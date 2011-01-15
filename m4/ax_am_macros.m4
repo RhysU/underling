@@ -1,5 +1,5 @@
 # ===========================================================================
-#       http://www.gnu.org/software/autoconf-archive/ax_am_macros.html
+#              http://autoconf-archive.cryp.to/ax_am_macros.html
 # ===========================================================================
 #
 # SYNOPSIS
@@ -8,23 +8,24 @@
 #
 # DESCRIPTION
 #
-#   Adds support for macros that create Make rules. You must manually add
-#   the following line
+#   Adds support for macros that create automake rules. You must manually
+#   add the following line
 #
 #     @INC_AMINCLUDE@
 #
-#   to your Makefile.in (or Makefile.am if you use Automake) files.
+#   to your Makefile.am files.
 #
-# LICENSE
+# LAST MODIFICATION
 #
-#   Copyright (c) 2009 Tom Howard <tomhoward@users.sf.net>
+#   2008-04-12
+#
+# COPYLEFT
+#
+#   Copyright (c) 2008 Tom Howard <tomhoward@users.sf.net>
 #
 #   Copying and distribution of this file, with or without modification, are
 #   permitted in any medium without royalty provided the copyright notice
-#   and this notice are preserved. This file is offered as-is, without any
-#   warranty.
-
-#serial 9
+#   and this notice are preserved.
 
 AC_DEFUN([AX_AM_MACROS],
 [

@@ -1,293 +1,286 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CPPFLAGS    = -I$(top_srcdir) -I$(top_builddir)
-AM_CPPFLAGS   += -I$(top_builddir)/lib -I$(top_srcdir)/lib
-AM_CPPFLAGS   += $(MKL_CFLAGS) $(GSL_CFLAGS) $(LOG4CXX_CFLAGS)
-AM_CPPFLAGS   += $(BOOST_CPPFLAGS) $(P3DFFT_CFLAGS)
-AM_CPPFLAGS   += $(EIGEN_CFLAGS)
-AM_LDFLAGS     = # Append below
-bin_PROGRAMS   = # Append below
-check_PROGRAMS = # Append below
-noinst_HEADERS = # Append below
-CLEANFILES     = # Append below
-EXTRA_DIST     = # Append below
-TESTS          = # Append below
+AM_CFLAGS       = # Append below
+AM_CPPFLAGS     = -I$(top_builddir)/gnulib -I$(top_srcdir)/gnulib
+AM_CPPFLAGS    += -I$(top_builddir)        -I$(top_srcdir)
+AM_FCFLAGS      = -I$(top_builddir)        -I$(top_srcdir)
+AM_FCFLAGS     += -I$(top_builddir)/esio
+AM_LDFLAGS      = # Append below
+check_PROGRAMS  = # Append below
+noinst_PROGRAMS = # Append below
+BUILT_SOURCES   = # Append below
+CLEANFILES      = # Append below
+noinst_HEADERS  = fct.h                  \
+                  testframework_assert.h \
+                  testutils.h
+EXTRA_DIST      = layout_template.c      \
+                  plane_template.c       \
+                  line_template.c        \
+                  attribute_template.c   \
+                  empty.h5
 
-noinst_HEADERS += test_tools.hpp
-noinst_HEADERS += test_underling_tools.hpp
+TESTS              = # Append below
+TESTS_ENVIRONMENT  = ESIO_TEST_INPUT_DIR=$(srcdir)
+TESTS_ENVIRONMENT += ESIO_TEST_OUTPUT_DIR=$(builddir)
 
-# FIXME: Ugly, separate MPI compilation into separate dir, maybe
-CXX=@MPICXX@
+# Use MPI compiler wrappers since HDF5 wrappers break autodependencies.
 CC=@MPICC@
+FC=@MPIFC@
 
-# Clean up from Intel Compiler's -prof-gen output
-CLEANFILES += pgopti.spi pgopti.spl *.dyn *.dpi
-# Clean up from Intel Compiler's precompiled header output
-CLEANFILES += *.pchi
+## Use HDF5 includes as many tests use HDF5 API calls to verify functionality
+AM_CFLAGS   += $(HDF5_CFLAGS)
+AM_CPPFLAGS += $(HDF5_CPPFLAGS)
+AM_FCFLAGS  += $(HDF5_FFLAGS)
 
-# Provide a test-ready logging configuration
-TESTS_ENVIRONMENT = LOG4CXX_CONFIGURATION=$(srcdir)/log4cxx.properties
+#############################################################################
+## INTERNAL INTERNAL INTERNAL INTERNAL INTERNAL INTERNAL INTERNAL INTERNAL ##
+#############################################################################
 
-# Demand that all tests build for 'make all' target to be successful.
-# Much of the C++ functionality is header-only; this ensures it builds.
-all-local: $(check_PROGRAMS)
+## Internal restart renaming logic tests
+TESTS                   += restart_helpers
+check_PROGRAMS          += restart_helpers
+restart_helpers_SOURCES  = restart_helpers.c ../esio/restart-rename.c
+restart_helpers_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS              += test_error
-check_PROGRAMS     += test_error
-test_error_SOURCES  = test_error.cpp
-test_error_LDADD    = ../suzerain/libsuzerain.la
-test_error_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_error_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+#############################################################################
+## BASIC BASIC BASIC BASIC BASIC BASIC BASIC BASIC BASIC BASIC BASIC BASIC ##
+#############################################################################
 
-TESTS           += test_os
-check_PROGRAMS  += test_os
-test_os_SOURCES  = test_os.c
-test_os_LDADD    = ../suzerain/libsuzerain.la
+## Basic C API sanity checks
+TESTS          += basic.sh     # NB Wrapper script
+EXTRA_DIST     += basic.sh     # NB Wrapper script
+check_PROGRAMS += basic
+basic_SOURCES   = basic.c testutils.c
+basic_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                   += test_blas_et_al
-check_PROGRAMS          += test_blas_et_al
-test_blas_et_al_SOURCES  = test_blas_et_al.c
-test_blas_et_al_LDADD    = ../suzerain/libsuzerain.la
-test_blas_et_al_LDADD   += $(GSL_LIBS)
-test_blas_et_al_LDADD   += $(MKL_LDFLAGS) $(MKL_LIBS)
+## Basic Fortran API sanity checks
+TESTS           += basic_f
+check_PROGRAMS  += basic_f
+basic_f_SOURCES  = basic_f.f90 testutils.c testframework.f90
+basic_f_LDADD    = ../esio/libesiof.la $(HDF5_LDFLAGS)
 
-TESTS                  += test_htstretch
-check_PROGRAMS         += test_htstretch
-test_htstretch_SOURCES  = test_htstretch.c
-test_htstretch_LDADD    = ../suzerain/libsuzerain.la
-test_htstretch_LDADD   += $(GSL_LIBS)
-test_htstretch_LDADD   += $(MKL_LDFLAGS) $(MKL_LIBS)
+###########################################################################
+## STRING STRING STRING STRING STRING STRING STRING STRING STRING STRING ##
+###########################################################################
 
-TESTS            += test_mpl
-check_PROGRAMS   += test_mpl
-test_mpl_SOURCES  = test_mpl.cpp
-test_mpl_LDADD    = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_mpl_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## String tests...
+TESTS          += string.sh    # NB Wrapper script
+EXTRA_DIST     += string.sh    # NB Wrapper script
 
-### Disabled: Dies for ICPC > 10.1
-### Error message like "invalid SHT_GROUP entry"
-##TESTS                  += test_allocator
-##check_PROGRAMS         += test_allocator
-##test_allocator_SOURCES  = test_allocator.cpp
-##test_allocator_LDADD    = ../suzerain/libsuzerain.la
-##test_allocator_LDADD   += $(MKL_LDFLAGS) $(MKL_LIBS)
-##test_allocator_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-##test_allocator_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in C
+check_PROGRAMS += string
+string_SOURCES  = string.c testutils.c
+string_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                += test_bspline
-check_PROGRAMS       += test_bspline
-test_bspline_SOURCES  = test_bspline.cpp
-test_bspline_LDADD    = ../suzerain/libsuzerain.la
-test_bspline_LDADD   += $(GSL_LIBS)
-test_bspline_LDADD   += $(MKL_LDFLAGS) $(MKL_LIBS)
-test_bspline_LDADD   += $(LOG4CXX_LIBS)
-test_bspline_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_bspline_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in Fortran
+check_PROGRAMS   += string_f
+string_f_SOURCES  = string_f.f90 testutils.c testframework.f90
+string_f_LDADD    = ../esio/libesiof.la $(HDF5_LDFLAGS)
 
-TESTS             += test_math
-check_PROGRAMS    += test_math
-test_math_SOURCES  = test_math.cpp
-test_math_LDADD    = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_math_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+###########################################################################
+## ATTRIBUTE ATTRIBUTE ATTRIBUTE ATTRIBUTE ATTRIBUTE ATTRIBUTE ATTRIBUTE ##
+###########################################################################
 
-TESTS                += test_utility
-check_PROGRAMS       += test_utility
-test_utility_SOURCES  = test_utility.cpp
-test_utility_LDADD    = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_utility_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Attribute double precision tests in C
+TESTS                    += attribute_double.sh    # NB Wrapper script
+EXTRA_DIST               += attribute_double.sh    # NB Wrapper script
+check_PROGRAMS           += attribute_double
+attribute_double_SOURCES  = attribute_double.c testutils.c
+attribute_double_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                += test_complex
-check_PROGRAMS       += test_complex
-test_complex_SOURCES  = test_complex.cpp
-test_complex_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_CFLAGS)
-test_complex_LDADD    = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_complex_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Attribute single precision tests in C
+TESTS                   += attribute_float.sh     # NB Wrapper script
+EXTRA_DIST              += attribute_float.sh     # NB Wrapper script
+check_PROGRAMS          += attribute_float
+attribute_float_SOURCES  = attribute_float.c testutils.c
+attribute_float_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                += test_traits
-check_PROGRAMS       += test_traits
-test_traits_SOURCES   = test_traits.cpp
-test_traits_CPPFLAGS  = $(AM_CPPFLAGS)
-test_traits_LDADD     = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_traits_LDADD    += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Attribute integer tests...
+TESTS                 += attribute_int.sh         # NB Wrapper script
+EXTRA_DIST            += attribute_int.sh         # NB Wrapper script
 
-TESTS                      += test_mpi_datatype
-check_PROGRAMS             += test_mpi_datatype
-test_mpi_datatype_SOURCES   = test_mpi_datatype.cpp
-test_mpi_datatype_CPPFLAGS  = $(AM_CPPFLAGS)
-test_mpi_datatype_LDADD     = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_mpi_datatype_LDADD    += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in C
+check_PROGRAMS        += attribute_int
+attribute_int_SOURCES  = attribute_int.c testutils.c
+attribute_int_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                       += test_blas_et_al_cpp
-check_PROGRAMS              += test_blas_et_al_cpp
-test_blas_et_al_cpp_SOURCES  = test_blas_et_al_cpp.cpp
-test_blas_et_al_cpp_LDADD    = ../suzerain/libsuzerain.la
-test_blas_et_al_cpp_LDADD   += $(MKL_LDFLAGS) $(MKL_LIBS)
-test_blas_et_al_cpp_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_blas_et_al_cpp_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in Fortran
+check_PROGRAMS          += attribute_int_f
+attribute_int_f_SOURCES  = attribute_int_f.f90 testutils.c testframework.f90
+attribute_int_f_LDADD    = ../esio/libesiof.la $(HDF5_LDFLAGS)
 
-TESTS                += test_iterator
-check_PROGRAMS       += test_iterator
-test_iterator_SOURCES = test_iterator.cpp
-test_iterator_LDADD   = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_iterator_LDADD  += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+###########################################################################
+## LINE LINE LINE LINE LINE LINE LINE LINE LINE LINE LINE LINE LINE LINE ##
+###########################################################################
 
-TESTS                  += test_functional
-check_PROGRAMS         += test_functional
-test_functional_SOURCES = test_functional.cpp
-test_functional_LDADD   = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_functional_LDADD  += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Line double precision tests in C
+TESTS               += line_double.sh    # NB Wrapper script
+EXTRA_DIST          += line_double.sh    # NB Wrapper script
+check_PROGRAMS      += line_double
+line_double_SOURCES  = line_double.c testutils.c
+line_double_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                 += test_storage
-check_PROGRAMS        += test_storage
-test_storage_SOURCES   = test_storage.cpp
-test_storage_LDADD     = ../suzerain/libsuzerain.la
-test_storage_LDADD    += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_storage_LDADD    += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Line single precision tests in C
+TESTS               += line_float.sh     # NB Wrapper script
+EXTRA_DIST          += line_float.sh     # NB Wrapper script
+check_PROGRAMS      += line_float
+line_float_SOURCES   = line_float.c testutils.c
+line_float_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS               += test_state
-check_PROGRAMS      += test_state
-test_state_SOURCES   = test_state.cpp
-test_state_LDADD     = ../suzerain/libsuzerain.la
-test_state_LDADD    += $(MKL_LDFLAGS) $(MKL_LIBS)
-test_state_LDADD    += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_state_LDADD    += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Line integer tests...
+TESTS             += line_int.sh         # NB Wrapper script
+EXTRA_DIST        += line_int.sh         # NB Wrapper script
 
-TESTS               += test_pencil
-check_PROGRAMS      += test_pencil
-test_pencil_SOURCES  = test_pencil.cpp
-test_pencil_LDADD    = ../suzerain/libsuzerain.la
-test_pencil_LDADD   += $(P3DFFT_LIBS)
-test_pencil_LDADD   += $(FFTW3_LIBS)
-test_pencil_LDADD   += $(GSL_LIBS)
-test_pencil_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_pencil_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in C
+check_PROGRAMS    += line_int
+line_int_SOURCES   = line_int.c testutils.c
+line_int_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                    += test_orthonormal
-check_PROGRAMS           += test_orthonormal
-test_orthonormal_SOURCES  = test_orthonormal.cpp
-test_orthonormal_LDADD    = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_orthonormal_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
-EXTRA_DIST               += test_orthonormal.sage
+## ...in Fortran
+check_PROGRAMS     += line_int_f
+line_int_f_SOURCES  = line_int_f.f90 testutils.c testframework.f90
+line_int_f_LDADD    = ../esio/libesiof.la $(HDF5_LDFLAGS)
 
-TESTS                   += test_richardson
-check_PROGRAMS          += test_richardson
-test_richardson_SOURCES  = test_richardson.c
-test_richardson_LDADD    = ../suzerain/libsuzerain.la
-test_richardson_LDADD   += $(GSL_LIBS)
+#############################################################################
+## PLANE PLANE PLANE PLANE PLANE PLANE PLANE PLANE PLANE PLANE PLANE PLANE ##
+#############################################################################
 
-TESTS                       += test_timecontroller
-check_PROGRAMS              += test_timecontroller
-test_timecontroller_SOURCES  = test_timecontroller.cpp
-test_timecontroller_LDADD    = ../suzerain/libsuzerain.la
-test_timecontroller_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_timecontroller_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Plane double precision tests in C
+TESTS                += plane_double.sh    # NB Wrapper script
+EXTRA_DIST           += plane_double.sh    # NB Wrapper script
+check_PROGRAMS       += plane_double
+plane_double_SOURCES  = plane_double.c testutils.c
+plane_double_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                    += test_timestepper
-check_PROGRAMS           += test_timestepper
-test_timestepper_SOURCES  = test_timestepper.cpp
-test_timestepper_LDADD    = ../suzerain/libsuzerain.la
-test_timestepper_LDADD   += $(GSL_LIBS)
-test_timestepper_LDADD   += $(MKL_LDFLAGS) $(MKL_LIBS)
-test_timestepper_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_timestepper_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Plane single precision tests in C
+TESTS                += plane_float.sh     # NB Wrapper script
+EXTRA_DIST           += plane_float.sh     # NB Wrapper script
+check_PROGRAMS       += plane_float
+plane_float_SOURCES   = plane_float.c testutils.c
+plane_float_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                    += test_multi_array
-check_PROGRAMS           += test_multi_array
-test_multi_array_SOURCES  = test_multi_array.cpp
-test_multi_array_LDADD    = $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_multi_array_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Plane integer tests...
+TESTS              += plane_int.sh         # NB Wrapper script
+EXTRA_DIST         += plane_int.sh         # NB Wrapper script
 
-TESTS             += test_fftw
-check_PROGRAMS    += test_fftw
-test_fftw_SOURCES  = test_fftw.cpp
-test_fftw_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_CFLAGS)
-test_fftw_LDADD    = ../suzerain/libsuzerain.la
-test_fftw_LDADD   += $(FFTW3_LIBS)
-test_fftw_LDADD   += $(BOOST_PROGRAM_OPTIONS_LIBS)
-test_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in C
+check_PROGRAMS     += plane_int
+plane_int_SOURCES   = plane_int.c testutils.c
+plane_int_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                += test_fftw_1D
-check_PROGRAMS       += test_fftw_1D
-test_fftw_1D_SOURCES  = test_fftw_1D.cpp
-test_fftw_1D_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_CFLAGS)
-test_fftw_1D_LDADD    = $(FFTW3_LIBS)
-test_fftw_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_fftw_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in Fortran
+check_PROGRAMS      += plane_int_f
+plane_int_f_SOURCES  = plane_int_f.f90 testutils.c testframework.f90
+plane_int_f_LDADD    = ../esio/libesiof.la $(HDF5_LDFLAGS)
 
-TESTS                          += test_pencilfft_utility
-check_PROGRAMS                 += test_pencilfft_utility
-test_pencilfft_utility_SOURCES  = test_pencilfft_utility.cpp
-test_pencilfft_utility_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_CFLAGS)
-test_pencilfft_utility_LDADD    = $(FFTW3_LIBS)
-test_pencilfft_utility_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_pencilfft_utility_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+#############################################################################
+## LAYOUT 0 LAYOUT 0 LAYOUT 0 LAYOUT 0 LAYOUT 0 LAYOUT 0 LAYOUT 0 LAYOUT 0 ##
+#############################################################################
 
-TESTS                     += test_pencilfft_1D
-check_PROGRAMS            += test_pencilfft_1D
-test_pencilfft_1D_SOURCES  = test_pencilfft_1D.cpp
-test_pencilfft_1D_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_CFLAGS)
-test_pencilfft_1D_LDADD    = $(FFTW3_LIBS)
-test_pencilfft_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_pencilfft_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Layout 0 double precision tests in C
+TESTS                  += layout0_double.sh    # NB Wrapper script
+EXTRA_DIST             += layout0_double.sh    # NB Wrapper script
+check_PROGRAMS         += layout0_double
+layout0_double_SOURCES  = layout0_double.c testutils.c
+layout0_double_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                     += test_pencilfft_2D
-check_PROGRAMS            += test_pencilfft_2D
-test_pencilfft_2D_SOURCES  = test_pencilfft_2D.cpp
-test_pencilfft_2D_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_CFLAGS)
-test_pencilfft_2D_LDADD    = $(FFTW3_LIBS)
-test_pencilfft_2D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_pencilfft_2D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Layout 0 single precision tests in C
+TESTS                  += layout0_float.sh     # NB Wrapper script
+EXTRA_DIST             += layout0_float.sh     # NB Wrapper script
+check_PROGRAMS         += layout0_float
+layout0_float_SOURCES   = layout0_float.c testutils.c
+layout0_float_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                     += test_pencilfft_3D
-check_PROGRAMS            += test_pencilfft_3D
-test_pencilfft_3D_SOURCES  = test_pencilfft_3D.cpp
-test_pencilfft_3D_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_CFLAGS)
-test_pencilfft_3D_LDADD    = $(FFTW3_LIBS)
-test_pencilfft_3D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_pencilfft_3D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Layout 0 integer tests...
+TESTS                += layout0_int.sh         # NB Wrapper script
+EXTRA_DIST           += layout0_int.sh         # NB Wrapper script
 
-TESTS                  += test_underling.sh          # NB Wrapper script
-EXTRA_DIST             += test_underling.sh          # NB Wrapper script
-check_PROGRAMS         += test_underling
-test_underling_SOURCES  = test_underling.cpp
-test_underling_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_THREADS_CFLAGS)
-test_underling_LDADD    = ../suzerain/libunderling.la
-test_underling_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
-test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in C
+check_PROGRAMS       += layout0_int
+layout0_int_SOURCES   = layout0_int.c testutils.c
+layout0_int_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
 
-TESTS                      += test_underling_fft.sh  # NB Wrapper script
-EXTRA_DIST                 += test_underling_fft.sh  # NB Wrapper script
-check_PROGRAMS             += test_underling_fft
-test_underling_fft_SOURCES  = test_underling_fft.cpp
-test_underling_fft_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_THREADS_CFLAGS)
-test_underling_fft_LDADD    = ../suzerain/libunderling.la
-test_underling_fft_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
-test_underling_fft_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_underling_fft_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## ...in Fortran
+check_PROGRAMS        += layout0_int_f
+layout0_int_f_SOURCES  = layout0_int_f.f90 testutils.c testframework.f90
+layout0_int_f_LDADD    = ../esio/libesiof.la $(HDF5_LDFLAGS)
 
-TESTS                 += test_diffwave
-check_PROGRAMS        += test_diffwave
-test_diffwave_SOURCES  = test_diffwave.cpp
-test_diffwave_LDADD    = ../suzerain/libsuzerain.la
-test_diffwave_LDADD   += $(GSL_LIBS)
-test_diffwave_LDADD   += $(MKL_LDFLAGS) $(MKL_LIBS)
-test_diffwave_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_diffwave_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+#############################################################################
+## LAYOUT 1 LAYOUT 1 LAYOUT 1 LAYOUT 1 LAYOUT 1 LAYOUT 1 LAYOUT 1 LAYOUT 1 ##
+#############################################################################
 
-TESTS                         += test_diffwave_p3dfft.sh  # NB Wrapper script
-EXTRA_DIST                    += test_diffwave_p3dfft.sh  # NB Wrapper script
-check_PROGRAMS                += test_diffwave_p3dfft
-test_diffwave_p3dfft_SOURCES   = test_diffwave_p3dfft.cpp
-test_diffwave_p3dfft_CPPFLAGS  = $(AM_CPPFLAGS) $(FFTW3_THREADS_CFLAGS)
-test_diffwave_p3dfft_LDADD     = ../suzerain/libsuzerain.la
-test_diffwave_p3dfft_LDADD    += $(GSL_LIBS)
-test_diffwave_p3dfft_LDADD    += $(MKL_LDFLAGS) $(MKL_LIBS)
-test_diffwave_p3dfft_LDADD    += $(P3DFFT_LIBS)
-test_diffwave_p3dfft_LDADD    += $(FFTW3_THREADS_LIBS)
-test_diffwave_p3dfft_LDADD    += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_diffwave_p3dfft_LDADD    += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+## Layout 1 double precision tests in C
+TESTS                  += layout1_double.sh    # NB Wrapper script
+EXTRA_DIST             += layout1_double.sh    # NB Wrapper script
+check_PROGRAMS         += layout1_double
+layout1_double_SOURCES  = layout1_double.c testutils.c
+layout1_double_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
+
+## Layout 1 single precision tests in C
+TESTS                  += layout1_float.sh     # NB Wrapper script
+EXTRA_DIST             += layout1_float.sh     # NB Wrapper script
+check_PROGRAMS         += layout1_float
+layout1_float_SOURCES   = layout1_float.c testutils.c
+layout1_float_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
+
+## Layout 1 integer tests in C
+TESTS                += layout1_int.sh         # NB Wrapper script
+EXTRA_DIST           += layout1_int.sh         # NB Wrapper script
+check_PROGRAMS       += layout1_int
+layout1_int_SOURCES   = layout1_int.c testutils.c
+layout1_int_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
+
+#############################################################################
+## LAYOUT 2 LAYOUT 2 LAYOUT 2 LAYOUT 2 LAYOUT 2 LAYOUT 2 LAYOUT 2 LAYOUT 2 ##
+#############################################################################
+
+## Layout 2 double precision tests in C
+TESTS                  += layout2_double.sh    # NB Wrapper script
+EXTRA_DIST             += layout2_double.sh    # NB Wrapper script
+check_PROGRAMS         += layout2_double
+layout2_double_SOURCES  = layout2_double.c testutils.c
+layout2_double_LDADD    = ../esio/libesio.la $(HDF5_LDFLAGS)
+
+## Layout 2 single precision tests in C
+TESTS                  += layout2_float.sh     # NB Wrapper script
+EXTRA_DIST             += layout2_float.sh     # NB Wrapper script
+check_PROGRAMS         += layout2_float
+layout2_float_SOURCES   = layout2_float.c testutils.c
+layout2_float_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
+
+## Layout 2 integer tests in C
+TESTS                += layout2_int.sh         # NB Wrapper script
+EXTRA_DIST           += layout2_int.sh         # NB Wrapper script
+check_PROGRAMS       += layout2_int
+layout2_int_SOURCES   = layout2_int.c testutils.c
+layout2_int_LDADD     = ../esio/libesio.la $(HDF5_LDFLAGS)
+
+#############################################################################
+### INSTALLED APPLICATIONS INSTALLED APPLICATIONS INSTALLED APPLICATIONS  ###
+#############################################################################
+
+## Externally observable restart renaming tets
+TESTS      += esio_rename.sh
+EXTRA_DIST += esio_rename.sh
+
+#############################################################################
+### MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS ###
+#############################################################################
+
+# Build test programs without running 'make check'
+.PHONY: check-programs
+check-programs: $(check_PROGRAMS)
+
+# Extra things to clean up
+clean-local:
+	rm -f *.mod *.gcno *.gcda
+
+# License updates
+include $(top_srcdir)/license.am
+
+# Automatic dependency generation for Fortran
+SFMAKEDEPEND_FLAGS = -i esio -i esio_c_binding
+include $(top_srcdir)/sfmakedepend.am
 
 # Required for AX_AM_MACROS
 @INC_AMINCLUDE@

@@ -1,10 +1,13 @@
 /aclocal.m4
 /aminclude.am
 /autom4te.cache
-/config.cache
 /config.log
+/_configs.sed
 /config.status
 /configure
-/doxygen-doc
+/docs
+/libtool
+/LICENSE
 /Makefile
 /Makefile.in
+/*.pc

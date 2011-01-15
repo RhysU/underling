@@ -1,54 +1,58 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CPPFLAGS    = -I$(top_srcdir) -I$(top_builddir)
-AM_CPPFLAGS   += -I$(top_builddir)/lib -I$(top_srcdir)/lib
-AM_CPPFLAGS   += $(MKL_CFLAGS) $(GSL_CFLAGS) $(LOG4CXX_CFLAGS)
-AM_CPPFLAGS   += $(BOOST_CPPFLAGS) $(P3DFFT_CFLAGS) $(FFTW3_THREADS_CFLAGS)
-AM_CPPFLAGS   += $(EIGEN_CFLAGS) $(GRVY_CFLAGS) $(ESIO_CFLAGS)
-AM_LDFLAGS     = $(MPIP_LDFLAGS)
-AM_LDFLAGS    += $(BOOST_PROGRAM_OPTIONS_LDFLAGS)
-AM_LDFLAGS    += $(BOOST_IOSTREAMS_LDFLAGS)
-bin_PROGRAMS   = # Append below
-check_PROGRAMS = # Append below
-CLEANFILES     = # Append below
+AM_CFLAGS       =
+AM_CPPFLAGS     = -I$(top_builddir)/gnulib -I$(top_srcdir)/gnulib
+AM_CPPFLAGS    += -I$(top_builddir)        -I$(top_srcdir)
+AM_FCFLAGS      = -I$(top_builddir)        -I$(top_srcdir)
+AM_FCFLAGS     += -I$(top_builddir)/esio
+AM_LDFLAGS      = # Append below
+noinst_PROGRAMS = # Append below
+noinst_HEADERS  = mpi_argp.h
+bin_PROGRAMS    = # Append below
+BUILT_DOCS      = # Append below
+BUILT_SOURCES   = # Append below
+CLEANFILES      = # Append below
+EXTRA_DIST      = # Append below
 
-# FIXME: Ugly, separate MPI compilation into separate dir, maybe
-CXX=@MPICXX@
+# Use MPI compiler wrappers since HDF5 wrappers break autodependencies.
+CC=@MPICC@
+FC=@MPIFC@
 
-# Clean up from Intel Compiler's -prof-gen output
-CLEANFILES += pgopti.spi pgopti.spl *.dyn *.dpi
-# Clean up from Intel Compiler's precompiled header output
-CLEANFILES += *.pchi
+## Pick up GRVY library includes
+AM_CFLAGS  += $(GRVY_CFLAGS)
+AM_FCFLAGS += $(GRVY_FCFLAGS)
 
-# Test progams and/or performance drivers
-bin_PROGRAMS                   += driver_suzerain_p3dfft
-driver_suzerain_p3dfft_SOURCES  = driver_suzerain_p3dfft.cpp
-driver_suzerain_p3dfft_LDADD    = ../suzerain/libsuzerain.la
-driver_suzerain_p3dfft_LDADD   += $(MPIP_LIBS)
-driver_suzerain_p3dfft_LDADD   += $(GSL_LIBS) $(LOG4CXX_LIBS)
-driver_suzerain_p3dfft_LDADD   += $(P3DFFT_LIBS) $(FFTW3_THREADS_LIBS)
-driver_suzerain_p3dfft_LDADD   += $(P3DFFT_LIBS) $(FFTW3_THREADS_LIBS)
-driver_suzerain_p3dfft_LDADD   += $(BOOST_PROGRAM_OPTIONS_LIBS)
+# C-based benchmarking tool
+bin_PROGRAMS        += esio_bench
+esio_bench_SOURCES   = esio_bench.c mpi_argp.c
+esio_bench_CPPFLAGS  = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
+esio_bench_LDADD     = ../esio/libesio.la
+esio_bench_LDADD    += ../gnulib/libgnu.la $(LTLIBINTL)
+esio_bench_LDADD    += $(HDF5_LDFLAGS)
+esio_bench_LDADD    += $(GRVY_LIBS)
 
-bin_PROGRAMS             += driver_underling
-driver_underling_SOURCES  = driver_underling.cpp
-driver_underling_LDADD    = ../suzerain/libsuzerain.la
-driver_underling_LDADD   += ../suzerain/libunderling.la
-driver_underling_LDADD   += $(MPIP_LIBS)
-driver_underling_LDADD   += $(FFTW3_MPI_THREADS_LIBS) $(GRVY_LIBS)
-driver_underling_LDADD   += $(GSL_LIBS) $(LOG4CXX_LIBS)
-driver_underling_LDADD   += $(BOOST_IOSTREAMS_LIBS)
-driver_underling_LDADD   += $(BOOST_PROGRAM_OPTIONS_LIBS)
+# Restart renaming tool which has few formal ESIO dependencies
+bin_PROGRAMS        += esio_rename
+esio_rename_SOURCES  = esio_rename.c ../esio/restart-rename.c ../esio/error.c
+esio_rename_LDADD    = ../gnulib/libgnu.la $(LTLIBINTL) -lm
 
-# Applications
-bin_PROGRAMS       += channel_ex
-channel_ex_SOURCES  = channel_ex.cpp
-channel_ex_LDADD    = ../suzerain/libsuzerain.la
-channel_ex_LDADD   += $(ESIO_LIBS) $(GRVY_LIBS)
-channel_ex_LDADD   += $(GSL_LIBS) $(LOG4CXX_LIBS)
-channel_ex_LDADD   += $(P3DFFT_LIBS) $(FFTW3_THREADS_LIBS)
-channel_ex_LDADD   += $(BOOST_IOSTREAMS_LIBS)
-channel_ex_LDADD   += $(BOOST_PROGRAM_OPTIONS_LIBS)
+# PSDNS iokernel test program based on P3DFFT v2.3 loading patterns
+# See http://code.google.com/p/p3dfft/ for more details on P3DFFT
+noinst_PROGRAMS          += p3dfft_like
+p3dfft_like_SOURCES       = p3dfft_like_header.f90 p3dfft_like.f90
+p3dfft_like_LDADD         = ../esio/libesiof.la $(GRVY_LIBS) $(HDF5_LDFLAGS)
+p3dfft_like_LIBTOOLFLAGS  = --tag=FC
+p3dfft_like.f90: p3dfft_like_header.o    # Explicit module dependence
+
+# Additional files to clean
+CLEANFILES += *.mod *.gcno *.gcda
+
+# License updates
+include $(top_srcdir)/license.am
+
+# Automatic dependency generation for Fortran
+SFMAKEDEPEND_FLAGS = -i esio
+include $(top_srcdir)/sfmakedepend.am
 
 # Required for AX_AM_MACROS
 @INC_AMINCLUDE@
