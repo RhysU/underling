@@ -4,10 +4,10 @@ ACLOCAL_AMFLAGS = -I m4
 AUTOMAKE_OPTIONS = foreign
 
 # Build in these directories:
-SUBDIRS = gnulib esio examples apps tests doxygen
+SUBDIRS = gnulib underling examples apps tests doxygen
 
 # Distribute these items:
-DIST_SUBDIRS = gnulib esio examples tests apps doxygen
+DIST_SUBDIRS = gnulib underling examples tests apps doxygen
 EXTRA_DIST   = # bootstrap not to be distributed in tarballs
 EXTRA_DIST  += $(DX_CONFIG)
 EXTRA_DIST  += build-aux/sfmakedepend.pl
@@ -27,24 +27,25 @@ AUX_DIST += build-aux/missing
 
 # Support for pkgconfig
 pkgconfigdir   = $(libdir)/pkgconfig
-pkgconfig_DATA = esio.pc esio-hdf5.pc
+pkgconfig_DATA = underling.pc underling-fftw.pc
 
 # Install selected manual pages when Doxygen man output is enabled
 if DX_COND_man
-BUILT_SOURCES = @DX_DOCDIR@/man/man3/esio.h.3
-@DX_DOCDIR@/man/man3/esio.h.3: esio/esio.h
+man3_MANS = @DX_DOCDIR@/man/man3/underling.h.3       \
+            @DX_DOCDIR@/man/man3/underling.hpp.3     \
+            @DX_DOCDIR@/man/man3/underling_fft.h.3   \
+            @DX_DOCDIR@/man/man3/underling_fft.hpp.3
+$(man3_MANS):
 	$(MAKE) $(AM_MAKEFLAGS) doxygen-doc
-man3_MANS = @DX_DOCDIR@/man/man3/esio.h.3
+BUILT_SOURCES = $(man3_MANS)
 endif DX_COND_man
 
 # Files to be deleted by make clean variants
 MOSTLYCLEANFILES =  $(DX_CLEANFILES)
-DISTCLEANFILES =           \
-    aminclude.am           \
-    _configs.sed           \
-    esio/esio-config.h     \
-    *__genmod.f90          \
-    *__genmod.mod
+DISTCLEANFILES =                  \
+    aminclude.am                  \
+    _configs.sed                  \
+    underling/underling-config.h
 MAINTAINERCLEANFILES =     \
     aclocal.m4             \
     autom4te.cache/*       \
@@ -53,10 +54,7 @@ MAINTAINERCLEANFILES =     \
     config.status          \
     config.sub             \
     configure              \
-    Makefile.in            \
-    src/config.h.in        \
-    src/Makefile.in        \
-    src/stamp.h.in
+    Makefile.in
 
 # Run toplevel makefile serially; submakes may still be parallel
 .NOTPARALLEL:
@@ -89,11 +87,11 @@ lcov-report:
 	@mkdir -p $(lcov_dir)
 
 	$(top_srcdir)/lcov/lcov --compat-libtool --directory . --capture --output-file $(lcov_dir)/lcov.info
-	$(top_srcdir)/lcov/lcov --list-full-path -l $(lcov_dir)/lcov.info | grep -v "`cd -P $(top_srcdir)/esio && pwd`" | cut -d\| -f1 > $(lcov_dir)/remove
+	$(top_srcdir)/lcov/lcov --list-full-path -l $(lcov_dir)/lcov.info | grep -v "`cd -P $(top_srcdir)/underling && pwd`" | cut -d\| -f1 > $(lcov_dir)/remove
 	$(top_srcdir)/lcov/lcov -q -r $(lcov_dir)/lcov.info `cat $(lcov_dir)/remove` > $(lcov_dir)/lcov.cleaned.info
 	@rm $(lcov_dir)/remove
 	@mv $(lcov_dir)/lcov.cleaned.info $(lcov_dir)/lcov.info
-	$(top_srcdir)/lcov/genhtml -t "ESIO" -o $(lcov_dir) $(lcov_dir)/lcov.info
+	$(top_srcdir)/lcov/genhtml -t "underling" -o $(lcov_dir) $(lcov_dir)/lcov.info
 
 lcov-reset:
 	@rm -rf $(lcov_dir)
@@ -110,9 +108,9 @@ libtool: $(LIBTOOL_DEPS)
 
 # Push license updates into appropriate subdirectories
 .license.stamp:
-	cd esio  && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
-	cd tests && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
-	cd apps  && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
+	cd underling && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
+	cd tests     && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
+	cd apps      && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
 
 # Required for AX_PROG_DOXYGEN
 include doxygen/doxygen.am
