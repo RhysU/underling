@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// esio 0.1.2: ExaScale IO library for turbulence simulation restart files
+// underling 0.1.2: ExaScale IO library for turbulence simulation restart files
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __ESIO_MPI_ARGP_H__
-#define __ESIO_MPI_ARGP_H__
+#ifndef __UNDERLING_MPI_ARGP_H__
+#define __UNDERLING_MPI_ARGP_H__
 
 #include "argp.h"
 
@@ -53,4 +53,4 @@ error_t mpi_argp_parse(const int rank,
                        int *arg_index,
                        void *input);
 
-#endif /* __ESIO_MPI_ARGP_H__ */
+#endif /* __UNDERLING_MPI_ARGP_H__ */

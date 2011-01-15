@@ -1,9 +1,9 @@
 dnl ----------------------------------------------------
 dnl Package name, release number, description, and URL
 dnl ----------------------------------------------------
-AC_INIT([esio], [0.1.2], [rhys@ices.utexas.edu])
+AC_INIT([underling], [0.0.1], [rhys@ices.utexas.edu])
 AC_REVISION([$Id$])
-PACKAGE_DESCRIPTION="ExaScale IO library for turbulence simulation restart files"
+PACKAGE_DESCRIPTION="Underling library for manipulating 3D pencil decompositions"
 AC_SUBST([PACKAGE_DESCRIPTION])
 PACKAGE_URL="http://pecos.ices.utexas.edu/"
 AC_SUBST([PACKAGE_URL])
@@ -11,11 +11,11 @@ AC_SUBST([PACKAGE_URL])
 dnl ------------------------------------------------
 dnl Initialization macros
 dnl ------------------------------------------------
-AC_CONFIG_SRCDIR([esio/esio.h])
-AM_CONFIG_HEADER(esio/config.h)
+AC_CONFIG_SRCDIR([underling/underling.h])
+AM_CONFIG_HEADER(underling/config.h)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AX_PREFIX_CONFIG_H([esio/esio-config.h])
+AX_PREFIX_CONFIG_H([underling/underling-config.h])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE(1.11 no-define tar-ustar -Wall -Werror foreign)
 AC_PREREQ([2.61])
@@ -48,62 +48,14 @@ ACX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for C, e.g. mpicc.))
 MPICC_LOCATION=$(eval command -v $MPICC)
 AC_SUBST([MPICC_LOCATION])
 AX_MPIP()
-AX_LIB_HDF5([parallel])
-if test "x$with_hdf5" != "xyes"; then
-    AC_MSG_ERROR([Parallel HDF5 installation not detected.])
+AX_FFTW3()
+if test "x$ax_fftw3_found_mpi" != "xyes"; then
+    AC_MSG_ERROR([FFTW3 installation with MPI support not detected.])
 fi
 AX_VISIBILITY([hidden])
-AX_TLS()
 AX_COMPILER_VENDOR()
 AX_WARNINGS_SANITIZE()
 AC_LANG_POP([C])
-AC_CACHE_SAVE
-
-dnl ------------------------------------------------
-dnl Manipulate Fortran settings and find MPI
-dnl ------------------------------------------------
-AC_PROG_FC
-AC_LANG_PUSH([Fortran])
-AC_FC_SRCEXT([f90])
-AC_FC_FREEFORM()
-dnl BEGIN: Enable the preprocessor for all Fortran .f90 sources
-dnl Stupidly complicated to get correct.  Modify FCFLAGS_f90 with result.
-dnl
-ax_save_FCFLAGS=$FCFLAGS
-AC_LANG_WERROR
-AC_MSG_CHECKING([for flags required to enable Fortran preprocessing])
-for fppflag in '' -fpp -cpp '-x f95-cpp-input' none
-do
-    if test "x$fppflag" == xnone; then
-        AC_MSG_RESULT([unknown])
-        AC_MSG_ERROR([Could not enable Fortran preprocessing])
-        break
-    fi
-    ax_fpp_save_FCFLAGS=$FCFLAGS
-    FCFLAGS="$FCFLAGS $fppflag"
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[#define TESTDEFINE])],[
-                         FCFLAGS=$ax_fpp_save_FCFLAGS
-                         break
-                      ],[
-                         FCFLAGS=$ax_fpp_save_FCFLAGS
-                      ])
-done
-AC_MSG_RESULT([$fppflag])
-FCFLAGS_f90="$FCFLAGS_f90 $fppflag"
-dnl END: Enable the preprocessor for all Fortran sources
-AC_FC_WRAPPERS
-AX_FCFLAGS_WARN_ALL
-if test "x$ax_enable_debug" != "xno"; then
-    AX_TRACEBACK()
-fi
-ACX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for Fortran, e.g. mpf90.))
-MPIFC_LOCATION=$(eval command -v $MPIFC)
-AC_SUBST([MPIFC_LOCATION])
-if test "x$with_hdf5_fortran" != "xyes"; then
-    AC_MSG_WARN([HDF5 Fortran support not detected])
-    AC_MSG_NOTICE([ESIO Fortran support does not require HDF5 Fortran support])
-fi
-AC_LANG_POP([Fortran])
 AC_CACHE_SAVE
 
 dnl ------------------------------------------------
@@ -127,7 +79,7 @@ DX_RTF_FEATURE([OFF])
 DX_XML_FEATURE([OFF])
 DX_PDF_FEATURE([OFF])
 DX_PS_FEATURE([OFF])
-DX_INIT_DOXYGEN([esio],[doxygen/doxygen.cfg],[docs])
+DX_INIT_DOXYGEN([underling],[doxygen/doxygen.cfg],[docs])
 
 #--------------------------
 # Checks for code coverage
@@ -140,12 +92,12 @@ dnl ------------------------------------------------
 AC_CONFIG_FILES([
     LICENSE
     Makefile
-    esio.pc
-    esio-hdf5.pc
+    underling.pc
+    underling-fftw3.pc
     apps/Makefile
     doxygen/Makefile
-    esio/Makefile
-    esio/version.h
+    underling/Makefile
+    underling/version.h
     examples/Makefile
     gnulib/Makefile
     tests/Makefile

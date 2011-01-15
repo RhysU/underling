@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// esio 0.1.2: ExaScale IO library for turbulence simulation restart files
+// underling 0.1.2: ExaScale IO library for turbulence simulation restart files
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __ESIO_VISIBILITY_H__
-#define __ESIO_VISIBILITY_H__
+#ifndef __UNDERLING_VISIBILITY_H__
+#define __UNDERLING_VISIBILITY_H__
 
 /** \cond INTERNAL */
 
@@ -32,26 +32,26 @@
 
 // Generic helper definitions for shared library support
 #if __GNUC__ >= 4
-#  define ESIO_HELPER_SHARED_IMPORT __attribute__ ((visibility("default")))
-#  define ESIO_HELPER_SHARED_EXPORT __attribute__ ((visibility("default")))
-#  define ESIO_HELPER_SHARED_LOCAL  __attribute__ ((visibility("hidden")))
+#  define UNDERLING_HELPER_SHARED_IMPORT __attribute__ ((visibility("default")))
+#  define UNDERLING_HELPER_SHARED_EXPORT __attribute__ ((visibility("default")))
+#  define UNDERLING_HELPER_SHARED_LOCAL  __attribute__ ((visibility("hidden")))
 #else
-#  define ESIO_HELPER_SHARED_IMPORT
-#  define ESIO_HELPER_SHARED_EXPORT
-#  define ESIO_HELPER_SHARED_LOCAL
+#  define UNDERLING_HELPER_SHARED_IMPORT
+#  define UNDERLING_HELPER_SHARED_EXPORT
+#  define UNDERLING_HELPER_SHARED_LOCAL
 #endif
 
-// Now we use the generic helper definitions above to define ESIO_API and
-// ESIO_LOCAL.  ESIO_API is used for the public API symbols.  It either imports
-// or exports the relevant symbol.  ESIO_LOCAL is used for non-API symbols.
+// Now we use the generic helper definitions above to define UNDERLING_API and
+// UNDERLING_LOCAL.  UNDERLING_API is used for the public API symbols.  It either imports
+// or exports the relevant symbol.  UNDERLING_LOCAL is used for non-API symbols.
 
-#ifdef ESIO_SHARED_EXPORTS // defined if building ESIO versus just using it
-#  define ESIO_API ESIO_HELPER_SHARED_EXPORT
+#ifdef UNDERLING_SHARED_EXPORTS // defined if building UNDERLING versus just using it
+#  define UNDERLING_API UNDERLING_HELPER_SHARED_EXPORT
 #else
-#  define ESIO_API ESIO_HELPER_SHARED_IMPORT
-#endif // ESIO_SHARED_EXPORTS
-#define ESIO_LOCAL ESIO_HELPER_SHARED_LOCAL
+#  define UNDERLING_API UNDERLING_HELPER_SHARED_IMPORT
+#endif // UNDERLING_SHARED_EXPORTS
+#define UNDERLING_LOCAL UNDERLING_HELPER_SHARED_LOCAL
 
 /** \endcond */
 
-#endif /* __ESIO_VISIBILITY_H__ */
+#endif /* __UNDERLING_VISIBILITY_H__ */

@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// esio 0.1.2: ExaScale IO library for turbulence simulation restart files
+// underling 0.1.2: ExaScale IO library for turbulence simulation restart files
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
@@ -39,48 +39,48 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-esio_error_handler_t * esio_error_handler = NULL;
+underling_error_handler_t * underling_error_handler = NULL;
 
 static void
 no_error_handler(const char *reason,
                  const char *file,
                  int line,
-                 int esio_errno);
+                 int underling_errno);
 
 void
-esio_error(const char * reason,
-           const char * file,
-           int line,
-           int esio_errno)
+underling_error(const char * reason,
+                const char * file,
+                int line,
+                int underling_errno)
 {
-    if (esio_error_handler) {
-        (*esio_error_handler) (reason, file, line, esio_errno);
+    if (underling_error_handler) {
+        (*underling_error_handler) (reason, file, line, underling_errno);
         return ;
     }
 
-    esio_stream_printf ("ERROR", file, line, reason);
+    underling_stream_printf ("ERROR", file, line, reason);
 
     fflush (stdout);
-    fprintf (stderr, "Default esio error handler invoked.\n");
+    fprintf (stderr, "Default underling error handler invoked.\n");
     fflush (stderr);
 
     MPI_Abort (MPI_COMM_WORLD, 1);
 }
 
-esio_error_handler_t *
-esio_set_error_handler(esio_error_handler_t * new_handler)
+underling_error_handler_t *
+underling_set_error_handler(underling_error_handler_t * new_handler)
 {
-    esio_error_handler_t * previous_handler = esio_error_handler;
-    esio_error_handler = new_handler;
+    underling_error_handler_t * previous_handler = underling_error_handler;
+    underling_error_handler = new_handler;
     return previous_handler;
 }
 
 
-esio_error_handler_t *
-esio_set_error_handler_off(void)
+underling_error_handler_t *
+underling_set_error_handler_off(void)
 {
-    esio_error_handler_t * previous_handler = esio_error_handler;
-    esio_error_handler = no_error_handler;
+    underling_error_handler_t * previous_handler = underling_error_handler;
+    underling_error_handler = no_error_handler;
     return previous_handler;
 }
 
@@ -91,74 +91,74 @@ static void
 no_error_handler(const char *reason,
                  const char *file,
                  int line,
-                 int esio_errno)
+                 int underling_errno)
 {
     (void) reason;     /* unused */
     (void) file;       /* unused */
     (void) line;       /* unused */
-    (void) esio_errno; /* unused */
+    (void) underling_errno; /* unused */
     return;            /* do nothing */
 }
 #ifdef __INTEL_COMPILER
 #pragma warning(pop)
 #endif
 
-FILE * esio_stream = NULL ;
-esio_stream_handler_t * esio_stream_handler = NULL;
+FILE * underling_stream = NULL ;
+underling_stream_handler_t * underling_stream_handler = NULL;
 
 void
-esio_stream_printf(const char *label,
-                   const char *file,
-                   int line,
-                   const char *reason)
+underling_stream_printf(const char *label,
+                        const char *file,
+                        int line,
+                        const char *reason)
 {
-    if (esio_stream == NULL) {
-        esio_stream = stderr;
+    if (underling_stream == NULL) {
+        underling_stream = stderr;
     }
-    if (esio_stream_handler) {
-        (*esio_stream_handler) (label, file, line, reason);
+    if (underling_stream_handler) {
+        (*underling_stream_handler) (label, file, line, reason);
         return;
     }
-    fprintf(esio_stream,
-            "esio: %s:%d: %s: %s\n", file, line, label, reason);
+    fprintf(underling_stream,
+            "underling: %s:%d: %s: %s\n", file, line, label, reason);
 
 }
 
-esio_stream_handler_t *
-esio_set_stream_handler(esio_stream_handler_t * new_handler)
+underling_stream_handler_t *
+underling_set_stream_handler(underling_stream_handler_t * new_handler)
 {
-    esio_stream_handler_t * previous_handler = esio_stream_handler;
-    esio_stream_handler = new_handler;
+    underling_stream_handler_t * previous_handler = underling_stream_handler;
+    underling_stream_handler = new_handler;
     return previous_handler;
 }
 
 FILE *
-esio_set_stream(FILE * new_stream)
+underling_set_stream(FILE * new_stream)
 {
     FILE * previous_stream;
-    if (esio_stream == NULL) {
-        esio_stream = stderr;
+    if (underling_stream == NULL) {
+        underling_stream = stderr;
     }
-    previous_stream = esio_stream;
-    esio_stream = new_stream;
+    previous_stream = underling_stream;
+    underling_stream = new_stream;
     return previous_stream;
 }
 
 const char *
-esio_strerror(const int esio_errno)
+underling_strerror(const int underling_errno)
 {
-    switch (esio_errno) {
-    case ESIO_SUCCESS:
+    switch (underling_errno) {
+    case UNDERLING_SUCCESS:
         return "success" ;
-    case ESIO_EFAULT:
+    case UNDERLING_EFAULT:
         return "invalid pointer" ;
-    case ESIO_EINVAL:
+    case UNDERLING_EINVAL:
         return "invalid argument supplied by user" ;
-    case ESIO_EFAILED:
+    case UNDERLING_EFAILED:
         return "generic failure" ;
-    case ESIO_ESANITY:
+    case UNDERLING_ESANITY:
         return "sanity check failed - shouldn't happen" ;
-    case ESIO_ENOMEM:
+    case UNDERLING_ENOMEM:
         return "malloc failed" ;
     default:
         return "unknown error code" ;
