@@ -1,41 +1,34 @@
+//-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
-//--------------------------------------------------------------------------
+//
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
+// http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
-// Based heavily on the Boost Test predicate utilities
 //
-// Please see http://pecos.ices.utexas.edu for more information.
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
 //
-// This file is part of Suzerain.
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
 //
-// Suzerain is free software: you can redistribute it and/or modify it under
-// the terms of the GNU General Public License as published by the Free
-// Software Foundation, either version 3 of the License, or (at your option)
-// any later version.
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
-// Suzerain is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-// details.
-//
-// You should have received a copy of the GNU General Public License along with
-// Suzerain.  If not, see <http://www.gnu.org/licenses/>.
-//
-//--------------------------------------------------------------------------
-//
-// test_underling_tools.hpp: one-off test tools for underling
-//
+//-----------------------------------------------------------------------el-
 // $Id$
-//--------------------------------------------------------------------------
-//--------------------------------------------------------------------------
 
-#ifndef PECOS_SUZERAIN_TEST_UNDERLING_TOOLS_HPP
-#define PECOS_SUZERAIN_TEST_UNDERLING_TOOLS_HPP
+#ifndef __TEST_UNDERLING_TOOLS_HPP
+#define __TEST_UNDERLING_TOOLS_HPP
 
-#include <suzerain/common.hpp>
-#include <suzerain/mpi.hpp>
-#include <suzerain/underling.hpp>
+#include <mpi.h>
 #include <fftw3-mpi.h>
+#include <underling/underling.hpp>
 
 /** A test fixture to setup and teardown MPI and FFTW MPI */
 struct FFTWMPIFixture {
@@ -84,7 +77,7 @@ struct UnderlingFixture {
                     problem.local_memory()*sizeof(underling_real)),
                 &fftw_free),
           plan(problem, data.get(),
-               suzerain::underling::transpose::all, FFTW_ESTIMATE)
+               underling::transpose::all, FFTW_ESTIMATE)
     {
         BOOST_REQUIRE(grid);
         BOOST_REQUIRE(problem);
@@ -92,11 +85,11 @@ struct UnderlingFixture {
         BOOST_REQUIRE(plan);
     }
 
-    suzerain::underling::grid grid;
-    suzerain::underling::problem problem;
+    underling::grid grid;
+    underling::problem problem;
     boost::shared_array<underling_real> data;
-    suzerain::underling::plan plan;
+    underling::plan plan;
 
 };
 
-#endif // PECOS_SUZERAIN_TEST_UNDERLING_TOOLS_HPP
+#endif // __TEST_UNDERLING_TOOLS_HPP

@@ -1,360 +1,37 @@
+//-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
-//--------------------------------------------------------------------------
+//
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
+// http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
-// Based heavily on the Boost Test predicate utilities
 //
-// Please see http://pecos.ices.utexas.edu for more information.
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
 //
-// This file is part of Suzerain.
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
 //
-// Suzerain is free software: you can redistribute it and/or modify it under
-// the terms of the GNU General Public License as published by the Free
-// Software Foundation, either version 3 of the License, or (at your option)
-// any later version.
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
-// Suzerain is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-// details.
-//
-// You should have received a copy of the GNU General Public License along with
-// Suzerain.  If not, see <http://www.gnu.org/licenses/>.
-//
-//--------------------------------------------------------------------------
-//
-// test_tools.hpp: one-off test predicates and checks
-//
+//-----------------------------------------------------------------------el-
 // $Id$
-//--------------------------------------------------------------------------
-//--------------------------------------------------------------------------
 
-#ifndef PECOS_SUZERAIN_TEST_TOOLS_HPP
-#define PECOS_SUZERAIN_TEST_TOOLS_HPP
+#ifndef __TEST_TOOLS_HPP
+#define __TEST_TOOLS_HPP
 
+#include <complex>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/test_tools.hpp>
-#include <suzerain/error.h>
-#include <suzerain/common.hpp>
-#include <suzerain/complex.hpp>
-#include <suzerain/gbmatrix.h>
-#include <suzerain/multi_array.hpp>
-
-#define CHECK_GBMATRIX_CLOSE(                                        \
-            e_m, e_n, e_kl, e_ku, e, e_ld,                           \
-            r_m, r_n, r_kl, r_ku, r, r_ld,                           \
-            percent_tolerance)                                       \
-        {                                                            \
-            ::std::string errormsg(_suzerain_check_gbmatrix_close(   \
-                    e_m, e_n, e_kl, e_ku, e, e_ld,                   \
-                    r_m, r_n, r_kl, r_ku, r, r_ld,                   \
-                    percent_tolerance));                             \
-            BOOST_CHECK_MESSAGE(!errormsg.length(), errormsg);       \
-        }
+#include <underling/error.h>
 
 #pragma warning(push,disable:1418)
-
-// TODO Two versions _suzerain_check_gbmatrix_close have mucho copy'n'paste
-
-template<typename FPT>
-std::string
-_suzerain_check_gbmatrix_close(
-    int e_m, int e_n, int e_kl, int e_ku, const FPT * const e, int e_ld,
-    int r_m, int r_n, int r_kl, int r_ku, const FPT * const r, int r_ld,
-    FPT percent_tolerance)
-{
-    bool checkequality = true;
-    std::ostringstream errors;
-
-    // Test sanity checks for expected values
-    if (e_m < 0) {
-        errors << "\nParameter e_m = " << e_m << " < 0";
-        checkequality = false;
-    }
-    if (e_n < 0) {
-        errors << "\nParameter e_n = " << e_n << " < 0";
-        checkequality = false;
-    }
-    if (e_kl < 0) {
-        errors << "\nParameter e_kl = " << e_kl << " < 0";
-        checkequality = false;
-    }
-    if (e_ku < 0) {
-        errors << "\nParameter e_ku = " << e_ku << " < 0";
-        checkequality = false;
-    }
-    if (e_ld < 0) {
-        errors << "\nParameter e_ld = " << e_ld << " < 0";
-        checkequality = false;
-    }
-    if (e == NULL) {
-        errors << "\nParameter e == NULL";
-        checkequality = false;
-    }
-
-    // Test sanity checks for result values
-    if (r_m < 0) {
-        errors << "\nParameter r_m = " << r_m << " < 0";
-        checkequality = false;
-    }
-    if (r_n < 0) {
-        errors << "\nParameter r_n = " << r_n << " < 0";
-        checkequality = false;
-    }
-    if (r_kl < 0) {
-        errors << "\nParameter r_kl = " << r_kl << " < 0";
-        checkequality = false;
-    }
-    if (r_ku < 0) {
-        errors << "\nParameter r_ku = " << r_ku << " < 0";
-        checkequality = false;
-    }
-    if (r_ld < 0) {
-        errors << "\nParameter r_ld = " << r_ld << " < 0";
-        checkequality = false;
-    }
-    if (r == NULL) {
-        errors << "\nParameter r == NULL";
-        checkequality = false;
-    }
-
-    // Check that expected and results have compatible shapes
-    if (e_m != r_m) {
-        errors << "\nMismatch in number of rows: " << e_m << " vs " << r_m;
-        checkequality = false;
-    }
-    if (e_n != r_n) {
-        errors << "\nMismatch in number of columns: " << e_n << " vs " << r_n;
-        checkequality = false;
-    }
-
-    // Any further error messages are useless if the above tests fail
-    // so short circuit the remainder of the test if any did.
-    if (checkequality) {
-        const boost::test_tools::close_at_tolerance<FPT> is_close
-            = boost::test_tools::close_at_tolerance<FPT>(
-                boost::test_tools::percent_tolerance(percent_tolerance));
-
-        for (int j = 0; j < e_n; ++j) {
-            for (int i = 0; i < e_m; ++i) {
-
-                const bool e_in_band
-                    = suzerain_gbmatrix_in_band(e_ld, e_kl, e_ku, i, j);
-                const bool r_in_band
-                    = suzerain_gbmatrix_in_band(r_ld, r_kl, r_ku, i, j);
-                const int e_offset
-                    = suzerain_gbmatrix_offset(e_ld, e_kl, e_ku, i, j);
-                const int r_offset
-                    = suzerain_gbmatrix_offset(r_ld, r_kl, r_ku, i, j);
-
-                 if (e_in_band && r_in_band) {
-                    const FPT r_value = r[r_offset];
-                    const FPT e_value = e[e_offset];
-                    if (!is_close(e_value, r_value)) {
-                        errors << "\nMismatch to "
-                            << percent_tolerance << "% at index ("
-                            << std::setw(2) << i << ","
-                            << std::setw(2) << j << "): ";
-                        const std::ios_base::fmtflags flags = errors.flags();
-                        const std::streamsize prec = errors.precision();
-                        errors.flags(std::ios::scientific | std::ios::showpos);
-                        errors.precision(std::numeric_limits<FPT>::digits10);
-                        errors << e_value << " != " << r_value;
-                        errors.flags(flags);
-                        errors.precision(prec);
-                    }
-                } else if (!e_in_band && !r_in_band) {
-                    // NOP
-                } else if (!e_in_band) {
-                    const FPT r_value = r[r_offset];
-                    if (r_value != 0.0) {
-                        errors << "\nNonzero outside expected's band "
-                            << "at result index (" << std::setw(2) << i
-                            << "," << std::setw(2) << j << "): ";
-                        const std::ios_base::fmtflags flags = errors.flags();
-                        const std::streamsize prec = errors.precision();
-                        errors.flags(std::ios::scientific | std::ios::showpos);
-                        errors.precision(std::numeric_limits<FPT>::digits10);
-                        errors << r_value;
-                        errors.flags(flags);
-                        errors.precision(prec);
-                    }
-                } else if (!r_in_band) {
-                    const FPT e_value = e[e_offset];
-                    if (e_value != 0.0) {
-                        errors << "\nNonzero outside result's band "
-                            << "at expected index (" << std::setw(2) << i
-                            << "," << std::setw(2) << j << "): ";
-                        const std::ios_base::fmtflags flags = errors.flags();
-                        const std::streamsize prec = errors.precision();
-                        errors.flags(std::ios::scientific | std::ios::showpos);
-                        errors.precision(std::numeric_limits<FPT>::digits10);
-                        errors << e_value;
-                        errors.flags(flags);
-                        errors.precision(prec);
-                    }
-                }
-            }
-        }
-    }
-
-    return errors.str();
-}
-
-template<typename FPT>
-std::string
-_suzerain_check_gbmatrix_close(
-    int e_m, int e_n, int e_kl, int e_ku, const FPT (* const e)[2], int e_ld,
-    int r_m, int r_n, int r_kl, int r_ku, const FPT (* const r)[2], int r_ld,
-    FPT abs_tolerance)
-{
-    bool checkequality = true;
-    std::ostringstream errors;
-
-    // Test sanity checks for expected values
-    if (e_m < 0) {
-        errors << "\nParameter e_m = " << e_m << " < 0";
-        checkequality = false;
-    }
-    if (e_n < 0) {
-        errors << "\nParameter e_n = " << e_n << " < 0";
-        checkequality = false;
-    }
-    if (e_kl < 0) {
-        errors << "\nParameter e_kl = " << e_kl << " < 0";
-        checkequality = false;
-    }
-    if (e_ku < 0) {
-        errors << "\nParameter e_ku = " << e_ku << " < 0";
-        checkequality = false;
-    }
-    if (e_ld < 0) {
-        errors << "\nParameter e_ld = " << e_ld << " < 0";
-        checkequality = false;
-    }
-    if (e == NULL) {
-        errors << "\nParameter e == NULL";
-        checkequality = false;
-    }
-
-    // Test sanity checks for result values
-    if (r_m < 0) {
-        errors << "\nParameter r_m = " << r_m << " < 0";
-        checkequality = false;
-    }
-    if (r_n < 0) {
-        errors << "\nParameter r_n = " << r_n << " < 0";
-        checkequality = false;
-    }
-    if (r_kl < 0) {
-        errors << "\nParameter r_kl = " << r_kl << " < 0";
-        checkequality = false;
-    }
-    if (r_ku < 0) {
-        errors << "\nParameter r_ku = " << r_ku << " < 0";
-        checkequality = false;
-    }
-    if (r_ld < 0) {
-        errors << "\nParameter r_ld = " << r_ld << " < 0";
-        checkequality = false;
-    }
-    if (r == NULL) {
-        errors << "\nParameter r == NULL";
-        checkequality = false;
-    }
-
-    // Check that expected and results have compatible shapes
-    if (e_m != r_m) {
-        errors << "\nMismatch in number of rows: " << e_m << " vs " << r_m;
-        checkequality = false;
-    }
-    if (e_n != r_n) {
-        errors << "\nMismatch in number of columns: " << e_n << " vs " << r_n;
-        checkequality = false;
-    }
-
-    // Any further error messages are useless if the above tests fail
-    // so short circuit the remainder of the test if any did.
-    if (checkequality) {
-
-        for (int j = 0; j < e_n; ++j) {
-            for (int i = 0; i < e_m; ++i) {
-
-                const bool e_in_band
-                    = suzerain_gbmatrix_in_band(e_ld, e_kl, e_ku, i, j);
-                const bool r_in_band
-                    = suzerain_gbmatrix_in_band(r_ld, r_kl, r_ku, i, j);
-                const int e_offset
-                    = suzerain_gbmatrix_offset(e_ld, e_kl, e_ku, i, j);
-                const int r_offset
-                    = suzerain_gbmatrix_offset(r_ld, r_kl, r_ku, i, j);
-
-                 if (e_in_band && r_in_band) {
-                    const FPT r_value_re = r[r_offset][0];
-                    const FPT r_value_im = r[r_offset][1];
-                    const FPT e_value_re = e[e_offset][0];
-                    const FPT e_value_im = e[e_offset][1];
-
-                    const FPT diff_re  = r_value_re - e_value_re;
-                    const FPT diff_im  = r_value_im - e_value_im;
-                    const FPT diff_abs
-                        = std::sqrt(diff_re*diff_re+ diff_im*diff_im);
-                    const bool is_close = diff_abs <= abs_tolerance;
-
-                    if (!is_close) {
-                        errors << "\nMismatch to "
-                            << abs_tolerance << "% at index ("
-                            << std::setw(2) << i << ","
-                            << std::setw(2) << j << "): ";
-                        const std::ios_base::fmtflags flags = errors.flags();
-                        const std::streamsize prec = errors.precision();
-                        errors.flags(std::ios::scientific | std::ios::showpos);
-                        errors.precision(std::numeric_limits<FPT>::digits10);
-                        errors <<'{'<< e_value_re <<','<< e_value_im <<'}'
-                               << " != "
-                               <<'{'<< r_value_re <<','<< r_value_im <<'}';
-                        errors.flags(flags);
-                        errors.precision(prec);
-                    }
-                } else if (!e_in_band && !r_in_band) {
-                    // NOP
-                } else if (!e_in_band) {
-                    const FPT r_value_re = r[r_offset][0];
-                    const FPT r_value_im = r[r_offset][1];
-                    if (r_value_re != 0.0 || r_value_im != 0.0) {
-                        errors << "\nNonzero outside expected's band "
-                            << "at result index (" << std::setw(2) << i
-                            << "," << std::setw(2) << j << "): ";
-                        const std::ios_base::fmtflags flags = errors.flags();
-                        const std::streamsize prec = errors.precision();
-                        errors.flags(std::ios::scientific | std::ios::showpos);
-                        errors.precision(std::numeric_limits<FPT>::digits10);
-                        errors <<'{'<< r_value_re <<','<< r_value_im <<'}';
-                        errors.flags(flags);
-                        errors.precision(prec);
-                    }
-                } else if (!r_in_band) {
-                    const FPT e_value_re = e[e_offset][0];
-                    const FPT e_value_im = e[e_offset][1];
-                    if (e_value_re != 0.0 || e_value_im != 0.0) {
-                        errors << "\nNonzero outside result's band "
-                            << "at expected index (" << std::setw(2) << i
-                            << "," << std::setw(2) << j << "): ";
-                        const std::ios_base::fmtflags flags = errors.flags();
-                        const std::streamsize prec = errors.precision();
-                        errors.flags(std::ios::scientific | std::ios::showpos);
-                        errors.precision(std::numeric_limits<FPT>::digits10);
-                        errors <<'{'<< e_value_re <<','<< e_value_im <<'}';
-                        errors.flags(flags);
-                        errors.precision(prec);
-                    }
-                }
-            }
-        }
-    }
-
-    return errors.str();
-}
 
 // Like BOOST_CHECK_EQUAL_COLLECTION but uses BOOST_CHECK_CLOSE, which allows
 // for a floating point tolerance on each comparison.  Have submitted a request
@@ -494,38 +171,6 @@ bool check_close_complex_collections(
 
     return res;
 }
-
-/**
- * Fill a floating point MultiArray \c x with real NaN.
- *
- * @param x MultiArray to fill.
- */
-template<class MultiArray>
-typename boost::disable_if<
-    ::suzerain::complex::traits::is_complex<typename MultiArray::element>,
-    void
->::type fill_with_NaN(MultiArray &x) {
-    typedef typename MultiArray::element real_type;
-    BOOST_STATIC_ASSERT(std::numeric_limits<real_type>::has_quiet_NaN);
-    using namespace ::suzerain::multi_array;
-    fill(x, std::numeric_limits<real_type>::quiet_NaN());
-}
-
-/**
- * Fill a complex-valued MultiArray \c x with complex NaN.
- *
- * @param x MultiArray to fill.
- */
-template<class MultiArray>
-typename boost::enable_if<
-    ::suzerain::complex::traits::is_complex<typename MultiArray::element>,
-    void
->::type fill_with_NaN(MultiArray &x) {
-    using namespace ::suzerain::multi_array;
-    fill(x, ::suzerain::complex::NaN<typename MultiArray::element>());
-}
-
-
 
 /** Provides a periodic function useful for testing FFT behavior */
 template<typename FPT = double, typename Integer = int>
@@ -690,55 +335,17 @@ typename std::complex<FPT> periodic_function<FPT,Integer>::wave(
     return retval;
 }
 
-// Relative error routine pulled from <boost/math/tools/test.hpp>.
-// Could not use original directly without adding a link-time dependency.
-// Slightly simplified from the source version.
-template <class T>
-T relative_error(T a, T b)
-{
-#pragma warning(push,disable:1572)
-    T min_val = std::numeric_limits<T>::min();
-    T max_val = std::numeric_limits<T>::max();
-
-    if((a != 0) && (b != 0)) {
-        if(std::abs(b) >= max_val) {
-            if(std::abs(a) >= max_val)
-                return 0;  // one infinity is as good as another!
-        }
-        // If the result is denormalised, treat all denorms as equivalent:
-        if((a < min_val) && (a > 0))
-            a = min_val;
-        else if((a > -min_val) && (a < 0))
-            a = -min_val;
-        if((b < min_val) && (b > 0))
-            b = min_val;
-        else if((b > -min_val) && (b < 0))
-            b = -min_val;
-        return (std::max)(std::abs((a-b)/a), std::abs((a-b)/b));
-    }
-
-    // Handle special case where one or both are zero:
-    if(min_val == 0)
-        return std::abs(a-b);
-    if(std::abs(a) < min_val)
-        a = min_val;
-    if(std::abs(b) < min_val)
-        b = min_val;
-    return (std::max)(std::abs((a-b)/a), std::abs((a-b)/b));
-#pragma warning(pop)
-}
-
-/** A fixture for the Boost.Test that replaces suzerain_error */
+/** A fixture for the Boost.Test that replaces underling_error */
 #pragma warning(push,disable:2017 2021)
 class BoostFailErrorHandlerFixture {
 public:
-    /** A suzerain_error_handler_t that invokes BOOST_FAIL */
+    /** A underling_error_handler_t that invokes BOOST_FAIL */
     static void boost_fail_error_handler(
-            const char *reason, const char *file, int line, int suzerain_errno)
+            const char *reason, const char *file, int line, int underling_errno)
     {
         std::ostringstream oss;
         oss << "Encountered '"
-            << suzerain_strerror(suzerain_errno)
+            << underling_strerror(underling_errno)
             << "' at "
             << file
             << ':'
@@ -750,27 +357,15 @@ public:
     }
 
     BoostFailErrorHandlerFixture()
-        : previous_(suzerain_set_error_handler(&boost_fail_error_handler)) {}
+        : previous_(underling_set_error_handler(&boost_fail_error_handler)) {}
 
     ~BoostFailErrorHandlerFixture() {
-        suzerain_set_error_handler(previous_);
+        underling_set_error_handler(previous_);
     }
 private:
-    suzerain_error_handler_t * previous_;
+    underling_error_handler_t * previous_;
 };
 #pragma warning(pop)
 
-#ifdef SUZERAIN_HAVE_MKL
-#include <mkl_service.h>
-#endif
-class BlasCleanupFixture {
-public:
-    BlasCleanupFixture() {
-#ifdef SUZERAIN_HAVE_MKL
-        MKL_FreeBuffers();
-#endif
-    }
-};
-
 #pragma warning(pop)
-#endif // PECOS_SUZERAIN_TEST_TOOLS_HPP
+#endif // __TEST_TOOLS_HPP

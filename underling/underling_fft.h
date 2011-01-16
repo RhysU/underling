@@ -100,10 +100,12 @@ extern const underling_fft_extents UNDERLING_FFT_EXTENTS_INVALID;
  * @return Returns an integer less than, equal to, or greater than zero if
  *         <tt>*e1</tt> is found, respectively, to be less than, to match,
  *         or be greater than <tt>*e2</tt>.
+ *
+ * @memberof underling_fft_extents
  */
 int
 underling_fft_extents_cmp(const underling_fft_extents * const e1,
-                          const underling_fft_extents * const e2);
+                          const underling_fft_extents * const e2) UNDERLING_API;
 
 /**
  * A type encapsulating FFTW-like planning information.
@@ -134,13 +136,15 @@ typedef struct underling_fft_plan_s *underling_fft_plan;
  *      the corresponding inverse complex-to-complex backward FFT.  It is
  *      <em>incorrect</em> to use underling_fft_create_c2c_backward for
  *      that purpose.
+ *
+ * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_c2c_forward(
         const underling_problem problem,
         int long_ni,
         underling_real * data,
-        unsigned fftw_rigor_flags);
+        unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a backward complex-to-complex FFT on the given data
@@ -166,13 +170,15 @@ underling_fft_plan_create_c2c_forward(
  *      the corresponding inverse complex-to-complex forward FFT.  It is
  *      <em>incorrect</em> to use underling_fft_create_c2c_forward for
  *      that purpose.
+ *
+ * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_c2c_backward(
         const underling_problem problem,
         int long_ni,
         underling_real * data,
-        unsigned fftw_rigor_flags);
+        unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a forward real-to-complex FFT on the given data
@@ -198,13 +204,15 @@ underling_fft_plan_create_c2c_backward(
  *      the corresponding inverse complex-to-real backward FFT.  It is
  *      <em>incorrect</em> to use underling_fft_create_c2r_backward for
  *      that purpose.
+ *
+ * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_r2c_forward(
         const underling_problem problem,
         int long_ni,
         underling_real * data,
-        unsigned fftw_rigor_flags);
+        unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a backward complex-to-real FFT on the given data
@@ -230,13 +238,15 @@ underling_fft_plan_create_r2c_forward(
  *      the corresponding inverse real-to-complex forward FFT.  It is
  *      <em>incorrect</em> to use underling_fft_create_r2c_forward for
  *      that purpose.
+ *
+ * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_c2r_backward(
         const underling_problem problem,
         int long_ni,
         underling_real * data,
-        unsigned fftw_rigor_flags);
+        unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Create a plan to invert another underling_fft_plan.  Inverse plans
@@ -258,12 +268,14 @@ underling_fft_plan_create_c2r_backward(
  *         plan_to_invert up to normalization.  On failure, calls
  *         underling_error and returns NULL.
  * @see The method underling_fft_plan_destroy for how to destroy an instance.
+ *
+ * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_inverse(
         const underling_fft_plan plan_to_invert,
         underling_real * data,
-        unsigned fftw_rigor_flags);
+        unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Obtain local size, stride, and storage information for the input data
@@ -276,10 +288,12 @@ underling_fft_plan_create_inverse(
  *         calls underling_error and returns UNDERLING_EXTENTS_INVALID.
  * @see The method underling_fft_local_input for a way to obtain only a subset
  *      of this information, or for a more Fortran-ready interface.
+ *
+ * @memberof underling_fft_plan
  */
 underling_fft_extents
 underling_fft_local_extents_input(
-        const underling_fft_plan plan);
+        const underling_fft_plan plan) UNDERLING_API;
 
 /**
  * Obtain local size, stride, and storage information for the input data
@@ -292,10 +306,12 @@ underling_fft_local_extents_input(
  *         calls underling_error and returns UNDERLING_EXTENTS_INVALID.
  * @see The method underling_fft_local_output for a way to obtain only a subset
  *      of this information, or for a more Fortran-ready interface.
+ *
+ * @memberof underling_fft_plan
  */
 underling_fft_extents
 underling_fft_local_extents_output(
-        const underling_fft_plan plan);
+        const underling_fft_plan plan) UNDERLING_API;
 
 /**
  * Obtain the processor-local sizes, storage details, and global starting
@@ -315,10 +331,12 @@ underling_fft_local_extents_output(
  * @param[in,out] order If non-NULL on entry, contains
  *                underling_extents.order on successful return.
  *
- * @return SUZERAIN_SUCCESS (zero) on success and non-zero on failure.
+ * @return UNDERLING_SUCCESS (zero) on success and non-zero on failure.
  *
  * @see The method underling_fft_local_extents_input for a more C-friendly and
  *      const-correct capable way to obtain all of this information.
+ *
+ * @memberof underling_fft_plan
  */
 int
 underling_fft_local_input(
@@ -326,7 +344,7 @@ underling_fft_local_input(
         int *start,
         int *size,
         int *stride,
-        int *order);
+        int *order) UNDERLING_API;
 
 /**
  * Obtain the processor-local sizes, storage details, and global starting
@@ -346,10 +364,12 @@ underling_fft_local_input(
  * @param[in,out] order If non-NULL on entry, contains
  *                underling_extents.order on successful return.
  *
- * @return SUZERAIN_SUCCESS (zero) on success and non-zero on failure.
+ * @return UNDERLING_SUCCESS (zero) on success and non-zero on failure.
  *
  * @see The method underling_fft_local_extents_output for a more C-friendly and
  *      const-correct capable way to obtain all of this information.
+ *
+ * @memberof underling_fft_plan
  */
 int
 underling_fft_local_output(
@@ -357,7 +377,7 @@ underling_fft_local_output(
         int *start,
         int *size,
         int *stride,
-        int *order);
+        int *order) UNDERLING_API;
 
 /**
  * Perform a previously planned FFT.  Appropriate calls to the underlying FFT
@@ -365,19 +385,23 @@ underling_fft_local_output(
  *
  * @param plan Plan to be executed.
  *
- * @return SUZERAIN_SUCCESS (zero) on success and non-zero on failure.
+ * @return UNDERLING_SUCCESS (zero) on success and non-zero on failure.
+ *
+ * @memberof underling_fft_plan
  */
 int
 underling_fft_plan_execute(
-        const underling_fft_plan plan);
+        const underling_fft_plan plan) UNDERLING_API;
 /**
  * Destroy all resources associated with the given plan.
  *
  * @param plan Plan to be destroyed.
+ *
+ * @memberof underling_fft_plan
  */
 void
 underling_fft_plan_destroy(
-        underling_fft_plan plan);
+        underling_fft_plan plan) UNDERLING_API;
 
 /**
  * Dump an instance's internals in a debugging-friendly format.
@@ -385,11 +409,13 @@ underling_fft_plan_destroy(
  * @param extents Extents to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
+ *
+ * @memberof underling_fft_extents
  */
 void
 underling_fft_fprint_extents(
         const underling_fft_extents *extents,
-        FILE *output_file);
+        FILE *output_file) UNDERLING_API;
 
 /**
  * Dump an instance's internals in a debugging-friendly format.
@@ -397,11 +423,13 @@ underling_fft_fprint_extents(
  * @param plan Plan to be dumped.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
+ *
+ * @memberof underling_fft_plan
  */
 void
 underling_fft_fprint_plan(
         const underling_fft_plan plan,
-        FILE *output_file);
+        FILE *output_file) UNDERLING_API;
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -68,7 +68,7 @@ public:
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_c2c_forward(
                     p.get(), long_ni, data, fftw_rigor_flags)) {
-        SUZERAIN_UNUSED(tag);
+        (void) tag; // unused
     }
 
     /** @see underling_fft_plan_create_c2c_backward */
@@ -79,7 +79,7 @@ public:
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_c2c_backward(
                     p.get(), long_ni, data, fftw_rigor_flags)) {
-        SUZERAIN_UNUSED(tag);
+        (void) tag; // unused
     }
 
     /** @see underling_fft_plan_create_r2c_forward */
@@ -90,7 +90,7 @@ public:
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_r2c_forward(
                     p.get(), long_ni, data, fftw_rigor_flags)) {
-        SUZERAIN_UNUSED(tag);
+        (void) tag; // unused
     }
 
     /** @see underling_fft_plan_create_c2r_backward */
@@ -101,7 +101,7 @@ public:
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_c2r_backward(
                     p.get(), long_ni, data, fftw_rigor_flags)) {
-        SUZERAIN_UNUSED(tag);
+        (void) tag; // unused
     }
 
     /** @see underling_fft_plan_create_inverse */

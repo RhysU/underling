@@ -1,22 +1,42 @@
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
+// http://pecos.ices.utexas.edu/
+//
+// Copyright (C) 2010 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
+//-----------------------------------------------------------------------el-
+// $Id$
+
 #ifdef HAVE_CONFIG_H
-#include <suzerain/config.h>
+#include <underling/config.h>
 #endif
-#include <suzerain/common.hpp>
-#pragma hdrstop
 #define BOOST_TEST_MODULE $Id$
 #include <boost/test/included/unit_test.hpp>
-#include <suzerain/error.h>
-#include <suzerain/mpi.hpp>
-#include <suzerain/underling_fft.hpp>
+#include <mpi.h>
+#include <underling/error.h>
+#include <underling/underling_fft.hpp>
 #include <fftw3-mpi.h>
 #include "test_tools.hpp"
 
 // Contains UnderlingFixture, FFTWMPIFixture
 #include "test_underling_tools.hpp"
 BOOST_GLOBAL_FIXTURE(FFTWMPIFixture);
-
-// Useful namespace import
-namespace underling = suzerain::underling;
 
 // Pull out the two slow directions, excluding long_ni
 static void slow_non_long_directions(
@@ -324,7 +344,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n2 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     // Non-cubic domain
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n2); // 1 field
@@ -353,7 +373,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n0 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     // Non-cubic domain
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n0); // 1 field
@@ -382,8 +402,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_both )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     // Non-cubic domain
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n2 | long_n0); // 1
@@ -605,7 +625,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n2 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     // Non-cubic domain
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n2); // 1 field
@@ -634,7 +654,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n0 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     // Non-cubic domain
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n0); // 1 field
@@ -663,8 +683,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_both )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     // Non-cubic domain
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n2 | long_n0); // 1
@@ -704,13 +724,13 @@ static void test_c2r(MPI_Comm comm,
 {
     // FIXME Implement proper handling and enable these tests
     if (    long_ni == 2
-        &&  transposed_flags & suzerain::underling::transposed::long_n2) {
+        &&  transposed_flags & underling::transposed::long_n2) {
         BOOST_TEST_MESSAGE(
                 "Cowardly skipping long_ni == 2 for transposed::long_n2");
         return;
     }
     if (    long_ni == 0
-        &&  transposed_flags & suzerain::underling::transposed::long_n0) {
+        &&  transposed_flags & underling::transposed::long_n0) {
         BOOST_TEST_MESSAGE(
                 "Cowardly skipping long_ni == 0 for transposed::long_n0");
         return;
@@ -929,7 +949,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n0_transposed_long_n2 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     // Long in n0, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -954,7 +974,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n1_transposed_long_n2 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     // Long in n1, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -979,7 +999,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n2_transposed_long_n2 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     // Long in n2, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1004,7 +1024,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n0_transposed_long_n0 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     // Long in n0, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1027,7 +1047,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n0_transposed_long_n0 )
 
 BOOST_AUTO_TEST_CASE( underling_fft_c2r_n1_transposed_long_n0 )
 {
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     // Long in n1, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1052,7 +1072,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n2_transposed_long_n0 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     // Long in n2, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1077,8 +1097,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n0_transposed_long_both )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     // Long in n0, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1103,8 +1123,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n1_transposed_long_both )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     // Long in n1, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1129,8 +1149,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n2_transposed_long_both )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     // Long in n2, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1166,13 +1186,13 @@ static void test_r2c(MPI_Comm comm,
 {
     // FIXME Implement proper handling and enable these tests
     if (    long_ni == 2
-        &&  transposed_flags & suzerain::underling::transposed::long_n2) {
+        &&  transposed_flags & underling::transposed::long_n2) {
         BOOST_TEST_MESSAGE(
                 "Cowardly skipping long_ni == 2 for transposed::long_n2");
         return;
     }
     if (    long_ni == 0
-        &&  transposed_flags & suzerain::underling::transposed::long_n0) {
+        &&  transposed_flags & underling::transposed::long_n0) {
         BOOST_TEST_MESSAGE(
                 "Cowardly skipping long_ni == 0 for transposed::long_n0");
         return;
@@ -1387,7 +1407,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_simple )
 
 BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_n2 )
 {
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     // Long in n0, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1410,7 +1430,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_n2 )
 
 BOOST_AUTO_TEST_CASE( underling_fft_r2c_n1_transposed_long_n2 )
 {
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     // Long in n1, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1435,7 +1455,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_transposed_long_n2 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     // Long in n2, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1458,7 +1478,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_transposed_long_n2 )
 
 BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_n0 )
 {
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     // Long in n0, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1481,7 +1501,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_n0 )
 
 BOOST_AUTO_TEST_CASE( underling_fft_r2c_n1_transposed_long_n0 )
 {
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     // Long in n1, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1506,7 +1526,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_transposed_long_n0 )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     // Long in n2, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1528,8 +1548,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_transposed_long_n0 )
 }
 BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_both )
 {
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     // Long in n0, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1552,8 +1572,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_both )
 
 BOOST_AUTO_TEST_CASE( underling_fft_r2c_n1_transposed_long_both )
 {
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     // Long in n1, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {
@@ -1578,8 +1598,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_transposed_long_both )
 {
     ensureFFTWTensor7PatchInPlace();
 
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     // Long in n2, transform a single pencil
     for (int howmany = 2; howmany < 10; howmany += 2) {

@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// esio 0.1.2: ExaScale IO library for turbulence simulation restart files
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team

@@ -29,16 +29,17 @@ AUX_DIST += build-aux/missing
 pkgconfigdir   = $(libdir)/pkgconfig
 pkgconfig_DATA = underling.pc underling-fftw.pc
 
-# Install selected manual pages when Doxygen man output is enabled
-if DX_COND_man
-man3_MANS = @DX_DOCDIR@/man/man3/underling.h.3       \
-            @DX_DOCDIR@/man/man3/underling.hpp.3     \
-            @DX_DOCDIR@/man/man3/underling_fft.h.3   \
-            @DX_DOCDIR@/man/man3/underling_fft.hpp.3
-$(man3_MANS):
-	$(MAKE) $(AM_MAKEFLAGS) doxygen-doc
-BUILT_SOURCES = $(man3_MANS)
-endif DX_COND_man
+## FIXME Manual page installation
+### Install selected manual pages when Doxygen man output is enabled
+##if DX_COND_man
+##man3_MANS = @DX_DOCDIR@/man/man3/underling.h.3       \
+##            @DX_DOCDIR@/man/man3/underling.hpp.3     \
+##            @DX_DOCDIR@/man/man3/underling_fft.h.3   \
+##            @DX_DOCDIR@/man/man3/underling_fft.hpp.3
+##$(man3_MANS):
+##	$(MAKE) $(AM_MAKEFLAGS) doxygen-doc
+##BUILT_SOURCES = $(man3_MANS)
+##endif DX_COND_man
 
 # Files to be deleted by make clean variants
 MOSTLYCLEANFILES =  $(DX_CLEANFILES)

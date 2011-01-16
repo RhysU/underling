@@ -1,22 +1,43 @@
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
+// http://pecos.ices.utexas.edu/
+//
+// Copyright (C) 2010 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
+//-----------------------------------------------------------------------el-
+// $Id$
+
 #ifdef HAVE_CONFIG_H
-#include <suzerain/config.h>
+#include <underling/config.h>
 #endif
-#include <suzerain/common.hpp>
-#pragma hdrstop
 #define BOOST_TEST_MODULE $Id$
 #include <boost/test/included/unit_test.hpp>
-#include <suzerain/error.h>
-#include <suzerain/mpi.hpp>
-#include <suzerain/underling.hpp>
+#include <boost/iterator/counting_iterator.hpp>
+#include <underling/error.h>
+#include <mpi.h>
+#include <underling/underling.hpp>
 #include <fftw3-mpi.h>
 #include "test_tools.hpp"
 
 // Contains UnderlingFixture, FFTWMPIFixture
 #include "test_underling_tools.hpp"
 BOOST_GLOBAL_FIXTURE(FFTWMPIFixture);
-
-// Useful namespace import
-namespace underling = suzerain::underling;
 
 BOOST_AUTO_TEST_SUITE(RoundTrip)
 
@@ -80,11 +101,11 @@ static void test_round_trip(MPI_Comm comm,
               f.data.get());
 
     // Transform from long in n2 to long in n0
-    BOOST_REQUIRE_EQUAL(SUZERAIN_SUCCESS, f.plan.execute_long_n2_to_long_n1());
-    BOOST_REQUIRE_EQUAL(SUZERAIN_SUCCESS, f.plan.execute_long_n1_to_long_n0());
+    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS, f.plan.execute_long_n2_to_long_n1());
+    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS, f.plan.execute_long_n1_to_long_n0());
     // Transform from long in n0 to long in n2
-    BOOST_REQUIRE_EQUAL(SUZERAIN_SUCCESS, f.plan.execute_long_n0_to_long_n1());
-    BOOST_REQUIRE_EQUAL(SUZERAIN_SUCCESS, f.plan.execute_long_n1_to_long_n2());
+    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS, f.plan.execute_long_n0_to_long_n1());
+    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS, f.plan.execute_long_n1_to_long_n2());
 
     // Ensure we successfully round-tripped back to long_n2 storage.
     // Buffer regions beyond total_extent are excluded from the check.
@@ -107,7 +128,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8 )
 
 BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_long_n2 )
 {
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n2);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n2);
@@ -119,7 +140,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_long_n2 )
 
 BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_long_n0 )
 {
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n0);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n0);
@@ -131,8 +152,8 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_long_n0 )
 
 BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_both )
 {
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n2 | long_n0);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n2 | long_n0);
@@ -144,8 +165,8 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_both )
 
 BOOST_AUTO_TEST_CASE( roundtrip8x8x8_degenerate_howmany )
 {
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 0, 0);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 0, long_n2);
@@ -165,7 +186,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5 )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n2 )
 {
-    using suzerain::underling::transposed::long_n2;
+    using underling::transposed::long_n2;
 
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n2);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n2);
@@ -177,7 +198,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n2 )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n0 )
 {
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n0;
 
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n0);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n0);
@@ -189,8 +210,8 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n0 )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_both )
 {
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n2 | long_n0);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n2 | long_n0);
@@ -202,8 +223,8 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_both )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x5_degenerate_howmany )
 {
-    using suzerain::underling::transposed::long_n2;
-    using suzerain::underling::transposed::long_n0;
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
 
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 0, 0);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 0, long_n2);
