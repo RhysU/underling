@@ -1,4 +1,4 @@
-/*! \mainpage The ESIO Library
+/*! \mainpage the underling library
 
 <!-- FIXME Build information disabled   -->
 <!-- <b>Version \version</b>            -->
@@ -8,15 +8,15 @@
 
 \section overview Overview
 
-The ExaScale IO (ESIO) library provides simple, high throughput
-input and output of structured data sets using parallel <a
-href="http://www.hdfgroup.org/HDF5/">HDF5</a>.  ESIO is designed to
-support reading and writing turbulence simulation restart files but it
-may be useful in other contexts.  The library is written in C99 and may
-be used by C89+ or C++ applications.  A Fortran API built atop the F2003
-standard ISO_C_BINDING is also available.
+The underling library provides simple, scalable means to manipulate parallel,
+three dimensional pencil decompositions using <a href="http://www.fftw.org/">
+FFTW</a>.  Pencil decompositions are a natural way to distribute O(n^3) data
+across O(n^2) processors and are well-suited for memory-intensive, structured
+spectral turbulence simulations.  The library is written in C99 and may be used
+by C89+ or C++ applications.
 
-The ESIO library provides:
+<!-- TODO Update
+The underling library provides:
 <ul>
   <li>Distributed IO of 1D lines, 2D planes, and 3D fields of data</li>
   <li>Support for scalar-, complex-, and vector-valued data</li>
@@ -26,6 +26,7 @@ The ESIO library provides:
   <li>Support to simplify writing restart file sequences</li>
   <li>Storage within the widely-used HDF5 file format</li>
 </ul>
+-->
 
 The library's manual is divided into the following subsections:
 
@@ -33,15 +34,16 @@ The library's manual is divided into the following subsections:
   <li> \subpage installation </li>
   <li> \subpage linkage</li>
   <li> \subpage concepts</li>
-  <li> \ref esio.h "C/C++ API"</li>
+  <li> \ref underling.h "C" and \ref underling.hpp "C++" API
+       for parallel, 3D pencil decompositions</li>
+  <li> \ref underling_fft.h "C" and \ref underling_fft.hpp "C++" API
+       for Fast Fourier Transforms atop pencil decompositions</li>
   <li> \ref error.h "C/C++ error handling API"</li>
-  <li> \ref esio.f90 "Fortran API"</li>
-  <li> \subpage restarts</li>
   <li> \subpage benchmark</li>
-  <li> <a href="http://buildbot.ices.utexas.edu/docs/buildbot/esio/build/docs/html/lcov/">Buildbot test coverage</a> </li>
+  <li> <a href="http://buildbot.ices.utexas.edu/docs/buildbot/underling/build/docs/html/lcov/">Buildbot test coverage</a> </li>
 </ul>
 
-Thank you for your interest in ESIO.
+Thank you for your interest in underling.
 
 \section bugs Reporting Bugs
 
@@ -49,7 +51,7 @@ Bugs in the code and errors or omissions in the documentation can be
 reported to rhys@ices.utexas.edu.  Requests and contributions are
 welcome at the same e-mail address.  All bug reports should include:
 <ul>
-  <li>the version number of the ESIO library,</li>
+  <li>the version number of the underling library,</li>
   <li>the hardware and operating system,</li>
   <li>the local compiler version number,</li>
   <li>a description of the bug behavior, and ideally, </li>
