@@ -6,6 +6,7 @@ includedir=@includedir@
 # MPI installation used to build @PACKAGE_NAME@
 # Retrieve these using `pkg-config --variable=name @PACKAGE_NAME@-fftw`
 mpicc=@MPICC_LOCATION@
+mpicxx=@MPICXX_LOCATION@
 
 Name: @PACKAGE_NAME@-fftw
 Description: @PACKAGE_DESCRIPTION@

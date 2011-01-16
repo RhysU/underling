@@ -30,42 +30,37 @@ AC_PATH_PROG([PERL],[perl],[no])
 AM_CONDITIONAL([HAVE_PERL],[test x$PERL != xno])
 AC_CACHE_SAVE
 
-dnl ------------------------------------------------
-dnl Manipulate C settings and find MPI/FFTW
-dnl ------------------------------------------------
+dnl ------------------------------------------------------
+dnl Check for MPI-ready C/C++ compiler toolchain
+dnl ------------------------------------------------------
 AX_CHECK_ENABLE_DEBUG
+AC_LANG_PUSH([C])
 AC_PROG_CC
 gl_EARLY
 gl_INIT
-AC_LANG_PUSH([C])
+AX_PROG_CC_C99_CFLAGS(,AC_MSG_ERROR([Compiler cannot support ISO C99]))
+AX_CFLAGS_WARN_ALL
+AX_COMPILER_VENDOR()
+AX_VISIBILITY([hidden])
 if test "x$ax_enable_debug" != "xno"; then
     AX_TRACEBACK()
 fi
-AX_PATH_GRVY_NEW([0.27],[no])
-AX_CFLAGS_WARN_ALL
-AX_PROG_CC_C99_CFLAGS(,AC_MSG_ERROR([Compiler cannot support ISO C99]))
 ACX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for C, e.g. mpicc.))
 MPICC_LOCATION=$(eval command -v $MPICC)
 AC_SUBST([MPICC_LOCATION])
-AX_MPIP()
-AX_FFTW3()
-if test "x$ax_fftw3_found_mpi" != "xyes"; then
-    AC_MSG_ERROR([FFTW3 installation with MPI support not detected.])
-fi
-AX_VISIBILITY([hidden])
-AX_COMPILER_VENDOR()
-AX_WARNINGS_SANITIZE()
 AC_LANG_POP([C])
 AC_CACHE_SAVE
-
-dnl ------------------------------------------------
-dnl Manipulate C++ settings and find MPI
-dnl ------------------------------------------------
 AC_LANG_PUSH([C++])
+AC_PROG_CXX
+AX_COMPILER_VENDOR()
+if test "x$ax_enable_debug" != "xno"; then
+    AX_TRACEBACK()
+fi
 ACX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for C++, e.g. mpicxx.))
-BOOST_REQUIRE([1.39])
-BOOST_TEST
+MPICXX_LOCATION=$(eval command -v $MPICXX)
+AC_SUBST([MPICXX_LOCATION])
 AC_LANG_POP([C++])
+AX_WARNINGS_SANITIZE()
 AC_CACHE_SAVE
 
 dnl ------------------------------------------------
@@ -75,6 +70,24 @@ dnl ------------------------------------------------
 LT_INIT([disable_static])
 LT_PREREQ([2.2.6])
 AC_SUBST(LIBTOOL_DEPS)
+AC_CACHE_SAVE
+
+dnl ------------------------------------------------
+dnl Check for non-MPI dependencies for C/C++
+dnl ------------------------------------------------
+AC_LANG_PUSH([C])
+AX_PATH_GRVY_NEW([0.27],[no])
+AX_MPIP()
+AX_FFTW3()
+if test "x$ax_fftw3_found_mpi" != "xyes"; then
+    AC_MSG_ERROR([FFTW3 installation with MPI support not detected.])
+fi
+AC_LANG_POP([C])
+AC_CACHE_SAVE
+AC_LANG_PUSH([C++])
+BOOST_REQUIRE([1.39])
+BOOST_TEST
+AC_LANG_POP([C++])
 AC_CACHE_SAVE
 
 dnl ------------------------------------------------
