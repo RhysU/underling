@@ -10,6 +10,7 @@ SUBDIRS = gnulib underling examples apps tests doxygen
 DIST_SUBDIRS = gnulib underling examples tests apps doxygen
 EXTRA_DIST   = # bootstrap not to be distributed in tarballs
 EXTRA_DIST  += $(DX_CONFIG)
+EXTRA_DIST  += tensor7.patch.sh
 EXTRA_DIST  += build-aux/sfmakedepend.pl
 EXTRA_DIST  += build-aux/update_license.pl
 EXTRA_DIST  += m4/gnulib-cache.m4
