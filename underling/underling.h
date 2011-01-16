@@ -47,7 +47,9 @@ extern "C" {
  */
 typedef double underling_real;
 
-/** A type encapsulating a reusable domain-to-processor mapping. */
+/**
+ * A type encapsulating a reusable domain-to-processor mapping.
+ **/
 typedef struct underling_grid_s *underling_grid;
 
 /**
@@ -132,8 +134,6 @@ extern const underling_extents UNDERLING_EXTENTS_INVALID;
  * @return Returns an integer less than, equal to, or greater than zero if
  *         <tt>*e1</tt> is found, respectively, to be less than, to match,
  *         or be greater than <tt>*e2</tt>.
- *
- * @memberof underling_extents
  */
 int
 underling_extents_cmp(const underling_extents * const e1,
@@ -244,8 +244,6 @@ underling_extents_cmp(const underling_extents * const e1,
  *         underling_error is invoked and NULL is returned.
  *
  * @see The method underling_grid_destroy for how to destroy an instance.
- *
- * @memberof underling_grid
  */
 underling_grid
 underling_grid_create(
@@ -265,8 +263,6 @@ underling_grid_create(
  *         On failure, calls underling_error and returns null.
  * @see The method underling_grid_create for how and when data
  *      is split across the \c pA processor grid direction.
- *
- * @memberof underling_grid
  */
 int
 underling_grid_pA_size(
@@ -281,8 +277,6 @@ underling_grid_pA_size(
  *         On failure, calls underling_error and returns null.
  * @see The method underling_grid_create for how and when data
  *      is split across the \c pB processor grid direction.
- *
- * @memberof underling_grid
  */
 int
 underling_grid_pB_size(
@@ -292,8 +286,6 @@ underling_grid_pB_size(
  * Destroy all resources associated with the given grid.
  *
  * @param grid Grid to be destroyed.
- *
- * @memberof underling_grid
  */
 void
 underling_grid_destroy(
@@ -317,8 +309,6 @@ underling_grid_destroy(
  * @see UNDERLING_TRANSPOSED_LONG_N2 and/or UNDERLING_TRANSPOSED_LONG_N0
  *      for information on how their usage effects storage ordering.
  * @see The method underling_problem_destroy for how to destroy an instance.
- *
- * @memberof underling_problem
  */
 underling_problem
 underling_problem_create(
@@ -330,8 +320,6 @@ underling_problem_create(
  * Destroy all resources associated with the given problem.
  *
  * @param problem Problem to be destroyed.
- *
- * @memberof underling_problem
  */
 void
 underling_problem_destroy(
@@ -351,8 +339,6 @@ underling_problem_destroy(
  *
  * @see The method underling_local for a way to obtain only a subset of
  *      this information, or for a more Fortran-ready interface.
- *
- * @memberof underling_problem
  */
 underling_extents
 underling_local_extents(
@@ -385,8 +371,6 @@ underling_local_extents(
  *
  * @see The method underling_local_extents for a more C-friendly and
  *      const-correct capable way to obtain all of this information.
- *
- * @memberof underling_problem
  */
 size_t
 underling_local(
@@ -406,8 +390,6 @@ underling_local(
  *
  * @return On success, the amount of storage required in units of
  *         underling_real.  On failure, calls underling_error and returns zero.
- *
- * @memberof underling_problem
  */
 size_t
 underling_local_memory(
@@ -422,8 +404,6 @@ underling_local_memory(
  *
  * @return On success, the amount of storage required in units of
  *         underling_real.  On failure, calls underling_error and returns zero.
- *
- * @memberof underling_problem
  */
 size_t
 underling_local_memory_optimum(
@@ -439,9 +419,6 @@ underling_local_memory_optimum(
  * @return On success, the maximal memory per-processor required to
  *         handle the problem.  On failure, calls underling_error
  *         and returns zero.
- *
- * @memberof underling_grid
- * @memberof underling_problem
  */
 size_t
 underling_local_memory_maximum(
@@ -458,9 +435,6 @@ underling_local_memory_maximum(
  * @return On success, the minimal memory per-processor required to
  *         handle the problem.  On failure, calls underling_error
  *         and returns zero.
- *
- * @memberof underling_grid
- * @memberof underling_problem
  */
 size_t
 underling_local_memory_minimum(
@@ -477,9 +451,6 @@ underling_local_memory_minimum(
  * @return On success, the global memory across all processors
  *         required to handle the problem.  On failure, calls
  *         underling_error and returns zero.
- *
- * @memberof underling_grid
- * @memberof underling_problem
  */
 size_t
 underling_global_memory(
@@ -496,9 +467,6 @@ underling_global_memory(
  *
  * @return On success, the minimal global memory required to handle
  *         the problem.  On failure, calls underling_error and returns zero.
- *
- * @memberof underling_grid
- * @memberof underling_problem
  */
 size_t
 underling_global_memory_optimum(
@@ -549,8 +517,6 @@ underling_global_memory_optimum(
  *         On failure, calls underling_error and returns NULL.
  *
  * @see The method underling_plan_destroy for how to destroy an instance.
- *
- * @memberof underling_plan
  */
 underling_plan
 underling_plan_create(
@@ -563,8 +529,6 @@ underling_plan_create(
  * Destroy all resources associated with the given plan.
  *
  * @param plan Plan to be destroyed.
- *
- * @memberof underling_plan
  */
 void
 underling_plan_destroy(
@@ -583,8 +547,6 @@ underling_plan_destroy(
  *      associated storage orders.
  * @see The methods underling_local_extents or underling_local for how to
  *      obtain local storage details in either the input or output layout.
- *
- * @memberof underling_plan
  */
 int
 underling_execute_long_n2_to_long_n1(
@@ -603,8 +565,6 @@ underling_execute_long_n2_to_long_n1(
  *      associated storage orders.
  * @see The methods underling_local_extents or underling_local for how to
  *      obtain local storage details in either the input or output layout.
- *
- * @memberof underling_plan
  */
 int
 underling_execute_long_n1_to_long_n0(
@@ -623,8 +583,6 @@ underling_execute_long_n1_to_long_n0(
  *      associated storage orders.
  * @see The methods underling_local_extents or underling_local for how to
  *      obtain local storage details in either the input or output layout.
- *
- * @memberof underling_plan
  */
 int
 underling_execute_long_n0_to_long_n1(
@@ -643,8 +601,6 @@ underling_execute_long_n0_to_long_n1(
  *      associated storage orders.
  * @see The methods underling_local_extents or underling_local for how to
  *      obtain local storage details in either the input or output layout.
- *
- * @memberof underling_plan
  */
 int
 underling_execute_long_n1_to_long_n2(
@@ -656,8 +612,6 @@ underling_execute_long_n1_to_long_n2(
  * @param grid Grid to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
- *
- * @memberof underling_grid
  */
 void
 underling_fprint_grid(
@@ -670,8 +624,6 @@ underling_fprint_grid(
  * @param problem Problem to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
- *
- * @memberof underling_problem
  */
 void
 underling_fprint_problem(
@@ -684,8 +636,6 @@ underling_fprint_problem(
  * @param extents Extents to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
- *
- * @memberof underling_extents
  */
 void
 underling_fprint_extents(
@@ -698,8 +648,6 @@ underling_fprint_extents(
  * @param plan Plan to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
- *
- * @memberof underling_plan
  */
 void
 underling_fprint_plan(

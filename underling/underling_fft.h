@@ -100,8 +100,6 @@ extern const underling_fft_extents UNDERLING_FFT_EXTENTS_INVALID;
  * @return Returns an integer less than, equal to, or greater than zero if
  *         <tt>*e1</tt> is found, respectively, to be less than, to match,
  *         or be greater than <tt>*e2</tt>.
- *
- * @memberof underling_fft_extents
  */
 int
 underling_fft_extents_cmp(const underling_fft_extents * const e1,
@@ -136,8 +134,6 @@ typedef struct underling_fft_plan_s *underling_fft_plan;
  *      the corresponding inverse complex-to-complex backward FFT.  It is
  *      <em>incorrect</em> to use underling_fft_create_c2c_backward for
  *      that purpose.
- *
- * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_c2c_forward(
@@ -170,8 +166,6 @@ underling_fft_plan_create_c2c_forward(
  *      the corresponding inverse complex-to-complex forward FFT.  It is
  *      <em>incorrect</em> to use underling_fft_create_c2c_forward for
  *      that purpose.
- *
- * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_c2c_backward(
@@ -204,8 +198,6 @@ underling_fft_plan_create_c2c_backward(
  *      the corresponding inverse complex-to-real backward FFT.  It is
  *      <em>incorrect</em> to use underling_fft_create_c2r_backward for
  *      that purpose.
- *
- * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_r2c_forward(
@@ -238,8 +230,6 @@ underling_fft_plan_create_r2c_forward(
  *      the corresponding inverse real-to-complex forward FFT.  It is
  *      <em>incorrect</em> to use underling_fft_create_r2c_forward for
  *      that purpose.
- *
- * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_c2r_backward(
@@ -268,8 +258,6 @@ underling_fft_plan_create_c2r_backward(
  *         plan_to_invert up to normalization.  On failure, calls
  *         underling_error and returns NULL.
  * @see The method underling_fft_plan_destroy for how to destroy an instance.
- *
- * @memberof underling_fft_plan
  */
 underling_fft_plan
 underling_fft_plan_create_inverse(
@@ -288,8 +276,6 @@ underling_fft_plan_create_inverse(
  *         calls underling_error and returns UNDERLING_EXTENTS_INVALID.
  * @see The method underling_fft_local_input for a way to obtain only a subset
  *      of this information, or for a more Fortran-ready interface.
- *
- * @memberof underling_fft_plan
  */
 underling_fft_extents
 underling_fft_local_extents_input(
@@ -306,8 +292,6 @@ underling_fft_local_extents_input(
  *         calls underling_error and returns UNDERLING_EXTENTS_INVALID.
  * @see The method underling_fft_local_output for a way to obtain only a subset
  *      of this information, or for a more Fortran-ready interface.
- *
- * @memberof underling_fft_plan
  */
 underling_fft_extents
 underling_fft_local_extents_output(
@@ -335,8 +319,6 @@ underling_fft_local_extents_output(
  *
  * @see The method underling_fft_local_extents_input for a more C-friendly and
  *      const-correct capable way to obtain all of this information.
- *
- * @memberof underling_fft_plan
  */
 int
 underling_fft_local_input(
@@ -368,8 +350,6 @@ underling_fft_local_input(
  *
  * @see The method underling_fft_local_extents_output for a more C-friendly and
  *      const-correct capable way to obtain all of this information.
- *
- * @memberof underling_fft_plan
  */
 int
 underling_fft_local_output(
@@ -386,8 +366,6 @@ underling_fft_local_output(
  * @param plan Plan to be executed.
  *
  * @return UNDERLING_SUCCESS (zero) on success and non-zero on failure.
- *
- * @memberof underling_fft_plan
  */
 int
 underling_fft_plan_execute(
@@ -396,8 +374,6 @@ underling_fft_plan_execute(
  * Destroy all resources associated with the given plan.
  *
  * @param plan Plan to be destroyed.
- *
- * @memberof underling_fft_plan
  */
 void
 underling_fft_plan_destroy(
@@ -409,8 +385,6 @@ underling_fft_plan_destroy(
  * @param extents Extents to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
- *
- * @memberof underling_fft_extents
  */
 void
 underling_fft_fprint_extents(
@@ -423,8 +397,6 @@ underling_fft_fprint_extents(
  * @param plan Plan to be dumped.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
- *
- * @memberof underling_fft_plan
  */
 void
 underling_fft_fprint_plan(
