@@ -1,36 +1,32 @@
-/*--------------------------------------------------------------------------
- *--------------------------------------------------------------------------
- *
- * Copyright (C) 2010 The PECOS Development Team
- *
- * Please see http://pecos.ices.utexas.edu for more information.
- *
- * This file is part of Suzerain.
- *
- * Suzerain is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Suzerain is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Suzerain.  If not, see <http://www.gnu.org/licenses/>.
- *
- *--------------------------------------------------------------------------
- *
- * underling_fft.h: Convenience wrappers around FFTW-like planning
- *
- * $Id$
- *--------------------------------------------------------------------------
- *-------------------------------------------------------------------------- */
-#ifndef __SUZERAIN_UNDERLING_FFT_H
-#define __SUZERAIN_UNDERLING_FFT_H
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
+// http://pecos.ices.utexas.edu/
+//
+// Copyright (C) 2010 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
+//-----------------------------------------------------------------------el-
+// $Id$
 
-#include <suzerain/underling.h>
+#ifndef __UNDERLING_FFT_H
+#define __UNDERLING_FFT_H
+
+#include <underling/underling.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -132,7 +128,7 @@ typedef struct underling_fft_plan_s *underling_fft_plan;
  *                         than FFTW_ESTIMATE.
  *
  * @return On success, return a valid \c underling_fft_plan.  On failure, calls
- *         suzerain_error and returns NULL.
+ *         underling_error and returns NULL.
  * @see The method underling_fft_plan_destroy for how to destroy an instance.
  * @see The method underling_fft_plan_create_inverse for how to create
  *      the corresponding inverse complex-to-complex backward FFT.  It is
@@ -164,7 +160,7 @@ underling_fft_plan_create_c2c_forward(
  *                         than FFTW_ESTIMATE.
  *
  * @return On success, return a valid \c underling_fft_plan.  On failure, calls
- *         suzerain_error and returns NULL.
+ *         underling_error and returns NULL.
  * @see The method underling_fft_plan_destroy for how to destroy an instance.
  * @see The method underling_fft_plan_create_inverse for how to create
  *      the corresponding inverse complex-to-complex forward FFT.  It is
@@ -196,7 +192,7 @@ underling_fft_plan_create_c2c_backward(
  *                         than FFTW_ESTIMATE.
  *
  * @return On success, return a valid \c underling_fft_plan.  On failure, calls
- *         suzerain_error and returns NULL.
+ *         underling_error and returns NULL.
  * @see The method underling_fft_plan_destroy for how to destroy an instance.
  * @see The method underling_fft_plan_create_inverse for how to create
  *      the corresponding inverse complex-to-real backward FFT.  It is
@@ -228,7 +224,7 @@ underling_fft_plan_create_r2c_forward(
  *                         than FFTW_ESTIMATE.
  *
  * @return On success, return a valid \c underling_fft_plan.  On failure, calls
- *         suzerain_error and returns NULL.
+ *         underling_error and returns NULL.
  * @see The method underling_fft_plan_destroy for how to destroy an instance.
  * @see The method underling_fft_plan_create_inverse for how to create
  *      the corresponding inverse real-to-complex forward FFT.  It is
@@ -260,7 +256,7 @@ underling_fft_plan_create_c2r_backward(
  *
  * @return On success, return a valid \c underling_fft_plan which inverts
  *         plan_to_invert up to normalization.  On failure, calls
- *         suzerain_error and returns NULL.
+ *         underling_error and returns NULL.
  * @see The method underling_fft_plan_destroy for how to destroy an instance.
  */
 underling_fft_plan
@@ -277,7 +273,7 @@ underling_fft_plan_create_inverse(
  * @param plan Plan for which to retrieve information.
  *
  * @return a valid underling_fft_extents structure on success.  On failure,
- *         calls suzerain_error and returns UNDERLING_EXTENTS_INVALID.
+ *         calls underling_error and returns UNDERLING_EXTENTS_INVALID.
  * @see The method underling_fft_local_input for a way to obtain only a subset
  *      of this information, or for a more Fortran-ready interface.
  */
@@ -293,7 +289,7 @@ underling_fft_local_extents_input(
  * @param plan Plan for which to retrieve information.
  *
  * @return a valid underling_fft_extents structure on success.  On failure,
- *         calls suzerain_error and returns UNDERLING_EXTENTS_INVALID.
+ *         calls underling_error and returns UNDERLING_EXTENTS_INVALID.
  * @see The method underling_fft_local_output for a way to obtain only a subset
  *      of this information, or for a more Fortran-ready interface.
  */
@@ -411,4 +407,4 @@ underling_fft_fprint_plan(
 } /* extern "C" */
 #endif
 
-#endif // __SUZERAIN_UNDERLING_FFT_H
+#endif // __UNDERLING_FFT_H

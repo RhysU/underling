@@ -31,6 +31,9 @@ libunderling_la_LDFLAGS  = -release $(PACKAGE_VERSION)
 libunderling_la_LDFLAGS += $(LTLIBINTL) # gnulib requirement
 libunderling_la_LIBADD   = ../gnulib/libgnu.la
 
+# Internal headers
+noinst_HEADERS += common.h
+
 # Config-time details saved using AX_PREFIX_CONFIG_H
 BUILT_SOURCES += underling-config.h
 

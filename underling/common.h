@@ -22,29 +22,30 @@
 //
 //-----------------------------------------------------------------------el-
 // $Id$
+#ifndef __UNDERLING_COMMON_H
+#define __UNDERLING_COMMON_H
 
-#ifndef __UNDERLING_VERSION_H__
-#define __UNDERLING_VERSION_H__
-
-/** @file
- * Provides underling version information.
- */
-
-/** Provides underling's major version number */
-#define UNDERLING_MAJOR_VERSION @AX_MAJOR_VERSION@
-
-/** Provides underling's minor version number */
-#define UNDERLING_MINOR_VERSION @AX_MINOR_VERSION@
-
-/** Provides underling's point version number */
-#define UNDERLING_POINT_VERSION @AX_POINT_VERSION@
+#if __GNUC__ >= 3
+/**
+Provides hint to the compiler to optimize for the expression being false.
+@param expr boolean expression.
+@returns value of expression.
+*/
+#define UNDERLING_UNLIKELY(expr) __builtin_expect(expr, 0)
+#else
+/**
+Provides hint to the compiler to optimize for the expression being false.
+@param expr boolean expression.
+@returns value of expression.
+**/
+#define UNDERLING_UNLIKELY(expr) expr
+#endif
 
 /**
- * Provides a composite major.minor.point version number
- * suitable for preprocessor integer comparison.
+ * Explicitly marks a variable as unused to avoid compiler warnings.
+ *
+ * @param variable Variable to be marked.
  */
-#define UNDERLING_VERSION (  UNDERLING_MAJOR_VERSION * 100000  \
-                           + UNDERLING_MINOR_VERSION *    100  \
-                           + UNDERLING_POINT_VERSION *      1)
+#define UNDERLING_UNUSED(variable) do {(void)(variable);} while (0)
 
-#endif /* __UNDERLING_VERSION_H__ */
+#endif // __UNDERLING_COMMON_H

@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// underling 0.1.2: ExaScale IO library for turbulence simulation restart files
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
@@ -42,8 +42,9 @@
 #endif
 
 // Now we use the generic helper definitions above to define UNDERLING_API and
-// UNDERLING_LOCAL.  UNDERLING_API is used for the public API symbols.  It either imports
-// or exports the relevant symbol.  UNDERLING_LOCAL is used for non-API symbols.
+// UNDERLING_LOCAL.  UNDERLING_API is used for the public API symbols.  It
+// either imports or exports the relevant symbol.  UNDERLING_LOCAL is used for
+// non-API symbols.
 
 #ifdef UNDERLING_SHARED_EXPORTS // defined if building UNDERLING versus just using it
 #  define UNDERLING_API UNDERLING_HELPER_SHARED_EXPORT

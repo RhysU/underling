@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// underling 0.1.2: ExaScale IO library for turbulence simulation restart files
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
@@ -35,9 +35,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include "error.h"
 #include <stdlib.h>
 #include <mpi.h>
+#include <underling/error.h>
 
 underling_error_handler_t * underling_error_handler = NULL;
 

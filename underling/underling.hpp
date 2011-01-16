@@ -1,46 +1,39 @@
-/*--------------------------------------------------------------------------
- *--------------------------------------------------------------------------
- *
- * Copyright (C) 2010 The PECOS Development Team
- *
- * Please see http://pecos.ices.utexas.edu for more information.
- *
- * This file is part of Suzerain.
- *
- * Suzerain is free software: you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free
- * Software Foundation, either version 3 of the License, or (at your option)
- * any later version.
- *
- * Suzerain is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License along with
- * Suzerain.  If not, see <http://www.gnu.org/licenses/>.
- *
- *--------------------------------------------------------------------------
- *
- * underling.hpp: C++ wrappers for the C-based underling API
- *
- * $Id$
- *--------------------------------------------------------------------------
- *-------------------------------------------------------------------------- */
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
+// http://pecos.ices.utexas.edu/
+//
+// Copyright (C) 2010 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
+//-----------------------------------------------------------------------el-
+// $Id$
 
-#ifndef __SUZERAIN_UNDERLING_HPP
-#define __SUZERAIN_UNDERLING_HPP
+#ifndef __UNDERLING_HPP
+#define __UNDERLING_HPP
 
 #include <ostream>
-#include <suzerain/underling.h>
+#include <underling/underling.h>
 
 /** @file
  * Provides C++ wrappers for the C-based API in underling.h.  In
  * particular, provides RAII semantics for underling's opaque types and some
  * std::basic_ostream helpers.
  */
-
-namespace suzerain {
 
 /** Provides C++ wrappers for underling's C-based API. */
 namespace underling {
@@ -267,10 +260,8 @@ private:
 
 } // namespace underling
 
-} // namespace suzerain
-
 /**
- * Outputs an underling_extents or suzerain::underling::extents instance
+ * Outputs an underling_extents or underling::extents instance
  * as a human-readable string on any std::basic_ostream.
  *
  * @param os On which to output \c e.
@@ -281,7 +272,7 @@ private:
 template< typename charT, typename traits >
 std::basic_ostream<charT,traits>& operator<<(
         std::basic_ostream<charT,traits> &os,
-        const suzerain::underling::extents &e)
+        const underling::extents &e)
 {
     return os << '['
               << e.start[0] << ',' << (e.start[0] + e.size[0])
@@ -295,9 +286,9 @@ std::basic_ostream<charT,traits>& operator<<(
 }
 
 /** @see underling_extents_cmp */
-bool operator==(const suzerain::underling::extents &e1,
-                const suzerain::underling::extents &e2) {
+bool operator==(const underling::extents &e1,
+                const underling::extents &e2) {
     return !underling_extents_cmp(&e1, &e2);
 }
 
-#endif // __SUZERAIN_UNDERLING_HPP
+#endif // __UNDERLING_HPP

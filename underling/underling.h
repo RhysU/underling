@@ -1,42 +1,35 @@
-/*--------------------------------------------------------------------------
- *--------------------------------------------------------------------------
- *
- * Copyright (C) 2010 The PECOS Development Team
- *
- * Please see http://pecos.ices.utexas.edu for more information.
- *
- * This file is part of Suzerain.
- *
- * Suzerain is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Suzerain is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Suzerain.  If not, see <http://www.gnu.org/licenses/>.
- *
- *--------------------------------------------------------------------------
- *
- * underling.h: A parallel, three dimensional FFT library atop MPI
- *
- * $Id$
- *--------------------------------------------------------------------------
- *-------------------------------------------------------------------------- */
-#ifndef __SUZERAIN_UNDERLING_H
-#define __SUZERAIN_UNDERLING_H
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
+// http://pecos.ices.utexas.edu/
+//
+// Copyright (C) 2010 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
+//-----------------------------------------------------------------------el-
+// $Id$
+#ifndef __UNDERLING_H
+#define __UNDERLING_H
 
-#include <suzerain/mpi.h>
+#include <mpi.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// TODO Group Doxygen documentation by class-like concepts
 
 /** @file
  * Provides a parallel, pencil-based 3D Cartesian domain decomposition atop
@@ -139,10 +132,12 @@ extern const underling_extents UNDERLING_EXTENTS_INVALID;
  * @return Returns an integer less than, equal to, or greater than zero if
  *         <tt>*e1</tt> is found, respectively, to be less than, to match,
  *         or be greater than <tt>*e2</tt>.
+ *
+ * @memberof underling_extents
  */
 int
 underling_extents_cmp(const underling_extents * const e1,
-                      const underling_extents * const e2);
+                      const underling_extents * const e2) UNDERLING_API;
 
 /**
  * Flag indicating a transform from long in \c n2 to long in \c n1.
@@ -246,9 +241,11 @@ underling_extents_cmp(const underling_extents * const e1,
  *           zero causes automatic size selection.
  *
  * @return A valid, non-NULL underling_grid instance on success.  On failure,
- *         suzerain_error is invoked and NULL is returned.
+ *         underling_error is invoked and NULL is returned.
  *
  * @see The method underling_grid_destroy for how to destroy an instance.
+ *
+ * @memberof underling_grid
  */
 underling_grid
 underling_grid_create(
@@ -257,7 +254,7 @@ underling_grid_create(
         int n1,
         int n2,
         int pA,
-        int pB);
+        int pB) UNDERLING_API;
 
 /**
  * Obtain the size of the processor grid in the \c pA direction.
@@ -265,13 +262,15 @@ underling_grid_create(
  * @param grid Grid for which to retrieve information.
  *
  * @return On success, the runtime size of the \c pA direction.
- *         On failure, calls suzerain_error and returns null.
+ *         On failure, calls underling_error and returns null.
  * @see The method underling_grid_create for how and when data
  *      is split across the \c pA processor grid direction.
+ *
+ * @memberof underling_grid
  */
 int
 underling_grid_pA_size(
-        const underling_grid grid);
+        const underling_grid grid) UNDERLING_API;
 
 /**
  * Obtain the size of the processor grid in the \c pB direction.
@@ -279,22 +278,26 @@ underling_grid_pA_size(
  * @param grid Grid for which to retrieve information.
  *
  * @return On success, the runtime size of the \c pB direction.
- *         On failure, calls suzerain_error and returns null.
+ *         On failure, calls underling_error and returns null.
  * @see The method underling_grid_create for how and when data
  *      is split across the \c pB processor grid direction.
+ *
+ * @memberof underling_grid
  */
 int
 underling_grid_pB_size(
-        const underling_grid grid);
+        const underling_grid grid) UNDERLING_API;
 
 /**
  * Destroy all resources associated with the given grid.
  *
  * @param grid Grid to be destroyed.
+ *
+ * @memberof underling_grid
  */
 void
 underling_grid_destroy(
-        underling_grid grid);
+        underling_grid grid) UNDERLING_API;
 
 /**
  * Collectively create an instance encapsulating the parallel decomposition
@@ -309,26 +312,30 @@ underling_grid_destroy(
  *        UNDERLING_TRANSPOSED_LONG_N2 and UNDERLING_TRANSPOSED_LONG_N0.
  *
  * @return A valid, non-NULL underling_problem instance on success.  On failure,
- *         suzerain_error is invoked and NULL is returned.
+ *         underling_error is invoked and NULL is returned.
  *
  * @see UNDERLING_TRANSPOSED_LONG_N2 and/or UNDERLING_TRANSPOSED_LONG_N0
  *      for information on how their usage effects storage ordering.
  * @see The method underling_problem_destroy for how to destroy an instance.
+ *
+ * @memberof underling_problem
  */
 underling_problem
 underling_problem_create(
         underling_grid grid,
         int howmany,
-        unsigned transposed_flags);
+        unsigned transposed_flags) UNDERLING_API;
 
 /**
  * Destroy all resources associated with the given problem.
  *
  * @param problem Problem to be destroyed.
+ *
+ * @memberof underling_problem
  */
 void
 underling_problem_destroy(
-        underling_problem problem);
+        underling_problem problem) UNDERLING_API;
 
 /**
  * Obtain the processor-local sizes, storage details, and global starting
@@ -340,15 +347,17 @@ underling_problem_destroy(
  *        <tt>{0, 1, 2}</tt>.
  *
  * @return a valid underling_extents structure on success.  On failure,
- *         calls suzerain_error and returns UNDERLING_EXTENTS_INVALID.
+ *         calls underling_error and returns UNDERLING_EXTENTS_INVALID.
  *
  * @see The method underling_local for a way to obtain only a subset of
  *      this information, or for a more Fortran-ready interface.
+ *
+ * @memberof underling_problem
  */
 underling_extents
 underling_local_extents(
         const underling_problem problem,
-        int i);
+        int i) UNDERLING_API;
 
 /**
  * Obtain the processor-local sizes, storage details, and global starting
@@ -370,12 +379,14 @@ underling_local_extents(
  *                underling_extents.order on successful return.
  *
  * @return The value of underling_extents.extent on successful return.
- *         On error calls suzerain_error and returns 0.  Note that a
+ *         On error calls underling_error and returns 0.  Note that a
  *         0 return value may not indicate an error as the processor
  *         may have zero storage in some unbalanced decompositions.
  *
  * @see The method underling_local_extents for a more C-friendly and
  *      const-correct capable way to obtain all of this information.
+ *
+ * @memberof underling_problem
  */
 size_t
 underling_local(
@@ -384,7 +395,7 @@ underling_local(
         int *start,
         int *size,
         int *stride,
-        int *order);
+        int *order) UNDERLING_API;
 
 /**
  * Find the amount of local storage necessary to plan and execute a problem.
@@ -394,11 +405,13 @@ underling_local(
  * @param problem Problem for which to retrieve information.
  *
  * @return On success, the amount of storage required in units of
- *         underling_real.  On failure, calls suzerain_error and returns zero.
+ *         underling_real.  On failure, calls underling_error and returns zero.
+ *
+ * @memberof underling_problem
  */
 size_t
 underling_local_memory(
-        const underling_problem problem);
+        const underling_problem problem) UNDERLING_API;
 
 /**
  * Find the amount of local storage necessary to merely hold a problem in
@@ -408,11 +421,13 @@ underling_local_memory(
  * @param problem Problem for which to retrieve information.
  *
  * @return On success, the amount of storage required in units of
- *         underling_real.  On failure, calls suzerain_error and returns zero.
+ *         underling_real.  On failure, calls underling_error and returns zero.
+ *
+ * @memberof underling_problem
  */
 size_t
 underling_local_memory_optimum(
-        const underling_problem problem);
+        const underling_problem problem) UNDERLING_API;
 
 /**
  * Collectively find the maximum amount of per-processor memory required
@@ -422,13 +437,16 @@ underling_local_memory_optimum(
  * @param problem Problem for which to retrieve information.
  *
  * @return On success, the maximal memory per-processor required to
- *         handle the problem.  On failure, calls suzerain_error
+ *         handle the problem.  On failure, calls underling_error
  *         and returns zero.
+ *
+ * @memberof underling_grid
+ * @memberof underling_problem
  */
 size_t
 underling_local_memory_maximum(
         const underling_grid    grid,
-        const underling_problem problem);
+        const underling_problem problem) UNDERLING_API;
 
 /**
  * Collectively find the minimal amount of per-processor memory required
@@ -438,13 +456,16 @@ underling_local_memory_maximum(
  * @param problem Problem for which to retrieve information.
  *
  * @return On success, the minimal memory per-processor required to
- *         handle the problem.  On failure, calls suzerain_error
+ *         handle the problem.  On failure, calls underling_error
  *         and returns zero.
+ *
+ * @memberof underling_grid
+ * @memberof underling_problem
  */
 size_t
 underling_local_memory_minimum(
         const underling_grid    grid,
-        const underling_problem problem);
+        const underling_problem problem) UNDERLING_API;
 
 /**
  * Collectively find the global amount of memory required to
@@ -455,12 +476,15 @@ underling_local_memory_minimum(
  *
  * @return On success, the global memory across all processors
  *         required to handle the problem.  On failure, calls
- *         suzerain_error and returns zero.
+ *         underling_error and returns zero.
+ *
+ * @memberof underling_grid
+ * @memberof underling_problem
  */
 size_t
 underling_global_memory(
         const underling_grid    grid,
-        const underling_problem problem);
+        const underling_problem problem) UNDERLING_API;
 
 /**
  * Find the theoretical optimum (minimum) amount of memory required to
@@ -471,12 +495,15 @@ underling_global_memory(
  * @param problem Problem for which to retrieve information.
  *
  * @return On success, the minimal global memory required to handle
- *         the problem.  On failure, calls suzerain_error and returns zero.
+ *         the problem.  On failure, calls underling_error and returns zero.
+ *
+ * @memberof underling_grid
+ * @memberof underling_problem
  */
 size_t
 underling_global_memory_optimum(
         const underling_grid    grid,
-        const underling_problem problem);
+        const underling_problem problem) UNDERLING_API;
 
 /**
  * Collectively create an execution plan to solve the given decomposition
@@ -519,25 +546,29 @@ underling_global_memory_optimum(
  *                         is equivalent to specifying FFTW_MEASURE.
  *
  * @return On success, returns a valid underling_plan suitable for execution.
- *         On failure, calls suzerain_error and returns NULL.
+ *         On failure, calls underling_error and returns NULL.
  *
  * @see The method underling_plan_destroy for how to destroy an instance.
+ *
+ * @memberof underling_plan
  */
 underling_plan
 underling_plan_create(
         const underling_problem problem,
         underling_real * data,
         unsigned transform_flags,
-        unsigned fftw_rigor_flags);
+        unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Destroy all resources associated with the given plan.
  *
  * @param plan Plan to be destroyed.
+ *
+ * @memberof underling_plan
  */
 void
 underling_plan_destroy(
-        underling_plan plan);
+        underling_plan plan) UNDERLING_API;
 
 /**
  * Collectively transform the data provided at plan creation time from being
@@ -552,10 +583,12 @@ underling_plan_destroy(
  *      associated storage orders.
  * @see The methods underling_local_extents or underling_local for how to
  *      obtain local storage details in either the input or output layout.
+ *
+ * @memberof underling_plan
  */
 int
 underling_execute_long_n2_to_long_n1(
-        const underling_plan plan);
+        const underling_plan plan) UNDERLING_API;
 
 /**
  * Collectively transform the data provided at plan creation time from being
@@ -570,10 +603,12 @@ underling_execute_long_n2_to_long_n1(
  *      associated storage orders.
  * @see The methods underling_local_extents or underling_local for how to
  *      obtain local storage details in either the input or output layout.
+ *
+ * @memberof underling_plan
  */
 int
 underling_execute_long_n1_to_long_n0(
-        const underling_plan plan);
+        const underling_plan plan) UNDERLING_API;
 
 /**
  * Collectively transform the data provided at plan creation time from being
@@ -588,10 +623,12 @@ underling_execute_long_n1_to_long_n0(
  *      associated storage orders.
  * @see The methods underling_local_extents or underling_local for how to
  *      obtain local storage details in either the input or output layout.
+ *
+ * @memberof underling_plan
  */
 int
 underling_execute_long_n0_to_long_n1(
-        const underling_plan plan);
+        const underling_plan plan) UNDERLING_API;
 
 /**
  * Collectively transform the data provided at plan creation time from being
@@ -606,10 +643,12 @@ underling_execute_long_n0_to_long_n1(
  *      associated storage orders.
  * @see The methods underling_local_extents or underling_local for how to
  *      obtain local storage details in either the input or output layout.
+ *
+ * @memberof underling_plan
  */
 int
 underling_execute_long_n1_to_long_n2(
-        const underling_plan plan);
+        const underling_plan plan) UNDERLING_API;
 
 /**
  * Dump an instance's internals in a debugging-friendly format.
@@ -617,11 +656,13 @@ underling_execute_long_n1_to_long_n2(
  * @param grid Grid to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
+ *
+ * @memberof underling_grid
  */
 void
 underling_fprint_grid(
         const underling_grid grid,
-        FILE *output_file);
+        FILE *output_file) UNDERLING_API;
 
 /**
  * Dump an instance's internals in a debugging-friendly format.
@@ -629,11 +670,13 @@ underling_fprint_grid(
  * @param problem Problem to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
+ *
+ * @memberof underling_problem
  */
 void
 underling_fprint_problem(
         const underling_problem problem,
-        FILE *output_file);
+        FILE *output_file) UNDERLING_API;
 
 /**
  * Dump an instance's internals in a debugging-friendly format.
@@ -641,11 +684,13 @@ underling_fprint_problem(
  * @param extents Extents to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
+ *
+ * @memberof underling_extents
  */
 void
 underling_fprint_extents(
         const underling_extents *extents,
-        FILE *output_file);
+        FILE *output_file) UNDERLING_API;
 
 /**
  * Dump an instance's internals in a debugging-friendly format.
@@ -653,14 +698,16 @@ underling_fprint_extents(
  * @param plan Plan to dump.
  * @param output_file Desired output handle,
  *                    which may be \c stdout or \c stderr.
+ *
+ * @memberof underling_plan
  */
 void
 underling_fprint_plan(
         const underling_plan plan,
-        FILE *output_file);
+        FILE *output_file) UNDERLING_API;
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
-#endif // __SUZERAIN_UNDERLING_H
+#endif // __UNDERLING_H

@@ -1,41 +1,38 @@
-/*--------------------------------------------------------------------------
- *--------------------------------------------------------------------------
- *
- * Copyright (C) 2010 The PECOS Development Team
- *
- * Please see http://pecos.ices.utexas.edu for more information.
- *
- * This file is part of Suzerain.
- *
- * Suzerain is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Suzerain is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Suzerain.  If not, see <http://www.gnu.org/licenses/>.
- *
- *--------------------------------------------------------------------------
- *
- * underling_fft.c: Convenience wrappers around FFTW-like planning
- *
- * $Id$
- *--------------------------------------------------------------------------
- *-------------------------------------------------------------------------- */
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//
+// underling 0.0.1: underling library for parallel, 3D pencil decompositions
+// http://pecos.ices.utexas.edu/
+//
+// Copyright (C) 2010 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
+//-----------------------------------------------------------------------el-
+// $Id$
 
 #ifdef HAVE_CONFIG_H
-#include <suzerain/config.h>
+#include "config.h"
 #endif
-#include <suzerain/common.h>
-#pragma hdrstop
-#include <suzerain/error.h>
-#include <suzerain/underling_fft.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 #include <fftw3.h>
+#include <underling/error.h>
+#include <underling/underling_fft.h>
+#include "common.h"
 
 // ********************************************************************
 // INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL
@@ -181,8 +178,8 @@ underling_fftw_plan_nop( void )
                                             /*out*/NULL,
                                             /*kind*/NULL,
                                             /*flags*/0);
-    if (SUZERAIN_UNLIKELY(nop_plan == NULL)) {
-        SUZERAIN_ERROR_NULL("FFTW returned NULL NOP plan", SUZERAIN_ESANITY);
+    if (UNDERLING_UNLIKELY(nop_plan == NULL)) {
+        UNDERLING_ERROR_NULL("FFTW returned NULL NOP plan", UNDERLING_ESANITY);
     }
     return nop_plan;
 }
@@ -206,9 +203,9 @@ underling_fftw_plan_reorder_complex(
             0, NULL, howmany_rank, howmany_dims, data, data,
             NULL, FFTW_ESTIMATE);
 
-    if (SUZERAIN_UNLIKELY(retval == NULL)) {
-        SUZERAIN_ERROR_NULL("FFTW returned NULL reorder_complex plan",
-                SUZERAIN_ESANITY);
+    if (UNDERLING_UNLIKELY(retval == NULL)) {
+        UNDERLING_ERROR_NULL("FFTW returned NULL reorder_complex plan",
+                UNDERLING_ESANITY);
     }
 
     return retval;
@@ -264,22 +261,22 @@ create_underling_fft_extents_for_complex(
     memcpy(retval.order,  extents.order,  sizeof(extents.order));
 
     // Sanity check layout assumptions
-    if (SUZERAIN_UNLIKELY(retval.size[3] % 2)) {
-        SUZERAIN_ERROR_VAL(
+    if (UNDERLING_UNLIKELY(retval.size[3] % 2)) {
+        UNDERLING_ERROR_VAL(
                 "problem must have an even number of underling_real fields",
-                SUZERAIN_EINVAL,
+                UNDERLING_EINVAL,
                 UNDERLING_FFT_EXTENTS_INVALID);
     }
-    if (SUZERAIN_UNLIKELY(retval.order[0] != 3)) {
-        SUZERAIN_ERROR_VAL(
+    if (UNDERLING_UNLIKELY(retval.order[0] != 3)) {
+        UNDERLING_ERROR_VAL(
                 "transformed fields not interleaved: retval.order[0] != 3",
-                SUZERAIN_EINVAL,
+                UNDERLING_EINVAL,
                 UNDERLING_FFT_EXTENTS_INVALID);
     }
-    if (SUZERAIN_UNLIKELY(retval.start[long_ni] != 0)) {
-        SUZERAIN_ERROR_VAL(
+    if (UNDERLING_UNLIKELY(retval.start[long_ni] != 0)) {
+        UNDERLING_ERROR_VAL(
                 "field does not start at zero: retval.start[long_ni] != 0",
-                SUZERAIN_EINVAL,
+                UNDERLING_EINVAL,
                 UNDERLING_FFT_EXTENTS_INVALID);
     }
 
@@ -313,28 +310,28 @@ create_underling_fft_extents_for_real(
     memcpy(retval.order,  extents.order,  sizeof(extents.order));
 
     // Sanity check layout assumptions
-    if (SUZERAIN_UNLIKELY(retval.size[3] % 2)) {
-        SUZERAIN_ERROR_VAL(
+    if (UNDERLING_UNLIKELY(retval.size[3] % 2)) {
+        UNDERLING_ERROR_VAL(
                 "problem must have an even number of underling_real fields",
-                SUZERAIN_EINVAL,
+                UNDERLING_EINVAL,
                 UNDERLING_FFT_EXTENTS_INVALID);
     }
-    if (SUZERAIN_UNLIKELY(retval.order[0] != 3)) {
-        SUZERAIN_ERROR_VAL(
+    if (UNDERLING_UNLIKELY(retval.order[0] != 3)) {
+        UNDERLING_ERROR_VAL(
                 "transformed fields not interleaved: retval.order[0] != 3",
-                SUZERAIN_EINVAL,
+                UNDERLING_EINVAL,
                 UNDERLING_FFT_EXTENTS_INVALID);
     }
-    if (SUZERAIN_UNLIKELY(retval.start[long_ni] != 0)) {
-        SUZERAIN_ERROR_VAL(
+    if (UNDERLING_UNLIKELY(retval.start[long_ni] != 0)) {
+        UNDERLING_ERROR_VAL(
                 "field does not start at zero: retval.start[long_ni] != 0",
-                SUZERAIN_EINVAL,
+                UNDERLING_EINVAL,
                 UNDERLING_FFT_EXTENTS_INVALID);
     }
-    if (SUZERAIN_UNLIKELY(retval.start[long_ni] % 2)) {
-        SUZERAIN_ERROR_VAL(
+    if (UNDERLING_UNLIKELY(retval.start[long_ni] % 2)) {
+        UNDERLING_ERROR_VAL(
                 "field does not have even stride",
-                SUZERAIN_EINVAL,
+                UNDERLING_EINVAL,
                 UNDERLING_FFT_EXTENTS_INVALID);
     }
 
@@ -415,20 +412,20 @@ underling_fft_plan_create_c2c_internal(
         const underling_fft_extents output)
 {
     // Sanity check input arguments
-    if (SUZERAIN_UNLIKELY(long_ni < 0 || long_ni > 2)) {
-        SUZERAIN_ERROR_VAL("long_ni < 0 or long_ni > 2", SUZERAIN_EINVAL, 0);
+    if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
+        UNDERLING_ERROR_VAL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL, 0);
     }
-    if (SUZERAIN_UNLIKELY(data == NULL)) {
-        SUZERAIN_ERROR_NULL("data == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(data == NULL)) {
+        UNDERLING_ERROR_NULL("data == NULL", UNDERLING_EINVAL);
     }
-    if (SUZERAIN_UNLIKELY(   fftw_sign != FFTW_FORWARD
+    if (UNDERLING_UNLIKELY(   fftw_sign != FFTW_FORWARD
                           && fftw_sign != FFTW_BACKWARD)) {
-        SUZERAIN_ERROR_NULL(
+        UNDERLING_ERROR_NULL(
                 "fftw_sign not one of FFTW_{FORWARD,BACKWARD}",
-                SUZERAIN_EINVAL);
+                UNDERLING_EINVAL);
     }
-    if (SUZERAIN_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
-        SUZERAIN_ERROR_NULL("FFTW non-rigor bits disallowed", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
+        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
     }
 
     // Determine when if/when we reorder relative to the FFT itself
@@ -445,8 +442,8 @@ underling_fft_plan_create_c2c_internal(
         reorder_out = &output; // ...to make it long for the transform.
         transform   = &output; // Then transform it.
     } else {
-        SUZERAIN_ERROR_NULL(
-                "Neither {input,output}_is_long", SUZERAIN_ESANITY);
+        UNDERLING_ERROR_NULL(
+                "Neither {input,output}_is_long", UNDERLING_ESANITY);
     }
 
     // Cook the reordering plan
@@ -498,17 +495,17 @@ underling_fft_plan_create_c2c_internal(
                 sizeof(howmany_dims)/sizeof(howmany_dims[0]), howmany_dims,
                 ri, ii, ro, io, fftw_rigor_flags);
 
-        if (SUZERAIN_UNLIKELY(plan_fft == NULL)) {
-            SUZERAIN_ERROR_NULL("FFTW returned NULL FFT plan",
-                    SUZERAIN_ESANITY);
+        if (UNDERLING_UNLIKELY(plan_fft == NULL)) {
+            UNDERLING_ERROR_NULL("FFTW returned NULL FFT plan",
+                    UNDERLING_ESANITY);
         }
     }
 
     // Create and initialize the plan workspace
     underling_fft_plan f = calloc(1, sizeof(struct underling_fft_plan_s));
-    if (SUZERAIN_UNLIKELY(f == NULL)) {
-        SUZERAIN_ERROR_NULL("failed to allocate space for plan",
-                             SUZERAIN_ENOMEM);
+    if (UNDERLING_UNLIKELY(f == NULL)) {
+        UNDERLING_ERROR_NULL("failed to allocate space for plan",
+                             UNDERLING_ENOMEM);
     }
 
     // Copy the relevant parameters to the plan workspace...
@@ -527,8 +524,8 @@ underling_fft_plan_create_c2c_internal(
         f->plan_preorder  = plan_reorder;
         f->plan_postorder = underling_fftw_plan_nop();
     } else {
-        SUZERAIN_ERROR_NULL(
-                "Neither {input,output}_is_long", SUZERAIN_ESANITY);
+        UNDERLING_ERROR_NULL(
+                "Neither {input,output}_is_long", UNDERLING_ESANITY);
     }
 
     return f;
@@ -552,12 +549,12 @@ underling_fft_plan_create_c2r_backward(
         = create_underling_fft_extents_for_real(e, long_ni);
 
     // TODO Remove this restriction; Requires smartening up the reordering.
-    if (SUZERAIN_UNLIKELY(input.order[2] != long_ni)) {
-        SUZERAIN_ERROR_NULL(
+    if (UNDERLING_UNLIKELY(input.order[2] != long_ni)) {
+        UNDERLING_ERROR_NULL(
                 "Creation of c2r_backward plans in non-stride one directions"
                 " is unavailable.  Check the UNDERLING_TRANSPOSED_LONG_N{0,2}"
                 " flags provided when creating the underling_problem.",
-                SUZERAIN_ESANITY);
+                UNDERLING_ESANITY);
     }
 
     return underling_fft_plan_create_c2r_backward_internal(
@@ -574,14 +571,14 @@ underling_fft_plan_create_c2r_backward_internal(
         const underling_fft_extents output)
 {
     // Sanity check input arguments
-    if (SUZERAIN_UNLIKELY(long_ni < 0 || long_ni > 2)) {
-        SUZERAIN_ERROR_VAL("long_ni < 0 or long_ni > 2", SUZERAIN_EINVAL, 0);
+    if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
+        UNDERLING_ERROR_VAL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL, 0);
     }
-    if (SUZERAIN_UNLIKELY(data == NULL)) {
-        SUZERAIN_ERROR_NULL("data == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(data == NULL)) {
+        UNDERLING_ERROR_NULL("data == NULL", UNDERLING_EINVAL);
     }
-    if (SUZERAIN_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
-        SUZERAIN_ERROR_NULL("FFTW non-rigor bits disallowed", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
+        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
     }
 
     // Prepare the pre-ordering plan.
@@ -610,10 +607,10 @@ underling_fft_plan_create_c2r_backward_internal(
                                            howmany_rank, howmany_dims,
                                            data, data,
                                            /*kind*/NULL, fftw_rigor_flags);
-        if (SUZERAIN_UNLIKELY(plan_preorder == NULL)) {
-            SUZERAIN_ERROR_NULL(
+        if (UNDERLING_UNLIKELY(plan_preorder == NULL)) {
+            UNDERLING_ERROR_NULL(
                     "FFTW returned NULL c2r_backward preorder plan",
-                    SUZERAIN_ESANITY);
+                    UNDERLING_ESANITY);
         }
     }
 
@@ -654,9 +651,9 @@ underling_fft_plan_create_c2r_backward_internal(
                                                 howmany_rank, howmany_dims,
                                                 ri, ii, out,
                                                 fftw_rigor_flags);
-        if (SUZERAIN_UNLIKELY(plan_fft == NULL)) {
-            SUZERAIN_ERROR_NULL("FFTW returned NULL c2r_backward FFT plan",
-                    SUZERAIN_ESANITY);
+        if (UNDERLING_UNLIKELY(plan_fft == NULL)) {
+            UNDERLING_ERROR_NULL("FFTW returned NULL c2r_backward FFT plan",
+                    UNDERLING_ESANITY);
         }
     }
 
@@ -689,18 +686,18 @@ underling_fft_plan_create_c2r_backward_internal(
                                            howmany_rank, howmany_dims,
                                            data, data,
                                            /*kind*/NULL, fftw_rigor_flags);
-        if (SUZERAIN_UNLIKELY(plan_postorder == NULL)) {
-            SUZERAIN_ERROR_NULL(
+        if (UNDERLING_UNLIKELY(plan_postorder == NULL)) {
+            UNDERLING_ERROR_NULL(
                     "FFTW returned NULL c2r_backward postorder plan",
-                    SUZERAIN_ESANITY);
+                    UNDERLING_ESANITY);
         }
     }
 
     // Create and initialize the plan workspace
     underling_fft_plan f = calloc(1, sizeof(struct underling_fft_plan_s));
-    if (SUZERAIN_UNLIKELY(f == NULL)) {
-        SUZERAIN_ERROR_NULL("failed to allocate space for plan",
-                             SUZERAIN_ENOMEM);
+    if (UNDERLING_UNLIKELY(f == NULL)) {
+        UNDERLING_ERROR_NULL("failed to allocate space for plan",
+                             UNDERLING_ENOMEM);
     }
     // Copy the relevant parameters to the plan workspace
     f->long_ni        = long_ni;
@@ -733,12 +730,12 @@ underling_fft_plan_create_r2c_forward(
         = create_underling_fft_extents_for_complex(e, long_ni);
 
     // TODO Remove this restriction; Requires smartening up the reordering.
-    if (SUZERAIN_UNLIKELY(input.order[2] != long_ni)) {
-        SUZERAIN_ERROR_NULL(
+    if (UNDERLING_UNLIKELY(input.order[2] != long_ni)) {
+        UNDERLING_ERROR_NULL(
                 "Creation of c2r_backward plans in non-stride one directions"
                 " is unavailable.  Check the UNDERLING_TRANSPOSED_LONG_N{0,2}"
                 " flags provided when creating the underling_problem.",
-                SUZERAIN_ESANITY);
+                UNDERLING_ESANITY);
     }
 
     return underling_fft_plan_create_r2c_forward_internal(
@@ -755,14 +752,14 @@ underling_fft_plan_create_r2c_forward_internal(
         const underling_fft_extents output)
 {
     // Sanity check input arguments
-    if (SUZERAIN_UNLIKELY(long_ni < 0 || long_ni > 2)) {
-        SUZERAIN_ERROR_VAL("long_ni < 0 or long_ni > 2", SUZERAIN_EINVAL, 0);
+    if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
+        UNDERLING_ERROR_VAL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL, 0);
     }
-    if (SUZERAIN_UNLIKELY(data == NULL)) {
-        SUZERAIN_ERROR_NULL("data == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(data == NULL)) {
+        UNDERLING_ERROR_NULL("data == NULL", UNDERLING_EINVAL);
     }
-    if (SUZERAIN_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
-        SUZERAIN_ERROR_NULL("FFTW non-rigor bits disallowed", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
+        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
     }
 
     // Prepare the reordering plan for the input data. We must always pay to
@@ -804,9 +801,9 @@ underling_fft_plan_create_r2c_forward_internal(
                                                 howmany_rank, howmany_dims,
                                                 in, ro, io,
                                                 fftw_rigor_flags);
-        if (SUZERAIN_UNLIKELY(plan_fft == NULL)) {
-            SUZERAIN_ERROR_NULL("FFTW returned NULL r2c_forward FFT plan",
-                    SUZERAIN_ESANITY);
+        if (UNDERLING_UNLIKELY(plan_fft == NULL)) {
+            UNDERLING_ERROR_NULL("FFTW returned NULL r2c_forward FFT plan",
+                    UNDERLING_ESANITY);
         }
     }
 
@@ -839,18 +836,18 @@ underling_fft_plan_create_r2c_forward_internal(
                                             howmany_rank, howmany_dims,
                                             data, data,
                                             /*kind*/NULL, fftw_rigor_flags);
-        if (SUZERAIN_UNLIKELY(plan_postorder == NULL)) {
-            SUZERAIN_ERROR_NULL(
+        if (UNDERLING_UNLIKELY(plan_postorder == NULL)) {
+            UNDERLING_ERROR_NULL(
                     "FFTW returned NULL r2c_forward postorder plan",
-                    SUZERAIN_ESANITY);
+                    UNDERLING_ESANITY);
         }
     }
 
     // Create and initialize the plan workspace
     underling_fft_plan f = calloc(1, sizeof(struct underling_fft_plan_s));
-    if (SUZERAIN_UNLIKELY(f == NULL)) {
-        SUZERAIN_ERROR_NULL("failed to allocate space for plan",
-                             SUZERAIN_ENOMEM);
+    if (UNDERLING_UNLIKELY(f == NULL)) {
+        UNDERLING_ERROR_NULL("failed to allocate space for plan",
+                             UNDERLING_ENOMEM);
     }
     // Copy the relevant parameters to the plan workspace
     f->long_ni        = long_ni;
@@ -870,8 +867,8 @@ underling_fft_plan_create_inverse(
         underling_real * data,
         unsigned fftw_rigor_flags)
 {
-    if (SUZERAIN_UNLIKELY(plan_to_invert == NULL)) {
-        SUZERAIN_ERROR_NULL("plan_to_invert == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(plan_to_invert == NULL)) {
+        UNDERLING_ERROR_NULL("plan_to_invert == NULL", UNDERLING_EINVAL);
     }
 
     underling_fft_plan retval = NULL;
@@ -903,8 +900,8 @@ underling_fft_plan_create_inverse(
         break;
     case transform_type_unspecified:
     default:
-        SUZERAIN_ERROR_NULL("Unrecognized plan_to_invert->type",
-                SUZERAIN_ESANITY);
+        UNDERLING_ERROR_NULL("Unrecognized plan_to_invert->type",
+                UNDERLING_ESANITY);
     }
 
     // Sanity check that the inverse is indeed an inverse
@@ -918,9 +915,9 @@ underling_fft_extents
 underling_fft_local_extents_input(
         const underling_fft_plan plan)
 {
-    if (SUZERAIN_UNLIKELY(plan == NULL)) {
-        SUZERAIN_ERROR_VAL("plan == NULL",
-                SUZERAIN_EINVAL, UNDERLING_FFT_EXTENTS_INVALID);
+    if (UNDERLING_UNLIKELY(plan == NULL)) {
+        UNDERLING_ERROR_VAL("plan == NULL",
+                UNDERLING_EINVAL, UNDERLING_FFT_EXTENTS_INVALID);
     }
 
     underling_fft_extents retval = plan->input; // Create temporary
@@ -931,9 +928,9 @@ underling_fft_extents
 underling_fft_local_extents_output(
         const underling_fft_plan plan)
 {
-    if (SUZERAIN_UNLIKELY(plan == NULL)) {
-        SUZERAIN_ERROR_VAL("plan == NULL",
-                SUZERAIN_EINVAL, UNDERLING_FFT_EXTENTS_INVALID);
+    if (UNDERLING_UNLIKELY(plan == NULL)) {
+        UNDERLING_ERROR_VAL("plan == NULL",
+                UNDERLING_EINVAL, UNDERLING_FFT_EXTENTS_INVALID);
     }
 
     underling_fft_extents retval = plan->output; // Create temporary
@@ -975,13 +972,13 @@ underling_fft_local_input(
         int *stride,
         int *order)
 {
-    if (SUZERAIN_UNLIKELY(plan == NULL)) {
-        SUZERAIN_ERROR("plan == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(plan == NULL)) {
+        UNDERLING_ERROR("plan == NULL", UNDERLING_EINVAL);
     }
 
     underling_fft_extents_copy(&plan->input, start, size, stride, order);
 
-    return SUZERAIN_SUCCESS;
+    return UNDERLING_SUCCESS;
 }
 
 int
@@ -992,37 +989,37 @@ underling_fft_local_output(
         int *stride,
         int *order)
 {
-    if (SUZERAIN_UNLIKELY(plan == NULL)) {
-        SUZERAIN_ERROR("plan == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(plan == NULL)) {
+        UNDERLING_ERROR("plan == NULL", UNDERLING_EINVAL);
     }
 
     underling_fft_extents_copy(&plan->output, start, size, stride, order);
 
-    return SUZERAIN_SUCCESS;
+    return UNDERLING_SUCCESS;
 }
 
 int
 underling_fft_plan_execute(
         const underling_fft_plan plan)
 {
-    if (SUZERAIN_UNLIKELY(plan == NULL)) {
-        SUZERAIN_ERROR("plan == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(plan == NULL)) {
+        UNDERLING_ERROR("plan == NULL", UNDERLING_EINVAL);
     }
-    if (SUZERAIN_UNLIKELY(plan->plan_preorder == NULL)) {
-        SUZERAIN_ERROR("plan->plan_preorder == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(plan->plan_preorder == NULL)) {
+        UNDERLING_ERROR("plan->plan_preorder == NULL", UNDERLING_EINVAL);
     }
-    if (SUZERAIN_UNLIKELY(plan->plan_fft == NULL)) {
-        SUZERAIN_ERROR("plan->plan_fft == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(plan->plan_fft == NULL)) {
+        UNDERLING_ERROR("plan->plan_fft == NULL", UNDERLING_EINVAL);
     }
-    if (SUZERAIN_UNLIKELY(plan->plan_postorder == NULL)) {
-        SUZERAIN_ERROR("plan->plan_postorder == NULL", SUZERAIN_EINVAL);
+    if (UNDERLING_UNLIKELY(plan->plan_postorder == NULL)) {
+        UNDERLING_ERROR("plan->plan_postorder == NULL", UNDERLING_EINVAL);
     }
 
     fftw_execute(plan->plan_preorder);
     fftw_execute(plan->plan_fft);
     fftw_execute(plan->plan_postorder);
 
-    return SUZERAIN_SUCCESS;
+    return UNDERLING_SUCCESS;
 }
 
 void
