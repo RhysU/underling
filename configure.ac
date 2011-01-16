@@ -103,7 +103,7 @@ AC_CONFIG_FILES([
     LICENSE
     Makefile
     underling.pc
-    underling-fftw3.pc
+    underling-fftw.pc
     apps/Makefile
     doxygen/Makefile
     underling/Makefile

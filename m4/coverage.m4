@@ -65,7 +65,7 @@ if test "x$enable_coverage" = "xyes"; then
      raw_compiler=$comp_name
      for mpicc_wrapper in mpicc hcc mpxlc_r mpxlc mpcc cmpicc; do
         if test "x$comp_name" = "x$mpicc_wrapper"; then
-     	   raw_compiler=`$comp_name -show | sed 's/\(.*\)\(gcc\)\(.*\)/gcc/'`
+     	   raw_compiler=`$comp_name -show | cut -d" " -f1`
         fi
      done
 
@@ -80,38 +80,32 @@ if test "x$enable_coverage" = "xyes"; then
      AC_LANG_POP([C])
    fi
 
-   # Test for Fortran...
+   # Test for C++...
 
-   if test "x$FC" != "x" ;then
+   if test "x$CXX" != "x";then
 
-      ac_coverage_save_FCFLAGS="$FCFLAGS"
+      ac_coverage_save_CXXFLAGS="$CXXFLAGS"
 
-      AC_LANG_PUSH([Fortran])
+      AC_LANG_PUSH([C++])
 
-      comp_name=`echo $FC | awk '{print $1}'`
+      comp_name=`echo $CXX | awk '{print $1}'`
 
       raw_compiler=$comp_name
-      for mpif90_wrapper in mpif90 mpxlf95_r mpxlf90_r mpxlf95 mpxlf90 mpf90 cmpif90c; do
-         if test "x$comp_name" = "x$mpif90_wrapper"; then
-     	    raw_compiler=`$comp_name -show | sed 's/\(.*\)\(gfortran\)\(.*\)/gfortran/'`
+      for mpicxx_wrapper in mpic++ mpicxx mpiCC hcp mpxlC_r mpxlC mpCC cmpic++; do
+         if test "x$comp_name" = "x$mpicxx_wrapper"; then
+     	    raw_compiler=`$comp_name -show | cut -d" " -f1`
          fi
       done
 
-      if test "x$FC" = "xmpif90_wrapper"; then
-      	 raw_compiler=`$mpif90_wrapper -show | cut -d" " -f1`
-      else	 
-         raw_compiler=$comp_name
-      fi
-
-      if test "x$raw_compiler" != "xgfortran" ; then
-       	 AC_MSG_ERROR([code coverage analysis requires gfortran, not $raw_compiler])
+      if test "x$raw_compiler" != "xg++" ; then
+      	 AC_MSG_ERROR([code coverage analysis requires g++, not $raw_compiler])
       else
-      	 FCFLAGS="${CFLAGS_GCOV} ${FCFLAGS}"
-      	 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],[],
-	 	[AC_MSG_ERROR([unable to compile with code coverage ($FC)])])
+      	 CXXFLAGS="${CFLAGS_GCOV} ${CXXFLAGS}"
+      	 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],[], 
+	 	[AC_MSG_ERROR([unable to compile with code coverage ($CXX)])])
       fi
 
-      AC_LANG_POP([Fortran])
+      AC_LANG_POP([C++])
    fi
 
 fi
