@@ -7,6 +7,7 @@ AM_LDFLAGS        = # Append below
 bin_PROGRAMS      = # Append below
 check_PROGRAMS    = # Append below
 noinst_HEADERS    = # Append below
+BUILT_SOURCES     = # Append below
 CLEANFILES        = # Append below
 EXTRA_DIST        = # Append below
 TESTS             = # Append below
@@ -18,10 +19,6 @@ noinst_HEADERS += test_underling_tools.hpp
 # FIXME: Ugly, separate MPI compilation into separate dir, maybe
 CC=@MPICC@
 CXX=@MPICXX@
-
-# Demand that all tests build for 'make all' target to be successful.
-# Much of the C++ functionality is header-only; this ensures it builds.
-all-local: $(check_PROGRAMS)
 
 TESTS              += test_error
 check_PROGRAMS     += test_error
@@ -57,6 +54,25 @@ test_underling_fft_LDADD    = ../underling/libunderling.la
 test_underling_fft_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_underling_fft_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_underling_fft_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+
+#############################################################################
+### MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS ###
+#############################################################################
+
+# Build test programs without running 'make check'
+.PHONY: check-programs
+check-programs: $(check_PROGRAMS)
+
+# Extra things to clean up
+clean-local:
+	rm -f *.gcno *.gcda
+
+# License updates
+include $(top_srcdir)/license.am
+
+# Automatic dependency generation for Fortran
+SFMAKEDEPEND_FLAGS = -i underling -i underling_c_binding
+include $(top_srcdir)/sfmakedepend.am
 
 # Required for AX_AM_MACROS
 @INC_AMINCLUDE@
