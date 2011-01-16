@@ -31,7 +31,7 @@ AM_CONDITIONAL([HAVE_PERL],[test x$PERL != xno])
 AC_CACHE_SAVE
 
 dnl ------------------------------------------------
-dnl Manipulate C settings and find MPI/HDF5
+dnl Manipulate C settings and find MPI/FFTW
 dnl ------------------------------------------------
 AX_CHECK_ENABLE_DEBUG
 AC_PROG_CC
@@ -56,6 +56,16 @@ AX_VISIBILITY([hidden])
 AX_COMPILER_VENDOR()
 AX_WARNINGS_SANITIZE()
 AC_LANG_POP([C])
+AC_CACHE_SAVE
+
+dnl ------------------------------------------------
+dnl Manipulate C++ settings and find MPI
+dnl ------------------------------------------------
+AC_LANG_PUSH([C++])
+ACX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for C++, e.g. mpicxx.))
+BOOST_REQUIRE([1.39])
+BOOST_TEST
+AC_LANG_POP([C++])
 AC_CACHE_SAVE
 
 dnl ------------------------------------------------
