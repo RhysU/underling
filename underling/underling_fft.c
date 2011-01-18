@@ -34,6 +34,16 @@
 #include <underling/underling_fft.h>
 #include "common.h"
 
+// TODO Allow in-place C2C transforms using a temporary buffer.
+//      Appears that all C2C transforms involve one reorder and one FFT, which
+//      is ideal for "out-of-place" work happening into and out of a scratch
+//      buffer.
+
+// TODO Allow out-of-place C2R and R2C transforms.
+//      Appears that all C2R and R2C transforms involve two reorders and one
+//      FFT.  By shuffling in -> out -> in -> out this is an out-of-place
+//      operation.
+
 // ********************************************************************
 // INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL
 // ********************************************************************
