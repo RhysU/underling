@@ -47,6 +47,7 @@ BOOST_AUTO_TEST_SUITE(RoundTrip)
 // TODO Test reuse of grids for multiple problems
 // TODO Test reuse of problems on multiple data sets
 // TODO Test unidirectional (i.e. down-only) transforms
+// TODO Test out-of-place transforms
 
 static void test_round_trip(MPI_Comm comm,
                             const int n0, const int n1, const int n2,
@@ -101,11 +102,15 @@ static void test_round_trip(MPI_Comm comm,
               f.data.get());
 
     // Transform from long in n2 to long in n0
-    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS, f.plan.execute_long_n2_to_long_n1());
-    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS, f.plan.execute_long_n1_to_long_n0());
+    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS,
+            f.plan.execute_long_n2_to_long_n1(f.data.get(), f.data.get()));
+    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS,
+            f.plan.execute_long_n1_to_long_n0(f.data.get(), f.data.get()));
     // Transform from long in n0 to long in n2
-    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS, f.plan.execute_long_n0_to_long_n1());
-    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS, f.plan.execute_long_n1_to_long_n2());
+    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS,
+            f.plan.execute_long_n0_to_long_n1(f.data.get(), f.data.get()));
+    BOOST_REQUIRE_EQUAL(UNDERLING_SUCCESS,
+            f.plan.execute_long_n1_to_long_n2(f.data.get(), f.data.get()));
 
     // Ensure we successfully round-tripped back to long_n2 storage.
     // Buffer regions beyond total_extent are excluded from the check.

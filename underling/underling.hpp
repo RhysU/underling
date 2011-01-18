@@ -217,11 +217,13 @@ public:
 
     /** @see underling_plan_create */
     plan(const problem &p,
-         underling_real * data,
+         underling_real * in,
+         underling_real * out,
          unsigned transform_flags  = 0,
          unsigned fftw_rigor_flags = 0)
         : plan_(underling_plan_create(p.get(),
-                                      data,
+                                      in,
+                                      out,
                                       transform_flags,
                                       fftw_rigor_flags)) {}
 
@@ -232,23 +234,27 @@ public:
     underling_plan get() const { return plan_; }
 
     /** @see underling_execute_long_n2_to_long_n1 */
-    int execute_long_n2_to_long_n1() const {
-        return underling_execute_long_n2_to_long_n1(plan_);
+    int execute_long_n2_to_long_n1(underling_real * in,
+                                   underling_real * out) const {
+        return underling_execute_long_n2_to_long_n1(plan_, in, out);
     }
 
     /** @see underling_execute_long_n1_to_long_n0 */
-    int execute_long_n1_to_long_n0() const {
-        return underling_execute_long_n1_to_long_n0(plan_);
+    int execute_long_n1_to_long_n0(underling_real * in,
+                                   underling_real * out) const {
+        return underling_execute_long_n1_to_long_n0(plan_, in, out);
     }
 
     /** @see underling_execute_long_n0_to_long_n1 */
-    int execute_long_n0_to_long_n1() const {
-        return underling_execute_long_n0_to_long_n1(plan_);
+    int execute_long_n0_to_long_n1(underling_real * in,
+                                   underling_real * out) const {
+        return underling_execute_long_n0_to_long_n1(plan_, in, out);
     }
 
     /** @see underling_execute_long_n1_to_long_n2 */
-    int execute_long_n1_to_long_n2() const {
-        return underling_execute_long_n1_to_long_n2(plan_);
+    int execute_long_n1_to_long_n2(underling_real * in,
+                                   underling_real * out) const {
+        return underling_execute_long_n1_to_long_n2(plan_, in, out);
     }
 
     /** @return True if the wrapped underling_problem instance is non-NULL. */

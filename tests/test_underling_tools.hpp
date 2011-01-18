@@ -76,7 +76,7 @@ struct UnderlingFixture {
           data((underling_real *) fftw_malloc(
                     problem.local_memory()*sizeof(underling_real)),
                 &fftw_free),
-          plan(problem, data.get(),
+          plan(problem, data.get(), data.get(),
                underling::transpose::all, FFTW_ESTIMATE)
     {
         BOOST_REQUIRE(grid);

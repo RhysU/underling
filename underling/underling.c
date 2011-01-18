@@ -77,11 +77,11 @@ struct underling_problem_s {
 };
 
 struct underling_plan_s {
+    _Bool in_place;
     fftw_plan plan_backwardA;
     fftw_plan plan_backwardB;
     fftw_plan plan_forwardA;
     fftw_plan plan_forwardB;
-    underling_real *data;              // API end-user owns resources
 };
 
 // ********************************************************************
@@ -957,15 +957,19 @@ underling_problem_destroy(
 underling_plan
 underling_plan_create(
         const underling_problem problem,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned transform_flags,
         unsigned rigor_flags)
 {
     if (UNDERLING_UNLIKELY(problem == NULL)) {
         UNDERLING_ERROR_NULL("problem == NULL", UNDERLING_EINVAL);
     }
-    if (UNDERLING_UNLIKELY(data == NULL)) {
-        UNDERLING_ERROR_NULL("data == NULL", UNDERLING_EINVAL);
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR_NULL("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR_NULL("out == NULL", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(transform_flags & ~UNDERLING_TRANSPOSE_ALL)) {
         UNDERLING_ERROR_NULL(
@@ -977,7 +981,8 @@ underling_plan_create(
                                     & ~FFTW_EXHAUSTIVE
                                     & ~FFTW_WISDOM_ONLY;
     if (UNDERLING_UNLIKELY(rigor_flags & non_rigor_mask)) {
-        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
+        UNDERLING_ERROR_NULL(
+                "FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
     }
 
     // Be ready to execute all transforms if trivial flag provided
@@ -992,12 +997,15 @@ underling_plan_create(
                              UNDERLING_ENOMEM);
     }
     // Copy the problem parameters to the problem workspace
-    p->data = data;
+    p->in_place = (in == out);
+
+    // Always specify FFTW_DESTROY_INPUT on out-of-place transposes
+    const unsigned other_flags = p->in_place ? 0 : FFTW_DESTROY_INPUT;
 
     // Create the requested FFTW MPI plans
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1) {
         p->plan_backwardA = underling_transpose_fftw_plan(
-                problem->backwardA, p->data, p->data, rigor_flags);
+                problem->backwardA, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardA == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
@@ -1008,7 +1016,7 @@ underling_plan_create(
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0) {
         p->plan_backwardB = underling_transpose_fftw_plan(
-                problem->backwardB, p->data, p->data, rigor_flags);
+                problem->backwardB, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardB == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
@@ -1019,7 +1027,7 @@ underling_plan_create(
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1) {
         p->plan_forwardB = underling_transpose_fftw_plan(
-                problem->forwardB, p->data, p->data, rigor_flags);
+                problem->forwardB, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardB == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
@@ -1030,7 +1038,7 @@ underling_plan_create(
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2) {
         p->plan_forwardA = underling_transpose_fftw_plan(
-                problem->forwardA, p->data, p->data, rigor_flags);
+                problem->forwardA, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardA == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
@@ -1063,14 +1071,15 @@ underling_plan_destroy(
             fftw_destroy_plan(plan->plan_forwardB);
             plan->plan_forwardB = NULL;
         }
-        plan->data = NULL;
         free(plan);
     }
 }
 
 int
 underling_execute_long_n2_to_long_n1(
-        const underling_plan plan)
+        const underling_plan plan,
+        underling_real * in,
+        underling_real * out)
 {
     if (UNDERLING_UNLIKELY(plan == NULL)) {
         UNDERLING_ERROR("plan == NULL", UNDERLING_EINVAL);
@@ -1078,15 +1087,34 @@ underling_execute_long_n2_to_long_n1(
     if (UNDERLING_UNLIKELY(plan->plan_backwardA == NULL)) {
         UNDERLING_ERROR("plan->plan_backwardA == NULL", UNDERLING_EINVAL);
     }
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
+    }
+    if (plan->in_place) {
+        if (UNDERLING_UNLIKELY(in != out)) {
+            UNDERLING_ERROR(
+                    "in-place plan but in != out", UNDERLING_EINVAL);
+        }
+    } else {
+        if (UNDERLING_UNLIKELY(in == out)) {
+            UNDERLING_ERROR(
+                    "out-of-place plan but in == out", UNDERLING_EINVAL);
+        }
+    }
 
-    fftw_execute(plan->plan_backwardA);
+    fftw_execute_r2r(plan->plan_backwardA, in, out);
 
     return UNDERLING_SUCCESS;
 }
 
 int
 underling_execute_long_n1_to_long_n0(
-        const underling_plan plan)
+        const underling_plan plan,
+        underling_real * in,
+        underling_real * out)
 {
     if (UNDERLING_UNLIKELY(plan == NULL)) {
         UNDERLING_ERROR("plan == NULL", UNDERLING_EINVAL);
@@ -1094,15 +1122,34 @@ underling_execute_long_n1_to_long_n0(
     if (UNDERLING_UNLIKELY(plan->plan_backwardB == NULL)) {
         UNDERLING_ERROR("plan->plan_backwardB == NULL", UNDERLING_EINVAL);
     }
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
+    }
+    if (plan->in_place) {
+        if (UNDERLING_UNLIKELY(in != out)) {
+            UNDERLING_ERROR(
+                    "in-place plan but in != out", UNDERLING_EINVAL);
+        }
+    } else {
+        if (UNDERLING_UNLIKELY(in == out)) {
+            UNDERLING_ERROR(
+                    "out-of-place plan but in == out", UNDERLING_EINVAL);
+        }
+    }
 
-    fftw_execute(plan->plan_backwardB);
+    fftw_execute_r2r(plan->plan_backwardB, in, out);
 
     return UNDERLING_SUCCESS;
 }
 
 int
 underling_execute_long_n0_to_long_n1(
-        const underling_plan plan)
+        const underling_plan plan,
+        underling_real * in,
+        underling_real * out)
 {
     if (UNDERLING_UNLIKELY(plan == NULL)) {
         UNDERLING_ERROR("plan == NULL", UNDERLING_EINVAL);
@@ -1110,15 +1157,34 @@ underling_execute_long_n0_to_long_n1(
     if (UNDERLING_UNLIKELY(plan->plan_forwardB == NULL)) {
         UNDERLING_ERROR("plan->plan_forwardB == NULL", UNDERLING_EINVAL);
     }
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
+    }
+    if (plan->in_place) {
+        if (UNDERLING_UNLIKELY(in != out)) {
+            UNDERLING_ERROR(
+                    "in-place plan but in != out", UNDERLING_EINVAL);
+        }
+    } else {
+        if (UNDERLING_UNLIKELY(in == out)) {
+            UNDERLING_ERROR(
+                    "out-of-place plan but in == out", UNDERLING_EINVAL);
+        }
+    }
 
-    fftw_execute(plan->plan_forwardB);
+    fftw_execute_r2r(plan->plan_forwardB, in, out);
 
     return UNDERLING_SUCCESS;
 }
 
 int
 underling_execute_long_n1_to_long_n2(
-        const underling_plan plan)
+        const underling_plan plan,
+        underling_real * in,
+        underling_real * out)
 {
     if (UNDERLING_UNLIKELY(plan == NULL)) {
         UNDERLING_ERROR("plan == NULL", UNDERLING_EINVAL);
@@ -1126,8 +1192,25 @@ underling_execute_long_n1_to_long_n2(
     if (UNDERLING_UNLIKELY(plan->plan_forwardA == NULL)) {
         UNDERLING_ERROR("plan->plan_forwardA == NULL", UNDERLING_EINVAL);
     }
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
+    }
+    if (plan->in_place) {
+        if (UNDERLING_UNLIKELY(in != out)) {
+            UNDERLING_ERROR(
+                    "in-place plan but in != out", UNDERLING_EINVAL);
+        }
+    } else {
+        if (UNDERLING_UNLIKELY(in == out)) {
+            UNDERLING_ERROR(
+                    "out-of-place plan but in == out", UNDERLING_EINVAL);
+        }
+    }
 
-    fftw_execute(plan->plan_forwardA);
+    fftw_execute_r2r(plan->plan_forwardA, in, out);
 
     return UNDERLING_SUCCESS;
 }

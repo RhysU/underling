@@ -475,9 +475,16 @@ underling_global_memory_optimum(
 
 /**
  * Collectively create an execution plan to solve the given decomposition
- * problem on the given data.  Creating a plan may have significant cost.  Once
- * a plan is created, it may be repeatedly used without incurring this one time
+ * problem using the given input and output buffers.  Creating a plan may have
+ * significant cost.  Once a plan is created, it may be repeatedly used on
+ * different, identically aligned buffers without incurring this one time
  * overhead.
+ *
+ * Out-of-place plans are created by specifying input and output buffers such
+ * that <tt>in != out</tt>.  Executing an out-of-place plans will always
+ * destroy the contents of the input buffer \c in.  In-place plans can be
+ * created by specifying <tt>in == out</tt>.  In-place plans always use less
+ * memory but will often run more slowly than out-of-place plans.
  *
  * Planning cost can be reduced by only requesting the transform capabilities
  * you require using \c transform_flags.  It should contain the bitwise OR of
@@ -502,12 +509,16 @@ underling_global_memory_optimum(
  * performance.  See the <a
  * href="http://www.fftw.org/fftw3.3alpha_doc/Planner-Flags.html"> FFTW manual
  * regarding planner flags</a> for more details.  Note that using any value
- * other than FFTW_ESTIMATE will cause \c data to be overwritten during the
- * invocation.
+ * other than FFTW_ESTIMATE will cause the buffers \c in and \c out to be
+ * overwritten during the invocation.
  *
  * @param problem Problem for which a plan is sought.
- * @param data Storage of size at least <tt>underling_local_memory(problem)</tt>
- *             <tt>underling_real</tt>s in which all data movement occurs.
+ * @param in Input buffer of size at least
+ *           <tt>underling_local_memory(problem)</tt>
+ *           <tt>underling_real</tt>s used as the source data.
+ * @param out Output buffer of size at least
+ *            <tt>underling_local_memory(problem)</tt>
+ *            <tt>underling_real</tt>s used as the target data.
  * @param transform_flags Desired transforms to plan.  Specifying zero
  *                        is equivalent to specifying UNDERLING_TRANSPOSE_ALL.
  * @param fftw_rigor_flags Desired FFTW planning rigor.  Specifying zero
@@ -521,7 +532,8 @@ underling_global_memory_optimum(
 underling_plan
 underling_plan_create(
         const underling_problem problem,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned transform_flags,
         unsigned fftw_rigor_flags) UNDERLING_API;
 
@@ -535,13 +547,17 @@ underling_plan_destroy(
         underling_plan plan) UNDERLING_API;
 
 /**
- * Collectively transform the data provided at plan creation time from being
- * long in \c n2 to long in \c n1.  Appropriate MPI calls and data reordering
- * will occur.
+ * Collectively transform data from being long in \c n2 within buffer \c in to
+ * being long in \c n1 within buffer \c out.  Appropriate MPI calls and data
+ * reordering will occur.
  *
  * @param plan Plan to be executed.
+ * @param in  Input buffer on which to execute the plan.  For out-of-place
+ *            transforms, this buffers contents will be destroyed.
+ * @param out Output buffer on which to execute the plan.  For in-place
+ *            transforms, one must specify <tt>out == in</tt>.
  *
- * @return SUZERAIN_SUCCESS (zero) on success and non-zero on failure.
+ * @return UNDERLING_SUCCESS (zero) on success and non-zero on failure.
  *
  * @see The documentation for underling_grid_create for more details on the
  *      associated storage orders.
@@ -550,61 +566,42 @@ underling_plan_destroy(
  */
 int
 underling_execute_long_n2_to_long_n1(
-        const underling_plan plan) UNDERLING_API;
+        const underling_plan plan,
+        underling_real * in,
+        underling_real * out) UNDERLING_API;
 
 /**
- * Collectively transform the data provided at plan creation time from being
- * long in \c n1 to long in \c n0.  Appropriate MPI calls and data reordering
- * will occur.
- *
- * @param plan Plan to be executed.
- *
- * @return SUZERAIN_SUCCESS (zero) on success and non-zero on failure.
- *
- * @see The documentation for underling_grid_create for more details on the
- *      associated storage orders.
- * @see The methods underling_local_extents or underling_local for how to
- *      obtain local storage details in either the input or output layout.
+ * Collectively transform data from being long in \c n1 within buffer \c in to
+ * being long in \c n0 within buffer \c out.
+ * @copydetails underling_execute_long_n2_to_long_n1
  */
 int
 underling_execute_long_n1_to_long_n0(
-        const underling_plan plan) UNDERLING_API;
+        const underling_plan plan,
+        underling_real * in,
+        underling_real * out) UNDERLING_API;
 
 /**
- * Collectively transform the data provided at plan creation time from being
- * long in \c n0 to long in \c n1.  Appropriate MPI calls and data reordering
- * will occur.
- *
- * @param plan Plan to be executed.
- *
- * @return SUZERAIN_SUCCESS (zero) on success and non-zero on failure.
- *
- * @see The documentation for underling_grid_create for more details on the
- *      associated storage orders.
- * @see The methods underling_local_extents or underling_local for how to
- *      obtain local storage details in either the input or output layout.
+ * Collectively transform data from being long in \c n0 within buffer \c in to
+ * being long in \c n1 within buffer \c out.
+ * @copydetails underling_execute_long_n2_to_long_n1
  */
 int
 underling_execute_long_n0_to_long_n1(
-        const underling_plan plan) UNDERLING_API;
+        const underling_plan plan,
+        underling_real * in,
+        underling_real * out) UNDERLING_API;
 
 /**
- * Collectively transform the data provided at plan creation time from being
- * long in \c n1 to long in \c n2.  Appropriate MPI calls and data reordering
- * will occur.
- *
- * @param plan Plan to be executed.
- *
- * @return SUZERAIN_SUCCESS (zero) on success and non-zero on failure.
- *
- * @see The documentation for underling_grid_create for more details on the
- *      associated storage orders.
- * @see The methods underling_local_extents or underling_local for how to
- *      obtain local storage details in either the input or output layout.
+ * Collectively transform data from being long in \c n1 within buffer \c in to
+ * being long in \c n2 within buffer \c out.
+ * @copydetails underling_execute_long_n2_to_long_n1
  */
 int
 underling_execute_long_n1_to_long_n2(
-        const underling_plan plan) UNDERLING_API;
+        const underling_plan plan,
+        underling_real * in,
+        underling_real * out) UNDERLING_API;
 
 /**
  * Dump an instance's internals in a debugging-friendly format.
