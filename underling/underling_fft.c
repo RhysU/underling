@@ -67,7 +67,8 @@ underling_fftw_plan_nop( void );
 static
 fftw_plan
 underling_fftw_plan_reorder_complex(
-        underling_real * const data,
+        underling_real * const data_in,
+        underling_real * const data_out,
         const underling_fft_extents * const input,
         const underling_fft_extents * const output);
 
@@ -187,7 +188,8 @@ underling_fftw_plan_nop( void )
 static
 fftw_plan
 underling_fftw_plan_reorder_complex(
-        underling_real * const data,
+        underling_real * const data_in,
+        underling_real * const data_out,
         const underling_fft_extents * const input,
         const underling_fft_extents * const output)
 {
@@ -200,7 +202,7 @@ underling_fftw_plan_reorder_complex(
         howmany_dims[i].os = output->stride[io];
     }
     fftw_plan retval = fftw_plan_guru_r2r(
-            0, NULL, howmany_rank, howmany_dims, data, data,
+            0, NULL, howmany_rank, howmany_dims, data_in, data_out,
             NULL, FFTW_ESTIMATE);
 
     if (UNDERLING_UNLIKELY(retval == NULL)) {
@@ -447,8 +449,8 @@ underling_fft_plan_create_c2c_internal(
     }
 
     // Cook the reordering plan
-    fftw_plan plan_reorder
-        = underling_fftw_plan_reorder_complex(data, reorder_in, reorder_out);
+    fftw_plan plan_reorder = underling_fftw_plan_reorder_complex(
+            data, data, reorder_in, reorder_out);
 
     // Prepare the input to fftw_plan_guru_split_dft, which allows using
     // underling_fft_extents.strides directly.  The transform is in place.
