@@ -34,16 +34,6 @@
 #include <underling/underling_fft.h>
 #include "common.h"
 
-// TODO Allow in-place C2C transforms using a temporary buffer.
-//      Appears that all C2C transforms involve one reorder and one FFT, which
-//      is ideal for "out-of-place" work happening into and out of a scratch
-//      buffer.
-
-// TODO Allow out-of-place C2R and R2C transforms.
-//      Appears that all C2R and R2C transforms involve two reorders and one
-//      FFT.  By shuffling in -> out -> in -> out this is an out-of-place
-//      operation.
-
 // ********************************************************************
 // INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL
 // ********************************************************************
@@ -64,11 +54,23 @@ struct underling_fft_plan_s {
     fftw_plan plan_fft;           // Performs the FFT
     fftw_plan plan_postorder;     // Executed after the FFT
     underling_fft_extents output; // Output data layout
+    _Bool in_place;               // Was planning done for in-place transform?
+    struct {                      // FFTW new execute interface offsets...
+        int ri;                   //   ...real part relative to in buffer
+        int ii;                   //   ...imag part relative to in buffer
+        int ro;                   //   ...real part relative to out buffer
+        int io;                   //   ...imag part relative to out buffer
+    } offset;                     // ...not all of which are always used
 };
 
 // ********************************************************************
 // INTERNAL PROTOTYPES INTERNAL PROTOTYPES INTERNAL PROTOTYPES INTERNAL
 // ********************************************************************
+
+static inline void swap(int *a, int *b)
+{
+    int t = *a; *a = *b; *b = t;
+}
 
 static
 fftw_plan
@@ -110,7 +112,8 @@ static
 underling_fft_plan
 underling_fft_plan_create_c2c_internal(
         const int long_ni,
-        underling_real * const data,
+        underling_real * const in,
+        underling_real * const out,
         const int fftw_sign,
         unsigned fftw_rigor_flags,
         const underling_fft_extents input,
@@ -120,7 +123,8 @@ static
 underling_fft_plan
 underling_fft_plan_create_c2r_backward_internal(
         const int long_ni,
-        underling_real * data,
+        underling_real * const in,
+        underling_real * const out,
         unsigned fftw_rigor_flags,
         const underling_fft_extents input,
         const underling_fft_extents output);
@@ -129,7 +133,8 @@ static
 underling_fft_plan
 underling_fft_plan_create_r2c_forward_internal(
         const int long_ni,
-        underling_real * data,
+        underling_real * const in,
+        underling_real * const out,
         unsigned fftw_rigor_flags,
         const underling_fft_extents input,
         const underling_fft_extents output);
@@ -373,7 +378,8 @@ underling_fft_plan
 underling_fft_plan_create_c2c_forward(
         const underling_problem problem,
         int long_ni,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags)
 {
     underling_extents e = underling_local_extents(problem, long_ni);
@@ -387,7 +393,7 @@ underling_fft_plan_create_c2c_forward(
         = create_underling_fft_extents_for_complex(e, long_ni);
 
     return underling_fft_plan_create_c2c_internal(
-            long_ni, data, FFTW_FORWARD, fftw_rigor_flags,
+            long_ni, in, out, FFTW_FORWARD, fftw_rigor_flags,
             input, output);
 }
 
@@ -395,7 +401,8 @@ underling_fft_plan
 underling_fft_plan_create_c2c_backward(
         const underling_problem problem,
         int long_ni,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags)
 {
     underling_extents e = underling_local_extents(problem, long_ni);
@@ -409,7 +416,7 @@ underling_fft_plan_create_c2c_backward(
         = create_underling_fft_extents_for_complex(e, long_ni);
 
     return underling_fft_plan_create_c2c_internal(
-            long_ni, data, FFTW_BACKWARD, fftw_rigor_flags,
+            long_ni, in, out, FFTW_BACKWARD, fftw_rigor_flags,
             input, output);
 }
 
@@ -417,7 +424,8 @@ static
 underling_fft_plan
 underling_fft_plan_create_c2c_internal(
         const int long_ni,
-        underling_real * const data,
+        underling_real * const in,
+        underling_real * const out,
         const int fftw_sign,
         unsigned fftw_rigor_flags,
         const underling_fft_extents input,
@@ -425,119 +433,139 @@ underling_fft_plan_create_c2c_internal(
 {
     // Sanity check input arguments
     if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
-        UNDERLING_ERROR_VAL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL, 0);
+        UNDERLING_ERROR_NULL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL);
     }
-    if (UNDERLING_UNLIKELY(data == NULL)) {
-        UNDERLING_ERROR_NULL("data == NULL", UNDERLING_EINVAL);
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR_NULL("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR_NULL("out == NULL", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(   fftw_sign != FFTW_FORWARD
-                          && fftw_sign != FFTW_BACKWARD)) {
+                           && fftw_sign != FFTW_BACKWARD)) {
         UNDERLING_ERROR_NULL(
-                "fftw_sign not one of FFTW_{FORWARD,BACKWARD}",
-                UNDERLING_EINVAL);
+                "fftw_sign not one of FFTW_{FORWARD,BACKWARD}", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
         UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
     }
 
-    // Determine when if/when we reorder relative to the FFT itself
-    // Do so by maintaining pointers to the relevant information
-    const underling_fft_extents *reorder_in, *reorder_out, *transform;
+    // Check user requested acceptable transform configuration
     const int input_is_long  = (input.order[2]  == long_ni);
     const int output_is_long = (output.order[2] == long_ni);
-    if (input_is_long) {
-        transform   = &input;  // First, transform the input in-place
-        reorder_in  = &input;  // Then reorder the transformed data...
-        reorder_out = &output; // to match with the desired output.
-    } else if (output_is_long) {
-        reorder_in  = &input;  // First, reorder the data ...
-        reorder_out = &output; // ...to make it long for the transform.
-        transform   = &output; // Then transform it.
-    } else {
-        UNDERLING_ERROR_NULL(
-                "Neither {input,output}_is_long", UNDERLING_ESANITY);
+    if (UNDERLING_UNLIKELY(!input_is_long && !output_is_long)) {
+        UNDERLING_ERROR_NULL("Neither {input,output} is long", UNDERLING_EINVAL);
     }
 
-    // Cook the reordering plan
-    fftw_plan plan_reorder = underling_fftw_plan_reorder_complex(
-            data, data, reorder_in, reorder_out);
-
-    // Prepare the input to fftw_plan_guru_split_dft, which allows using
-    // underling_fft_extents.strides directly.  The transform is in place.
-    fftw_plan plan_fft = NULL;
-    {
-        // Transform the long dimension given by transform->order[2]
-        assert(transform->order[2] == long_ni);
-        const fftw_iodim dims[] = {{
-            transform->size[transform->order[2]],
-            transform->stride[transform->order[2]],
-            transform->stride[transform->order[2]]
-        }};
-
-        // Loop over non-transformed dimensions
-        const fftw_iodim howmany_dims[3] = {
-            {
-                transform->size[transform->order[4]],
-                transform->stride[transform->order[4]],
-                transform->stride[transform->order[4]]
-            },
-            {
-                transform->size[transform->order[3]],
-                transform->stride[transform->order[3]],
-                transform->stride[transform->order[3]]
-            },
-            {
-                transform->size[3],
-                transform->size[4],
-                transform->size[4]
-            }
-        };
-
-        // FFTW manual section 4.5.3, FFTW_BACKWARD is FFTW_FORWARD with the
-        // components flipped.
-        underling_real * const ri
-            = (fftw_sign == FFTW_FORWARD) ? data : data + transform->stride[4];
-        underling_real * const ii
-            = (fftw_sign == FFTW_FORWARD) ? data + transform->stride[4] : data;
-        underling_real * const ro = ri;
-        underling_real * const io = ii;
-
-        plan_fft = fftw_plan_guru_split_dft(
-                sizeof(dims)/sizeof(dims[0]), dims,
-                sizeof(howmany_dims)/sizeof(howmany_dims[0]), howmany_dims,
-                ri, ii, ro, io, fftw_rigor_flags);
-
-        if (UNDERLING_UNLIKELY(plan_fft == NULL)) {
-            UNDERLING_ERROR_NULL("FFTW returned NULL FFT plan",
-                    UNDERLING_ESANITY);
-        }
-    }
-
-    // Create and initialize the plan workspace
-    underling_fft_plan f = calloc(1, sizeof(struct underling_fft_plan_s));
+    // Allocate and initialize the plan workspace
+    underling_fft_plan f = malloc(sizeof(struct underling_fft_plan_s));
     if (UNDERLING_UNLIKELY(f == NULL)) {
         UNDERLING_ERROR_NULL("failed to allocate space for plan",
                              UNDERLING_ENOMEM);
     }
-
-    // Copy the relevant parameters to the plan workspace...
     f->long_ni        = long_ni;
     f->type           = (fftw_sign == FFTW_FORWARD)
                       ? transform_type_c2c_forward
                       : transform_type_c2c_backward;
     f->input          = input;
-    f->plan_fft       = plan_fft;
+    f->plan_preorder  = NULL;
+    f->plan_fft       = NULL;
+    f->plan_postorder = NULL;
     f->output         = output;
-    // ...and fix when the data is reordered relative to the FFT
-    if (input_is_long) {
-        f->plan_preorder  = underling_fftw_plan_nop();
-        f->plan_postorder = plan_reorder;
-    } else if (output_is_long) {
-        f->plan_preorder  = plan_reorder;
-        f->plan_postorder = underling_fftw_plan_nop();
+    f->in_place       = (in == out);
+
+    // Determine when if/when we reorder relative to the FFT operation
+    const underling_fft_extents *transform_in, *transform_out;
+    if (f->in_place) {
+        // In-place requires reordering either before or after the FFT
+        if (input_is_long) {
+            transform_in = transform_out = &input;
+            f->plan_postorder
+                = underling_fftw_plan_reorder_complex(in, out, &input, &output);
+            if (UNDERLING_UNLIKELY(!f->plan_postorder)) {
+                underling_fft_plan_destroy(f);
+                UNDERLING_ERROR_NULL("!f->plan_postorder", UNDERLING_ESANITY);
+            }
+        } else if (output_is_long) {
+            f->plan_preorder
+                = underling_fftw_plan_reorder_complex(in, out, &input, &output);
+            if (UNDERLING_UNLIKELY(!f->plan_preorder)) {
+                underling_fft_plan_destroy(f);
+                UNDERLING_ERROR_NULL("!f->plan_preorder", UNDERLING_ESANITY);
+            }
+            transform_in = transform_out = &output;
+        } else {
+            UNDERLING_ERROR_NULL("!{input,output}_is_long", UNDERLING_ESANITY);
+        }
     } else {
-        UNDERLING_ERROR_NULL(
-                "Neither {input,output}_is_long", UNDERLING_ESANITY);
+        // Out-of-place does not require additional reordering steps
+        transform_in  = &f->input;
+        transform_out = &f->output;
+    }
+
+    // Prepare the input to fftw_plan_guru_split_dft, which allows using
+    // underling_fft_extents.strides directly from transform_in, transform_out
+    {
+        // Transform the long dimension given by transform_in->order[2]
+        assert(transform_in->order[2] == long_ni);
+        const fftw_iodim dims[] = {{
+            transform_in ->size  [transform_in ->order[2]],
+            transform_in ->stride[transform_in ->order[2]],
+            transform_out->stride[transform_out->order[2]]
+        }};
+
+        // Loop over non-transformed dimensions
+        const fftw_iodim howmany_dims[3] = {
+            {
+                transform_in ->size  [transform_in ->order[4]],
+                transform_in ->stride[transform_in ->order[4]],
+                transform_out->stride[transform_out->order[4]]
+            },
+            {
+                transform_in ->size  [transform_in ->order[3]],
+                transform_in ->stride[transform_in ->order[3]],
+                transform_out->stride[transform_out->order[3]]
+            },
+            {
+                transform_in ->size[3],
+                transform_in ->size[4],
+                transform_out->size[4]
+            }
+        };
+
+        // Find (in-ri), (in-ii), (out-ro), (out-io) for fftw_execute_split_dft
+        // Store offsets to simply using the new array execute interface later
+        // guru_split_dft: FFTW_BACKWARD is FFTW_FORWARD with flipped parts
+        if (f->in_place) {
+            f->offset.ri = 0;
+            f->offset.ii = transform_in->stride[4];
+            if (fftw_sign == FFTW_BACKWARD) {
+                swap(&f->offset.ri, &f->offset.ii);
+            }
+            f->offset.ro = f->offset.ri;
+            f->offset.io = f->offset.ii;
+        } else {
+            f->offset.ri = 0;
+            f->offset.ii = f->input.stride[4];
+            if (fftw_sign == FFTW_BACKWARD) {
+                swap(&f->offset.ri, &f->offset.ii);
+            }
+            f->offset.ro = 0;
+            f->offset.io = f->output.stride[4];
+        }
+
+        // Finally create the transformation plan
+        f->plan_fft = fftw_plan_guru_split_dft(
+                sizeof(dims)/sizeof(dims[0]), dims,
+                sizeof(howmany_dims)/sizeof(howmany_dims[0]), howmany_dims,
+                in + f->offset.ri, in + f->offset.ii,
+                out + f->offset.ro, out + f->offset.io,
+                fftw_rigor_flags);
+        if (UNDERLING_UNLIKELY(f->plan_fft == NULL)) {
+            underling_fft_plan_destroy(f);
+            UNDERLING_ERROR_NULL(
+                    "FFTW returned NULL FFT plan", UNDERLING_ESANITY);
+        }
     }
 
     return f;
@@ -547,7 +575,8 @@ underling_fft_plan
 underling_fft_plan_create_c2r_backward(
         const underling_problem problem,
         int long_ni,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags)
 {
     underling_extents e = underling_local_extents(problem, long_ni);
@@ -570,24 +599,31 @@ underling_fft_plan_create_c2r_backward(
     }
 
     return underling_fft_plan_create_c2r_backward_internal(
-            long_ni, data, fftw_rigor_flags, input, output);
+            long_ni, in, out, fftw_rigor_flags, input, output);
 }
 
 static
 underling_fft_plan
 underling_fft_plan_create_c2r_backward_internal(
         const int long_ni,
-        underling_real * data,
+        underling_real * const in,
+        underling_real * const out,
         unsigned fftw_rigor_flags,
         const underling_fft_extents input,
         const underling_fft_extents output)
 {
+    underling_real * const data = in; // FIXME: Remove assumption
+    assert(in == out);                // FIXME: Remove assumption
+
     // Sanity check input arguments
     if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
         UNDERLING_ERROR_VAL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL, 0);
     }
-    if (UNDERLING_UNLIKELY(data == NULL)) {
-        UNDERLING_ERROR_NULL("data == NULL", UNDERLING_EINVAL);
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR_NULL("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR_NULL("out == NULL", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
         UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
@@ -719,6 +755,7 @@ underling_fft_plan_create_c2r_backward_internal(
     f->plan_fft       = plan_fft;
     f->plan_postorder = plan_postorder;
     f->output         = output;
+    f->in_place       = (in == out);
 
     return f;
 
@@ -728,7 +765,8 @@ underling_fft_plan
 underling_fft_plan_create_r2c_forward(
         const underling_problem problem,
         int long_ni,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags)
 {
     underling_extents e = underling_local_extents(problem, long_ni);
@@ -751,24 +789,31 @@ underling_fft_plan_create_r2c_forward(
     }
 
     return underling_fft_plan_create_r2c_forward_internal(
-            long_ni, data, fftw_rigor_flags, input, output);
+            long_ni, in, out, fftw_rigor_flags, input, output);
 }
 
 static
 underling_fft_plan
 underling_fft_plan_create_r2c_forward_internal(
         const int long_ni,
-        underling_real * data,
+        underling_real * const in,
+        underling_real * const out,
         unsigned fftw_rigor_flags,
         const underling_fft_extents input,
         const underling_fft_extents output)
 {
+    underling_real * const data = in; // FIXME: Remove assumption
+    assert(in == out);                // FIXME: Remove assumption
+
     // Sanity check input arguments
     if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
         UNDERLING_ERROR_VAL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL, 0);
     }
-    if (UNDERLING_UNLIKELY(data == NULL)) {
-        UNDERLING_ERROR_NULL("data == NULL", UNDERLING_EINVAL);
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR_NULL("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR_NULL("out == NULL", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
         UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
@@ -869,6 +914,7 @@ underling_fft_plan_create_r2c_forward_internal(
     f->plan_fft       = plan_fft;
     f->plan_postorder = plan_postorder;
     f->output         = output;
+    f->in_place       = (in == out);
 
     return f;
 }
@@ -876,7 +922,8 @@ underling_fft_plan_create_r2c_forward_internal(
 underling_fft_plan
 underling_fft_plan_create_inverse(
         const underling_fft_plan plan_to_invert,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags)
 {
     if (UNDERLING_UNLIKELY(plan_to_invert == NULL)) {
@@ -888,25 +935,25 @@ underling_fft_plan_create_inverse(
     switch (plan_to_invert->type) {
     case transform_type_c2c_forward:
         retval = underling_fft_plan_create_c2c_internal(
-                    plan_to_invert->long_ni, data, FFTW_BACKWARD,
+                    plan_to_invert->long_ni, in, out, FFTW_BACKWARD,
                     fftw_rigor_flags,
                     plan_to_invert->output, plan_to_invert->input);
         break;
     case transform_type_c2c_backward:
         retval = underling_fft_plan_create_c2c_internal(
-                    plan_to_invert->long_ni, data, FFTW_FORWARD,
+                    plan_to_invert->long_ni, in, out, FFTW_FORWARD,
                     fftw_rigor_flags,
                     plan_to_invert->output, plan_to_invert->input);
         break;
     case transform_type_c2r_backward:
         retval = underling_fft_plan_create_r2c_forward_internal(
-                    plan_to_invert->long_ni, data,
+                    plan_to_invert->long_ni, in, out,
                     fftw_rigor_flags,
                     plan_to_invert->output, plan_to_invert->input);
         break;
     case transform_type_r2c_forward:
         retval = underling_fft_plan_create_c2r_backward_internal(
-                    plan_to_invert->long_ni, data,
+                    plan_to_invert->long_ni, in, out,
                     fftw_rigor_flags,
                     plan_to_invert->output, plan_to_invert->input);
         break;
@@ -917,8 +964,10 @@ underling_fft_plan_create_inverse(
     }
 
     // Sanity check that the inverse is indeed an inverse
-    assert(!underling_fft_extents_cmp(&plan_to_invert->input,  &retval->output));
-    assert(!underling_fft_extents_cmp(&plan_to_invert->output, &retval->input));
+    assert(!underling_fft_extents_cmp(
+                &plan_to_invert->input,  &retval->output));
+    assert(!underling_fft_extents_cmp(
+                &plan_to_invert->output, &retval->input));
 
     return retval;
 }
@@ -1012,24 +1061,59 @@ underling_fft_local_output(
 
 int
 underling_fft_plan_execute(
-        const underling_fft_plan plan)
+        const underling_fft_plan plan,
+        underling_real * in,
+        underling_real * out)
 {
     if (UNDERLING_UNLIKELY(plan == NULL)) {
         UNDERLING_ERROR("plan == NULL", UNDERLING_EINVAL);
     }
-    if (UNDERLING_UNLIKELY(plan->plan_preorder == NULL)) {
-        UNDERLING_ERROR("plan->plan_preorder == NULL", UNDERLING_EINVAL);
-    }
     if (UNDERLING_UNLIKELY(plan->plan_fft == NULL)) {
         UNDERLING_ERROR("plan->plan_fft == NULL", UNDERLING_EINVAL);
     }
-    if (UNDERLING_UNLIKELY(plan->plan_postorder == NULL)) {
-        UNDERLING_ERROR("plan->plan_postorder == NULL", UNDERLING_EINVAL);
+    if (UNDERLING_UNLIKELY(in == NULL)) {
+        UNDERLING_ERROR("in == NULL", UNDERLING_EINVAL);
+    }
+    if (UNDERLING_UNLIKELY(out == NULL)) {
+        UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
     }
 
-    fftw_execute(plan->plan_preorder);
-    fftw_execute(plan->plan_fft);
-    fftw_execute(plan->plan_postorder);
+    // Check in- vs out-of-place plan applied appropriately
+    if (plan->in_place) {
+        if (UNDERLING_UNLIKELY(in != out)) {
+            UNDERLING_ERROR("in-place plan but in != out", UNDERLING_EINVAL);
+        }
+    } else if (UNDERLING_UNLIKELY(in == out)) {
+        UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
+    }
+
+    if (plan->plan_preorder) {
+        assert(plan->in_place && in == out);
+        fftw_execute_r2r(plan->plan_preorder, in, out);
+    }
+    switch (plan->type) {
+        case transform_type_c2c_forward:
+        case transform_type_c2c_backward:
+            fftw_execute_split_dft(plan->plan_fft,
+                                   in  + plan->offset.ri,
+                                   in  + plan->offset.ii,
+                                   out + plan->offset.ro,
+                                   out + plan->offset.io);
+            break;
+        case transform_type_c2r_backward:
+            fftw_execute(plan->plan_fft); // FIXME Use new array execute
+            break;
+        case transform_type_r2c_forward:
+            fftw_execute(plan->plan_fft); // FIXME Use new array execute
+            break;
+        default:
+            UNDERLING_ERROR("Unknown plan->type", UNDERLING_ESANITY);
+    }
+
+    if (plan->plan_postorder) {
+        assert(plan->in_place && in == out);
+        fftw_execute_r2r(plan->plan_postorder, in, out);
+    }
 
     return UNDERLING_SUCCESS;
 }

@@ -1123,16 +1123,14 @@ underling_execute_long_n2_to_long_n1(
     if (UNDERLING_UNLIKELY(out == NULL)) {
         UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
     }
+
+    // Check in- vs out-of-place plan applied appropriately
     if (plan->in_place) {
         if (UNDERLING_UNLIKELY(in != out)) {
-            UNDERLING_ERROR(
-                    "in-place plan but in != out", UNDERLING_EINVAL);
+            UNDERLING_ERROR("in-place plan but in != out", UNDERLING_EINVAL);
         }
-    } else {
-        if (UNDERLING_UNLIKELY(in == out)) {
-            UNDERLING_ERROR(
-                    "out-of-place plan but in == out", UNDERLING_EINVAL);
-        }
+    } else if (UNDERLING_UNLIKELY(in == out)) {
+        UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
     }
 
     fftw_execute_r2r(plan->plan_backwardA, in, out);
@@ -1158,16 +1156,14 @@ underling_execute_long_n1_to_long_n0(
     if (UNDERLING_UNLIKELY(out == NULL)) {
         UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
     }
+
+    // Check in- vs out-of-place plan applied appropriately
     if (plan->in_place) {
         if (UNDERLING_UNLIKELY(in != out)) {
-            UNDERLING_ERROR(
-                    "in-place plan but in != out", UNDERLING_EINVAL);
+            UNDERLING_ERROR("in-place plan but in != out", UNDERLING_EINVAL);
         }
-    } else {
-        if (UNDERLING_UNLIKELY(in == out)) {
-            UNDERLING_ERROR(
-                    "out-of-place plan but in == out", UNDERLING_EINVAL);
-        }
+    } else if (UNDERLING_UNLIKELY(in == out)) {
+        UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
     }
 
     fftw_execute_r2r(plan->plan_backwardB, in, out);
@@ -1193,16 +1189,14 @@ underling_execute_long_n0_to_long_n1(
     if (UNDERLING_UNLIKELY(out == NULL)) {
         UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
     }
+
+    // Check in- vs out-of-place plan applied appropriately
     if (plan->in_place) {
         if (UNDERLING_UNLIKELY(in != out)) {
-            UNDERLING_ERROR(
-                    "in-place plan but in != out", UNDERLING_EINVAL);
+            UNDERLING_ERROR("in-place plan but in != out", UNDERLING_EINVAL);
         }
-    } else {
-        if (UNDERLING_UNLIKELY(in == out)) {
-            UNDERLING_ERROR(
-                    "out-of-place plan but in == out", UNDERLING_EINVAL);
-        }
+    } else if (UNDERLING_UNLIKELY(in == out)) {
+        UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
     }
 
     fftw_execute_r2r(plan->plan_forwardB, in, out);
@@ -1228,16 +1222,14 @@ underling_execute_long_n1_to_long_n2(
     if (UNDERLING_UNLIKELY(out == NULL)) {
         UNDERLING_ERROR("out == NULL", UNDERLING_EINVAL);
     }
+
+    // Check in- vs out-of-place plan applied appropriately
     if (plan->in_place) {
         if (UNDERLING_UNLIKELY(in != out)) {
-            UNDERLING_ERROR(
-                    "in-place plan but in != out", UNDERLING_EINVAL);
+            UNDERLING_ERROR("in-place plan but in != out", UNDERLING_EINVAL);
         }
-    } else {
-        if (UNDERLING_UNLIKELY(in == out)) {
-            UNDERLING_ERROR(
-                    "out-of-place plan but in == out", UNDERLING_EINVAL);
-        }
+    } else if (UNDERLING_UNLIKELY(in == out)) {
+        UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
     }
 
     fftw_execute_r2r(plan->plan_forwardA, in, out);

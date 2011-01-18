@@ -34,6 +34,8 @@
 #include <fftw3-mpi.h>
 #include "test_tools.hpp"
 
+// TODO Test out-of-place transformations
+
 // Contains UnderlingFixture, FFTWMPIFixture
 #include "test_underling_tools.hpp"
 BOOST_GLOBAL_FIXTURE(FFTWMPIFixture);
@@ -89,6 +91,7 @@ BOOST_AUTO_TEST_CASE( extents_consistency )
     underling::fft::plan backward(underling::fft::plan::c2c_forward(),
                                   f.problem,
                                   0,
+                                  f.data.get(),
                                   f.data.get(),
                                   FFTW_ESTIMATE);
 
@@ -182,9 +185,11 @@ static void test_c2c_forward(MPI_Comm comm,
                                  f.problem,
                                  long_ni,
                                  f.data.get(),
+                                 f.data.get(),
                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
     underling::fft::plan backward(forward,         // Inverse constructor!
+                                  f.data.get(),
                                   f.data.get(),
                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
@@ -229,7 +234,7 @@ static void test_c2c_forward(MPI_Comm comm,
     }
 
     // Transform from physical to wave space
-    forward.execute();
+    forward.execute(f.data.get(), f.data.get());
 
     // Check the sample data transformed as expected
     {
@@ -273,7 +278,7 @@ static void test_c2c_forward(MPI_Comm comm,
     }
 
     // Transform from wave space to physical space
-    backward.execute();
+    backward.execute(f.data.get(), f.data.get());
 
     // Check that we recovered the scaled sample data
     {
@@ -464,9 +469,11 @@ static void test_c2c_backward(MPI_Comm comm,
                                   f.problem,
                                   long_ni,
                                   f.data.get(),
+                                  f.data.get(),
                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
     underling::fft::plan forward(backward,         // Inverse constructor!
+                                 f.data.get(),
                                  f.data.get(),
                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
@@ -510,7 +517,7 @@ static void test_c2c_backward(MPI_Comm comm,
     }
 
     // Transform from wave space to physical space
-    backward.execute();
+    backward.execute(f.data.get(), f.data.get());
 
     // Check the sample data transformed as expected
     {
@@ -552,7 +559,7 @@ static void test_c2c_backward(MPI_Comm comm,
     }
 
     // Transform from physical to wave space
-    forward.execute();
+    forward.execute(f.data.get(), f.data.get());
 
     // Check the sample data transformed as expected
     {
@@ -756,9 +763,11 @@ static void test_c2r(MPI_Comm comm,
                                   f.problem,
                                   long_ni,
                                   f.data.get(),
+                                  f.data.get(),
                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
     underling::fft::plan forward(backward,       // Inverse constructor!
+                                 f.data.get(),
                                  f.data.get(),
                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
@@ -807,7 +816,7 @@ static void test_c2r(MPI_Comm comm,
     }
 
     // Transform from wave to physical space
-    backward.execute();
+    backward.execute(f.data.get(), f.data.get());
 
     // Check data transformed as expected
     {
@@ -840,7 +849,7 @@ static void test_c2r(MPI_Comm comm,
     }
 
     // Transform physical to wave space
-    forward.execute();
+    forward.execute(f.data.get(), f.data.get());
 
     // Check data transformed as expected
     {
@@ -1218,9 +1227,11 @@ static void test_r2c(MPI_Comm comm,
                                  f.problem,
                                  long_ni,
                                  f.data.get(),
+                                 f.data.get(),
                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
     underling::fft::plan backward(forward,        // Inverse constructor!
+                                  f.data.get(),
                                   f.data.get(),
                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
@@ -1265,7 +1276,7 @@ static void test_r2c(MPI_Comm comm,
     }
 
     // Transform physical to wave space
-    forward.execute();
+    forward.execute(f.data.get(), f.data.get());
 
     // Check data transformed as expected
     {
@@ -1307,7 +1318,7 @@ static void test_r2c(MPI_Comm comm,
     }
 
     // Transform wave to physical
-    backward.execute();
+    backward.execute(f.data.get(), f.data.get());
 
     // Checking data transformed as expected
     {

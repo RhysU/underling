@@ -102,8 +102,9 @@ extern const underling_fft_extents UNDERLING_FFT_EXTENTS_INVALID;
  *         or be greater than <tt>*e2</tt>.
  */
 int
-underling_fft_extents_cmp(const underling_fft_extents * const e1,
-                          const underling_fft_extents * const e2) UNDERLING_API;
+underling_fft_extents_cmp(
+        const underling_fft_extents * const e1,
+        const underling_fft_extents * const e2) UNDERLING_API;
 
 /**
  * A type encapsulating FFTW-like planning information.
@@ -117,125 +118,75 @@ typedef struct underling_fft_plan_s *underling_fft_plan;
  * will be treated as <tt>howmany/2</tt> complex fields.  Note that the
  * transform is not normalized.
  *
+ * Out-of-place plans are created by specifying input and output buffers such
+ * that <tt>in != out</tt>.  Executing an out-of-place plan will always
+ * destroy the contents of the input buffer \c in.  In-place plans can be
+ * created by specifying <tt>in == out</tt>.  In-place plans always use less
+ * memory but will often run more slowly than out-of-place plans.
+ *
  * @param problem Problem to use for layout and stride information.
  * @param long_ni Direction across which to perform the FFT, which is assumed
  *                to be long whenever the returned plan is executed.
- * @param data Pointer to the start of the memory allocated to execute
- *             the problem.
+ * @param in  Input buffer containing the source data to be transformed.
+ * @param out Output buffer to contain the data after transformation.
  * @param fftw_rigor_flags One of FFTW's rigor planning flags, e.g.
- *                         FFTW_MEASURE.  Note that \c data is overwritten
- *                         during the planning process for any value other
- *                         than FFTW_ESTIMATE.
+ *                         FFTW_ESTIMATE.  Specifying zero is equivalent to
+ *                         providing FFTW_MEASURE.  Note that the buffers
+ *                         \c in and \c out are overwritten during the planning
+ *                         process for any value other than FFTW_ESTIMATE.
  *
  * @return On success, return a valid \c underling_fft_plan.  On failure, calls
  *         underling_error and returns NULL.
  * @see The method underling_fft_plan_destroy for how to destroy an instance.
  * @see The method underling_fft_plan_create_inverse for how to create
- *      the corresponding inverse complex-to-complex backward FFT.  It is
- *      <em>incorrect</em> to use underling_fft_create_c2c_backward for
- *      that purpose.
+ *      the corresponding inverse FFT.  It is <em>incorrect</em> to use
+ *      any other way to invert the return FFT.
  */
 underling_fft_plan
 underling_fft_plan_create_c2c_forward(
         const underling_problem problem,
         int long_ni,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a backward complex-to-complex FFT on the given data
- * when long in the <tt>long_ni</tt>th direction.  The problem must have had
- * <tt>howmany</tt> specified as a multiple of two at creation time, and it
- * will be treated as <tt>howmany/2</tt> complex fields.  Note that the
- * transform is not normalized.
- *
- * @param problem Problem to use for layout and stride information.
- * @param long_ni Direction across which to perform the FFT, which is assumed
- *                to be long whenever the returned plan is executed.
- * @param data Pointer to the start of the memory allocated to execute
- *             the problem.
- * @param fftw_rigor_flags One of FFTW's rigor planning flags, e.g.
- *                         FFTW_MEASURE.  Note that \c data is overwritten
- *                         during the planning process for any value other
- *                         than FFTW_ESTIMATE.
- *
- * @return On success, return a valid \c underling_fft_plan.  On failure, calls
- *         underling_error and returns NULL.
- * @see The method underling_fft_plan_destroy for how to destroy an instance.
- * @see The method underling_fft_plan_create_inverse for how to create
- *      the corresponding inverse complex-to-complex forward FFT.  It is
- *      <em>incorrect</em> to use underling_fft_create_c2c_forward for
- *      that purpose.
+ * when long in the <tt>long_ni</tt>th direction.
+ * @copydetails underling_fft_plan_create_c2c_forward
  */
 underling_fft_plan
 underling_fft_plan_create_c2c_backward(
         const underling_problem problem,
         int long_ni,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a forward real-to-complex FFT on the given data
- * when long in the <tt>long_ni</tt>th direction.  The problem must have had
- * <tt>howmany</tt> specified as a multiple of two at creation time, and it
- * will be treated as <tt>howmany/2</tt> complex fields.  Note that the
- * transform is not normalized.
- *
- * @param problem Problem to use for layout and stride information.
- * @param long_ni Direction across which to perform the FFT, which is assumed
- *                to be long whenever the returned plan is executed.
- * @param data Pointer to the start of the memory allocated to execute
- *             the problem.
- * @param fftw_rigor_flags One of FFTW's rigor planning flags, e.g.
- *                         FFTW_MEASURE.  Note that \c data is overwritten
- *                         during the planning process for any value other
- *                         than FFTW_ESTIMATE.
- *
- * @return On success, return a valid \c underling_fft_plan.  On failure, calls
- *         underling_error and returns NULL.
- * @see The method underling_fft_plan_destroy for how to destroy an instance.
- * @see The method underling_fft_plan_create_inverse for how to create
- *      the corresponding inverse complex-to-real backward FFT.  It is
- *      <em>incorrect</em> to use underling_fft_create_c2r_backward for
- *      that purpose.
+ * when long in the <tt>long_ni</tt>th direction.
+ * @copydetails underling_fft_plan_create_c2c_forward
  */
 underling_fft_plan
 underling_fft_plan_create_r2c_forward(
         const underling_problem problem,
         int long_ni,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a backward complex-to-real FFT on the given data
- * when long in the <tt>long_ni</tt>th direction.  The problem must have had
- * <tt>howmany</tt> specified as a multiple of two at creation time, and it
- * will be treated as <tt>howmany/2</tt> complex fields.  Note that the
- * transform is not normalized.
- *
- * @param problem Problem to use for layout and stride information.
- * @param long_ni Direction across which to perform the FFT, which is assumed
- *                to be long whenever the returned plan is executed.
- * @param data Pointer to the start of the memory allocated to execute
- *             the problem.
- * @param fftw_rigor_flags One of FFTW's rigor planning flags, e.g.
- *                         FFTW_MEASURE.  Note that \c data is overwritten
- *                         during the planning process for any value other
- *                         than FFTW_ESTIMATE.
- *
- * @return On success, return a valid \c underling_fft_plan.  On failure, calls
- *         underling_error and returns NULL.
- * @see The method underling_fft_plan_destroy for how to destroy an instance.
- * @see The method underling_fft_plan_create_inverse for how to create
- *      the corresponding inverse real-to-complex forward FFT.  It is
- *      <em>incorrect</em> to use underling_fft_create_r2c_forward for
- *      that purpose.
+ * when long in the <tt>long_ni</tt>th direction.
+ * @copydetails underling_fft_plan_create_c2c_forward
  */
 underling_fft_plan
 underling_fft_plan_create_c2r_backward(
         const underling_problem problem,
         int long_ni,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
@@ -246,13 +197,20 @@ underling_fft_plan_create_c2r_backward(
  * this method will have compatible input and output underling_fft_extents
  * information.
  *
+ * Out-of-place plans are created by specifying input and output buffers such
+ * that <tt>in != out</tt>.  Executing an out-of-place plan will always
+ * destroy the contents of the input buffer \c in.  In-place plans can be
+ * created by specifying <tt>in == out</tt>.  In-place plans always use less
+ * memory but will often run more slowly than out-of-place plans.
+ *
  * @param plan_to_invert Prior plan to use for layout and stride information.
- * @param data Pointer to the start of the memory allocated to execute
- *             the problem.
+ * @param in  Input buffer containing the source data to be transformed.
+ * @param out Output buffer to contain the data after transformation.
  * @param fftw_rigor_flags One of FFTW's rigor planning flags, e.g.
- *                         FFTW_MEASURE.  Note that \c data is overwritten
- *                         during the planning process for any value other
- *                         than FFTW_ESTIMATE.
+ *                         FFTW_ESTIMATE.  Specifying zero is equivalent to
+ *                         providing FFTW_MEASURE.  Note that the buffers
+ *                         \c in and \c out are overwritten during the planning
+ *                         process for any value other than FFTW_ESTIMATE.
  *
  * @return On success, return a valid \c underling_fft_plan which inverts
  *         plan_to_invert up to normalization.  On failure, calls
@@ -262,7 +220,8 @@ underling_fft_plan_create_c2r_backward(
 underling_fft_plan
 underling_fft_plan_create_inverse(
         const underling_fft_plan plan_to_invert,
-        underling_real * data,
+        underling_real * in,
+        underling_real * out,
         unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
@@ -361,15 +320,23 @@ underling_fft_local_output(
 
 /**
  * Perform a previously planned FFT.  Appropriate calls to the underlying FFT
- * implementation will occur.
+ * implementation will occur.  The input and output buffers <em>must</em> be
+ * aligned identically to the input and output buffers provided during
+ * planning.
  *
  * @param plan Plan to be executed.
+ * @param in  Input buffer on which to execute the plan.  For out-of-place
+ *            transforms, this buffer's contents will be destroyed.
+ * @param out Output buffer on which to execute the plan.  For in-place
+ *            transforms, one must specify <tt>out == in</tt>.
  *
  * @return UNDERLING_SUCCESS (zero) on success and non-zero on failure.
  */
 int
 underling_fft_plan_execute(
-        const underling_fft_plan plan) UNDERLING_API;
+        const underling_fft_plan plan,
+        underling_real * in,
+        underling_real * out) UNDERLING_API;
 /**
  * Destroy all resources associated with the given plan.
  *

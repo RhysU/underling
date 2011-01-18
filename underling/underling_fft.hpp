@@ -64,10 +64,11 @@ public:
     plan(const c2c_forward tag,
          const problem &p,
          int long_ni,
-         underling_real *data,
+         underling_real *in,
+         underling_real *out,
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_c2c_forward(
-                    p.get(), long_ni, data, fftw_rigor_flags)) {
+                    p.get(), long_ni, in, out, fftw_rigor_flags)) {
         (void) tag; // unused
     }
 
@@ -75,10 +76,11 @@ public:
     plan(const c2c_backward tag,
          const problem &p,
          int long_ni,
-         underling_real *data,
+         underling_real *in,
+         underling_real *out,
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_c2c_backward(
-                    p.get(), long_ni, data, fftw_rigor_flags)) {
+                    p.get(), long_ni, in, out, fftw_rigor_flags)) {
         (void) tag; // unused
     }
 
@@ -86,10 +88,11 @@ public:
     plan(const r2c_forward tag,
          const problem &p,
          int long_ni,
-         underling_real *data,
+         underling_real *in,
+         underling_real *out,
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_r2c_forward(
-                    p.get(), long_ni, data, fftw_rigor_flags)) {
+                    p.get(), long_ni, in, out, fftw_rigor_flags)) {
         (void) tag; // unused
     }
 
@@ -97,19 +100,21 @@ public:
     plan(const c2r_backward tag,
          const problem &p,
          int long_ni,
-         underling_real *data,
+         underling_real *in,
+         underling_real *out,
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_c2r_backward(
-                    p.get(), long_ni, data, fftw_rigor_flags)) {
+                    p.get(), long_ni, in, out, fftw_rigor_flags)) {
         (void) tag; // unused
     }
 
     /** @see underling_fft_plan_create_inverse */
     plan(const plan& plan_to_invert,
-         underling_real * data,
+         underling_real * in,
+         underling_real * out,
          unsigned fftw_rigor_flags)
         : plan_(underling_fft_plan_create_inverse(
-                    plan_to_invert.get(), data, fftw_rigor_flags)) {};
+                    plan_to_invert.get(), in, out, fftw_rigor_flags)) {};
 
     /** @see underling_fft_plan_destroy */
     ~plan() { underling_fft_plan_destroy(plan_); }
@@ -147,8 +152,9 @@ public:
     operator bool () const { return plan_ != NULL; };
 
     /** @see underling_fft_plan_execute */
-    int execute() const {
-        return underling_fft_plan_execute(plan_);
+    int execute(underling_real *in,
+                underling_real *out) const {
+        return underling_fft_plan_execute(plan_, in, out);
     }
 
 private:
