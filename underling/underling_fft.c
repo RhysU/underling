@@ -74,15 +74,12 @@ static inline void swap(int *a, int *b)
 
 static
 fftw_plan
-underling_fftw_plan_nop( void );
-
-static
-fftw_plan
 underling_fftw_plan_reorder_complex(
         underling_real * const data_in,
         underling_real * const data_out,
         const underling_fft_extents * const input,
-        const underling_fft_extents * const output);
+        const underling_fft_extents * const output,
+        const unsigned flags);
 
 static
 void
@@ -183,30 +180,12 @@ underling_fft_extents_cmp(const underling_fft_extents * const e1,
 
 static
 fftw_plan
-underling_fftw_plan_nop( void )
-{
-    // Create a non-NULL NOP FFTW plan
-    fftw_plan nop_plan = fftw_plan_guru_r2r(/*rank*/0,
-                                            /*dims*/NULL,
-                                            /*howmany_rank*/0,
-                                            /*dims*/NULL,
-                                            /*in*/NULL,
-                                            /*out*/NULL,
-                                            /*kind*/NULL,
-                                            /*flags*/0);
-    if (UNDERLING_UNLIKELY(nop_plan == NULL)) {
-        UNDERLING_ERROR_NULL("FFTW returned NULL NOP plan", UNDERLING_ESANITY);
-    }
-    return nop_plan;
-}
-
-static
-fftw_plan
 underling_fftw_plan_reorder_complex(
         underling_real * const data_in,
         underling_real * const data_out,
         const underling_fft_extents * const input,
-        const underling_fft_extents * const output)
+        const underling_fft_extents * const output,
+        const unsigned flags)
 {
     const int howmany_rank = sizeof(input->size)/sizeof(input->size[0]);
     fftw_iodim howmany_dims[howmany_rank];
@@ -216,9 +195,8 @@ underling_fftw_plan_reorder_complex(
         howmany_dims[i].is = input->stride[io];
         howmany_dims[i].os = output->stride[io];
     }
-    fftw_plan retval = fftw_plan_guru_r2r(
-            0, NULL, howmany_rank, howmany_dims, data_in, data_out,
-            NULL, FFTW_ESTIMATE);
+    fftw_plan retval = fftw_plan_guru_r2r(0, NULL, howmany_rank, howmany_dims,
+                                          data_in, data_out, NULL, flags);
 
     if (UNDERLING_UNLIKELY(retval == NULL)) {
         UNDERLING_ERROR_NULL("FFTW returned NULL reorder_complex plan",
@@ -480,15 +458,17 @@ underling_fft_plan_create_c2c_internal(
         // In-place requires reordering either before or after the FFT
         if (input_is_long) {
             transform_in = transform_out = &input;
-            f->plan_postorder
-                = underling_fftw_plan_reorder_complex(in, out, &input, &output);
+            f->plan_postorder = underling_fftw_plan_reorder_complex(
+                    in, out, &input, &output,
+                    fftw_rigor_flags | FFTW_DESTROY_INPUT);
             if (UNDERLING_UNLIKELY(!f->plan_postorder)) {
                 underling_fft_plan_destroy(f);
                 UNDERLING_ERROR_NULL("!f->plan_postorder", UNDERLING_ESANITY);
             }
         } else if (output_is_long) {
-            f->plan_preorder
-                = underling_fftw_plan_reorder_complex(in, out, &input, &output);
+            f->plan_preorder = underling_fftw_plan_reorder_complex(
+                    in, out, &input, &output,
+                    fftw_rigor_flags | FFTW_DESTROY_INPUT);
             if (UNDERLING_UNLIKELY(!f->plan_preorder)) {
                 underling_fft_plan_destroy(f);
                 UNDERLING_ERROR_NULL("!f->plan_preorder", UNDERLING_ESANITY);
@@ -560,7 +540,7 @@ underling_fft_plan_create_c2c_internal(
                 sizeof(howmany_dims)/sizeof(howmany_dims[0]), howmany_dims,
                 in + f->offset.ri, in + f->offset.ii,
                 out + f->offset.ro, out + f->offset.io,
-                fftw_rigor_flags);
+                fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_fft == NULL)) {
             underling_fft_plan_destroy(f);
             UNDERLING_ERROR_NULL(
@@ -651,10 +631,9 @@ underling_fft_plan_create_c2r_backward_internal(
         howmany_dims[4].is = 1;
         howmany_dims[4].os = input.size[3];
 
-        plan_preorder = fftw_plan_guru_r2r(/*rank*/0, /*dims*/NULL,
-                                           howmany_rank, howmany_dims,
-                                           data, data,
-                                           /*kind*/NULL, fftw_rigor_flags);
+        plan_preorder = fftw_plan_guru_r2r(
+                0, NULL, howmany_rank, howmany_dims, data, data, NULL,
+                fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(plan_preorder == NULL)) {
             UNDERLING_ERROR_NULL(
                     "FFTW returned NULL c2r_backward preorder plan",
@@ -695,10 +674,9 @@ underling_fft_plan_create_c2r_backward_internal(
         underling_real * const ii = data + input.size[3]; // From preorder plan
         underling_real * const out = data;
 
-        plan_fft = fftw_plan_guru_split_dft_c2r(rank, dims,
-                                                howmany_rank, howmany_dims,
-                                                ri, ii, out,
-                                                fftw_rigor_flags);
+        plan_fft = fftw_plan_guru_split_dft_c2r(
+                rank, dims, howmany_rank, howmany_dims, ri, ii, out,
+                fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(plan_fft == NULL)) {
             UNDERLING_ERROR_NULL("FFTW returned NULL c2r_backward FFT plan",
                     UNDERLING_ESANITY);
@@ -730,10 +708,9 @@ underling_fft_plan_create_c2r_backward_internal(
         howmany_dims[4].n  = 1;
         howmany_dims[4].is = howmany_dims[4].os = output.size[3];
 
-        plan_postorder = fftw_plan_guru_r2r(/*rank*/0, /*dims*/NULL,
-                                           howmany_rank, howmany_dims,
-                                           data, data,
-                                           /*kind*/NULL, fftw_rigor_flags);
+        plan_postorder = fftw_plan_guru_r2r(
+                0, NULL, howmany_rank, howmany_dims, data, data, NULL,
+                fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(plan_postorder == NULL)) {
             UNDERLING_ERROR_NULL(
                     "FFTW returned NULL c2r_backward postorder plan",
@@ -823,7 +800,7 @@ underling_fft_plan_create_r2c_forward_internal(
     // reorder the output data.  Ignoring the input reordering process avoids
     // touching everything a third separate time.
     // TODO Evaluate performance impact since FFT may be non-stride 1
-    const fftw_plan plan_preorder = underling_fftw_plan_nop();
+    const fftw_plan plan_preorder = NULL;
 
     // The transform is purely in place.
     fftw_plan plan_fft = NULL;
@@ -854,10 +831,9 @@ underling_fft_plan_create_r2c_forward_internal(
         underling_real * const ro = data;
         underling_real * const io = data + input.stride[long_ni];
 
-        plan_fft = fftw_plan_guru_split_dft_r2c(rank, dims,
-                                                howmany_rank, howmany_dims,
-                                                in, ro, io,
-                                                fftw_rigor_flags);
+        plan_fft = fftw_plan_guru_split_dft_r2c(
+                rank, dims, howmany_rank, howmany_dims, in, ro, io,
+                fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(plan_fft == NULL)) {
             UNDERLING_ERROR_NULL("FFTW returned NULL r2c_forward FFT plan",
                     UNDERLING_ESANITY);
@@ -889,10 +865,9 @@ underling_fft_plan_create_r2c_forward_internal(
         howmany_dims[4].is = output.size[3];
         howmany_dims[4].os = 1;
 
-        plan_postorder = fftw_plan_guru_r2r(/*rank*/0, /*dims*/NULL,
-                                            howmany_rank, howmany_dims,
-                                            data, data,
-                                            /*kind*/NULL, fftw_rigor_flags);
+        plan_postorder = fftw_plan_guru_r2r(
+                0, NULL, howmany_rank, howmany_dims, data, data, NULL,
+                fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(plan_postorder == NULL)) {
             UNDERLING_ERROR_NULL(
                     "FFTW returned NULL r2c_forward postorder plan",
