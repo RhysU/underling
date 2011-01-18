@@ -226,85 +226,115 @@ underling_grid_create(
         UNDERLING_ERROR_NULL("pB >= 0 required", UNDERLING_EINVAL);
     }
 
-    // Get number of processors in the communicator
-    int nproc;
-    UNDERLING_MPICHKN(MPI_Comm_size(comm, &nproc));
+    // Local scratch variables
+    int error;                         // For error reporting
+    char buffer[MPI_MAX_OBJECT_NAME];  // For snprintf calls
+    int dims[2];                       // For MPI routine dimensions
 
-    // Create a balanced processor grid if not specified by pA, pB != 0
-    {
-        int dims[2] = { pA, pB };
-        UNDERLING_MPICHKN(MPI_Dims_create(nproc, 2, dims));
-        // If both directions automatic, ensure dims[0] <= dims[1]
-        if (pA == 0 && pB == 0 && dims[0] > dims[1]) {
-            const int tmp = dims[0]; dims[0] = dims[1]; dims[1] = tmp;
-        }
-        pA = dims[0];
-        pB = dims[1];
-        if (UNDERLING_UNLIKELY(pA * pB != nproc)) {
-            char reason[127];
-            snprintf(reason, sizeof(reason)/sizeof(reason[0]),
-                    "Invalid processor grid: pA {%d} * pB {%d} != nproc {%d}",
-                    pA, pB, nproc);
-            UNDERLING_ERROR_NULL(reason, UNDERLING_EFAILED);
-        }
-    }
-
-    // Clone the communicator and create the 2D Cartesian topology
-    MPI_Comm g_comm = MPI_COMM_NULL;
-    {
-        int dims[2]     = { pA, pB };
-        int periodic[2] = { 0, 0 };
-        UNDERLING_MPICHKN(MPI_Cart_create(
-                comm, 2, dims, periodic, 1/*reordering allowed*/, &g_comm));
-    }
-
-    // Create communicator for the PA direction
-    MPI_Comm pA_comm = MPI_COMM_NULL;
-    {
-        int remain_dims[2] = { 1, 0 };
-        UNDERLING_MPICHKN(MPI_Cart_sub(g_comm, remain_dims, &pA_comm));
-    }
-    // Find the rank of this process within g_comm
-    int pA_rank;
-    UNDERLING_MPICHKN(MPI_Comm_rank(pA_comm, &pA_rank));
-
-    // Create communicator for the PB direction
-    MPI_Comm pB_comm = MPI_COMM_NULL;
-    {
-        int remain_dims[2] = { 0, 1 };
-        UNDERLING_MPICHKN(MPI_Cart_sub(g_comm, remain_dims, &pB_comm));
-    }
-    // Find the rank of this process within g_comm
-    int pB_rank;
-    UNDERLING_MPICHKN(MPI_Comm_rank(pB_comm, &pB_rank));
-
-    // Name the three new communicators something mildly descriptive
-    char buffer[MPI_MAX_OBJECT_NAME];
-    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
-            "uGComm%dx%d", pA, pB);
-    UNDERLING_MPICHKN(MPI_Comm_set_name(g_comm, buffer));
-    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
-            "uPACommXx%d", pB_rank);
-    UNDERLING_MPICHKN(MPI_Comm_set_name(pA_comm, buffer));
-    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
-            "uPBComm%dxX", pA_rank);
-    UNDERLING_MPICHKN(MPI_Comm_set_name(pB_comm, buffer));
-
-    // Create and initialize the grid workspace
-    underling_grid g = calloc(1, sizeof(struct underling_grid_s));
+    // Allocate memory for the grid workspace
+    underling_grid g = malloc(sizeof(struct underling_grid_s));
     if (UNDERLING_UNLIKELY(g == NULL)) {
         UNDERLING_ERROR_NULL("failed to allocate space for grid",
                              UNDERLING_ENOMEM);
     }
-    // Copy the grid parameters to the grid workspace
-    g->n[0]        = n0;
-    g->n[1]        = n1;
-    g->n[2]        = n2;
-    g->pA          = pA;
-    g->pB          = pB;
-    g->g_comm      = g_comm;
-    g->pA_comm     = pA_comm;
-    g->pB_comm     = pB_comm;
+
+    // Initialize values that we'll update as we proceed...
+    g->n[0]    = n0;
+    g->n[1]    = n1;
+    g->n[2]    = n2;
+    g->pA      = pA;
+    g->pB      = pB;
+    g->g_comm  = MPI_COMM_NULL;
+    g->pA_comm = MPI_COMM_NULL;
+    g->pB_comm = MPI_COMM_NULL;
+
+    // Get number of processors in the communicator
+    int nproc;
+    if ((error = MPI_Comm_size(comm, &nproc))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
+
+    // Create a balanced processor grid if not specified by pA, pB != 0
+    dims[0] = g->pA;
+    dims[1] = g->pB;
+    if ((error = MPI_Dims_create(nproc, 2, dims))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
+    // If both directions automatic, ensure dims[0] <= dims[1]
+    if (g->pA == 0 && g->pB == 0 && dims[0] > dims[1]) {
+        const int tmp = dims[0]; dims[0] = dims[1]; dims[1] = tmp;
+    }
+    // Store new values of pA, pB within workspace
+    g->pA = dims[0];
+    g->pB = dims[1];
+    if (UNDERLING_UNLIKELY(g->pA * g->pB != nproc)) {
+        snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+                "Invalid processor grid: pA {%d} * pB {%d} != nproc {%d}",
+                g->pA, g->pB, nproc);
+        underling_grid_destroy(g);
+        UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
+    }
+
+    // Clone the communicator and create the 2D Cartesian topology
+    {
+        dims[0] = g->pA;
+        dims[1] = g->pB;
+        int periodic[2] = { 0, 0 };
+        if ((error = MPI_Cart_create(comm, 2, dims, periodic, 1, &g->g_comm))) {
+            underling_grid_destroy(g);
+            UNDERLING_MPICHKN(error);
+        }
+    }
+
+    // Create communicator for the pA direction
+    dims[0] = 1;
+    dims[1] = 0;
+    if ((error = MPI_Cart_sub(g->g_comm, /* remaining */ dims, &g->pA_comm))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
+    // Find the rank of this process within pA_comm
+    int pA_rank;
+    if ((error = MPI_Comm_rank(g->pA_comm, &pA_rank))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
+
+    // Create communicator for the pB direction
+    dims[0] = 0;
+    dims[1] = 1;
+    if ((error = MPI_Cart_sub(g->g_comm, /* remaining */ dims, &g->pB_comm))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
+    // Find the rank of this process within pB_comm
+    int pB_rank;
+    if ((error = MPI_Comm_rank(g->pB_comm, &pB_rank))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
+
+    // Name the three new communicators something mildly descriptive
+    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+            "uGComm%dx%d", g->pA, g->pB);
+    if ((error = MPI_Comm_set_name(g->g_comm, buffer))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
+    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+            "uPACommXx%d", pB_rank);
+    if ((error = MPI_Comm_set_name(g->pA_comm, buffer))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
+    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+            "uPBComm%dxX", pA_rank);
+    if ((error = MPI_Comm_set_name(g->pB_comm, buffer))) {
+        underling_grid_destroy(g);
+        UNDERLING_MPICHKN(error);
+    }
 
     return g;
 }
