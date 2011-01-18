@@ -421,18 +421,20 @@ underling_fft_plan_create_c2c_internal(
     }
     if (UNDERLING_UNLIKELY(   fftw_sign != FFTW_FORWARD
                            && fftw_sign != FFTW_BACKWARD)) {
-        UNDERLING_ERROR_NULL(
-                "fftw_sign not one of FFTW_{FORWARD,BACKWARD}", UNDERLING_EINVAL);
+        UNDERLING_ERROR_NULL("fftw_sign not one of FFTW_{FORWARD,BACKWARD}",
+                             UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
-        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
+        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed",
+                             UNDERLING_EINVAL);
     }
 
     // Check user requested acceptable transform configuration
     const int input_is_long  = (input.order[2]  == long_ni);
     const int output_is_long = (output.order[2] == long_ni);
     if (UNDERLING_UNLIKELY(!input_is_long && !output_is_long)) {
-        UNDERLING_ERROR_NULL("Neither {input,output} is long", UNDERLING_EINVAL);
+        UNDERLING_ERROR_NULL(
+                "Neither {input,output} is long", UNDERLING_EINVAL);
     }
 
     // Allocate and initialize the plan workspace
@@ -569,12 +571,12 @@ underling_fft_plan_create_c2r_backward(
     const underling_fft_extents output
         = create_underling_fft_extents_for_real(e, long_ni);
 
-    // TODO Remove this restriction; Requires smartening up the reordering.
-    if (UNDERLING_UNLIKELY(input.order[2] != long_ni)) {
+    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
-                "Creation of c2r_backward plans in non-stride one directions"
-                " is unavailable.  Check the UNDERLING_TRANSPOSED_LONG_N{0,2}"
-                " flags provided when creating the underling_problem.",
+                "Creation of in-place c2r_backward plans in"
+                " non-stride one directions is unavailable.  Check the"
+                " UNDERLING_TRANSPOSED_LONG_N{0,2} flags provided when"
+                " creating the underling_problem.",
                 UNDERLING_ESANITY);
     }
 
@@ -597,7 +599,7 @@ underling_fft_plan_create_c2r_backward_internal(
 
     // Sanity check input arguments
     if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
-        UNDERLING_ERROR_VAL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL, 0);
+        UNDERLING_ERROR_NULL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(in == NULL)) {
         UNDERLING_ERROR_NULL("in == NULL", UNDERLING_EINVAL);
@@ -606,7 +608,8 @@ underling_fft_plan_create_c2r_backward_internal(
         UNDERLING_ERROR_NULL("out == NULL", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
-        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
+        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed",
+                             UNDERLING_EINVAL);
     }
 
     // Prepare the pre-ordering plan.
@@ -756,12 +759,12 @@ underling_fft_plan_create_r2c_forward(
     const underling_fft_extents output
         = create_underling_fft_extents_for_complex(e, long_ni);
 
-    // TODO Remove this restriction; Requires smartening up the reordering.
-    if (UNDERLING_UNLIKELY(input.order[2] != long_ni)) {
+    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
-                "Creation of c2r_backward plans in non-stride one directions"
-                " is unavailable.  Check the UNDERLING_TRANSPOSED_LONG_N{0,2}"
-                " flags provided when creating the underling_problem.",
+                "Creation of in-place c2r_backward plans in non-stride"
+                " one directions is unavailable.  Check the"
+                " UNDERLING_TRANSPOSED_LONG_N{0,2} flags provided when"
+                " creating the underling_problem.",
                 UNDERLING_ESANITY);
     }
 
@@ -784,7 +787,7 @@ underling_fft_plan_create_r2c_forward_internal(
 
     // Sanity check input arguments
     if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
-        UNDERLING_ERROR_VAL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL, 0);
+        UNDERLING_ERROR_NULL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(in == NULL)) {
         UNDERLING_ERROR_NULL("in == NULL", UNDERLING_EINVAL);
@@ -793,7 +796,8 @@ underling_fft_plan_create_r2c_forward_internal(
         UNDERLING_ERROR_NULL("out == NULL", UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(fftw_rigor_flags & non_rigor_mask)) {
-        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed", UNDERLING_EINVAL);
+        UNDERLING_ERROR_NULL("FFTW non-rigor bits disallowed",
+                             UNDERLING_EINVAL);
     }
 
     // Prepare the reordering plan for the input data. We must always pay to
