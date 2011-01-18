@@ -651,6 +651,7 @@ underling_fft_plan_create_c2r_backward_internal(
                 0, NULL, howmany_rank, howmany_dims, in, out, NULL,
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_preorder == NULL)) {
+            underling_fft_plan_destroy(f);
             UNDERLING_ERROR_NULL(
                     "FFTW returned NULL c2r_backward preorder plan",
                     UNDERLING_ESANITY);
@@ -696,6 +697,7 @@ underling_fft_plan_create_c2r_backward_internal(
                 in + f->offset.ri, in + f->offset.ii, out,
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_fft == NULL)) {
+            underling_fft_plan_destroy(f);
             UNDERLING_ERROR_NULL("FFTW returned NULL c2r_backward FFT plan",
                     UNDERLING_ESANITY);
         }
@@ -730,6 +732,7 @@ underling_fft_plan_create_c2r_backward_internal(
                 0, NULL, howmany_rank, howmany_dims, in, out, NULL,
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_postorder == NULL)) {
+            underling_fft_plan_destroy(f);
             UNDERLING_ERROR_NULL(
                     "FFTW returned NULL c2r_backward postorder plan",
                     UNDERLING_ESANITY);
@@ -781,9 +784,6 @@ underling_fft_plan_create_r2c_forward_internal(
         const underling_fft_extents input,
         const underling_fft_extents output)
 {
-    underling_real * const data = in; // FIXME: Remove assumption
-    assert(in == out);                // FIXME: Remove assumption
-
     // Sanity check input arguments
     if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
         UNDERLING_ERROR_NULL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL);
@@ -799,15 +799,32 @@ underling_fft_plan_create_r2c_forward_internal(
                              UNDERLING_EINVAL);
     }
 
-    // Prepare the reordering plan for the input data. We must always pay to
-    // reorder the output data.  Ignoring the input reordering process avoids
-    // touching everything a third separate time.
-    // TODO Evaluate performance impact since FFT may be non-stride 1
-    const fftw_plan plan_preorder = NULL;
+    // Create and initialize the plan workspace
+    underling_fft_plan f = malloc(sizeof(struct underling_fft_plan_s));
+    if (UNDERLING_UNLIKELY(f == NULL)) {
+        UNDERLING_ERROR_NULL("failed to allocate space for plan",
+                             UNDERLING_ENOMEM);
+    }
+    // Copy the relevant parameters to the plan workspace
+    f->long_ni        = long_ni;
+    f->type           = transform_type_r2c_forward;
+    f->input          = input;
+    f->plan_preorder  = NULL;
+    f->plan_fft       = NULL;
+    f->plan_postorder = NULL;
+    f->output         = output;
+    f->in_place       = (in == out);
 
-    // The transform is purely in place.
-    fftw_plan plan_fft = NULL;
-    {
+    // Prepare the pre-ordering plan for in-place transforms
+    if (f->in_place) {
+        // We must always pay to reorder the output data.
+        // Ignoring the input reordering process avoids touching all the data a
+        // separate, third time.
+        // TODO Evaluate performance impact since FFT may be non-stride 1
+    }
+
+    // Plan FFT for in-place transform
+    if (f->in_place) {
         const fftw_iodim dims[] = {       // Transform long_ni
             {
                 input.size[long_ni],
@@ -830,23 +847,26 @@ underling_fft_plan_create_r2c_forward_internal(
         }
         assert((size_t) j == sizeof(howmany_dims)/sizeof(howmany_dims[0]));
 
-        underling_real * const in = data;
-        underling_real * const ro = data;
-        underling_real * const io = data + input.stride[long_ni];
+        // Find (out-ro) and (out-i0) offsets for fftw_execute_split_dft_r2c
+        // Store offsets to simplify using the new array execute interface
+        f->offset.ro = 0;
+        f->offset.io = input.stride[long_ni];
 
-        plan_fft = fftw_plan_guru_split_dft_r2c(
-                rank, dims, howmany_rank, howmany_dims, in, ro, io,
+        assert(in == out);
+        f->plan_fft = fftw_plan_guru_split_dft_r2c(
+                rank, dims, howmany_rank, howmany_dims,
+                in, out + f->offset.ro, out + f->offset.io,
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
-        if (UNDERLING_UNLIKELY(plan_fft == NULL)) {
+        if (UNDERLING_UNLIKELY(f->plan_fft == NULL)) {
+            underling_fft_plan_destroy(f);
             UNDERLING_ERROR_NULL("FFTW returned NULL r2c_forward FFT plan",
                     UNDERLING_ESANITY);
         }
     }
 
-    // Prepare the reordering plan for the output data.
+    // Prepare the post-ordering plan for in-place transforms
     // Use "complex-centric" sizes since they cover the contiguous region.
-    fftw_plan plan_postorder = NULL;
-    {
+    if (f->in_place) {
         const int howmany_rank = sizeof(output.size)/sizeof(output.size[0]);
         fftw_iodim howmany_dims[howmany_rank];
         int j = 0;
@@ -868,31 +888,17 @@ underling_fft_plan_create_r2c_forward_internal(
         howmany_dims[4].is = output.size[3];
         howmany_dims[4].os = 1;
 
-        plan_postorder = fftw_plan_guru_r2r(
-                0, NULL, howmany_rank, howmany_dims, data, data, NULL,
+        assert(in == out);
+        f->plan_postorder = fftw_plan_guru_r2r(
+                0, NULL, howmany_rank, howmany_dims, in, out, NULL,
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
-        if (UNDERLING_UNLIKELY(plan_postorder == NULL)) {
+        if (UNDERLING_UNLIKELY(f->plan_postorder == NULL)) {
+            underling_fft_plan_destroy(f);
             UNDERLING_ERROR_NULL(
                     "FFTW returned NULL r2c_forward postorder plan",
                     UNDERLING_ESANITY);
         }
     }
-
-    // Create and initialize the plan workspace
-    underling_fft_plan f = calloc(1, sizeof(struct underling_fft_plan_s));
-    if (UNDERLING_UNLIKELY(f == NULL)) {
-        UNDERLING_ERROR_NULL("failed to allocate space for plan",
-                             UNDERLING_ENOMEM);
-    }
-    // Copy the relevant parameters to the plan workspace
-    f->long_ni        = long_ni;
-    f->type           = transform_type_r2c_forward;
-    f->input          = input;
-    f->plan_preorder  = plan_preorder;
-    f->plan_fft       = plan_fft;
-    f->plan_postorder = plan_postorder;
-    f->output         = output;
-    f->in_place       = (in == out);
 
     return f;
 }
@@ -1085,7 +1091,10 @@ underling_fft_plan_execute(
                                        out);
             break;
         case transform_type_r2c_forward:
-            fftw_execute(plan->plan_fft); // FIXME Use new array execute
+            fftw_execute_split_dft_r2c(plan->plan_fft,
+                                       in,
+                                       out + plan->offset.ro,
+                                       out + plan->offset.io);
             break;
         default:
             UNDERLING_ERROR("Unknown plan->type", UNDERLING_ESANITY);
