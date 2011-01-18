@@ -594,9 +594,6 @@ underling_fft_plan_create_c2r_backward_internal(
         const underling_fft_extents input,
         const underling_fft_extents output)
 {
-    underling_real * const data = in; // FIXME: Remove assumption
-    assert(in == out);                // FIXME: Remove assumption
-
     // Sanity check input arguments
     if (UNDERLING_UNLIKELY(long_ni < 0 || long_ni > 2)) {
         UNDERLING_ERROR_NULL("long_ni < 0 or long_ni > 2", UNDERLING_EINVAL);
@@ -612,9 +609,24 @@ underling_fft_plan_create_c2r_backward_internal(
                              UNDERLING_EINVAL);
     }
 
-    // Prepare the pre-ordering plan.
-    fftw_plan plan_preorder = NULL;
-    {
+    // Allocate and initialize the plan workspace
+    underling_fft_plan f = malloc(sizeof(struct underling_fft_plan_s));
+    if (UNDERLING_UNLIKELY(f == NULL)) {
+        UNDERLING_ERROR_NULL("failed to allocate space for plan",
+                             UNDERLING_ENOMEM);
+    }
+    // Copy the relevant parameters to the plan workspace
+    f->long_ni        = long_ni;
+    f->type           = transform_type_c2r_backward;
+    f->input          = input;
+    f->plan_preorder  = NULL;
+    f->plan_fft       = NULL;
+    f->plan_postorder = NULL;
+    f->output         = output;
+    f->in_place       = (in == out);
+
+    // Prepare the pre-ordering plan for in-place transforms
+    if (f->in_place) {
         const int howmany_rank = sizeof(input.size)/sizeof(input.size[0]);
         fftw_iodim howmany_dims[howmany_rank];
         // Copy dimensions n{0,1,2}
@@ -634,19 +646,19 @@ underling_fft_plan_create_c2r_backward_internal(
         howmany_dims[4].is = 1;
         howmany_dims[4].os = input.size[3];
 
-        plan_preorder = fftw_plan_guru_r2r(
-                0, NULL, howmany_rank, howmany_dims, data, data, NULL,
+        assert(in == out);
+        f->plan_preorder = fftw_plan_guru_r2r(
+                0, NULL, howmany_rank, howmany_dims, in, out, NULL,
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
-        if (UNDERLING_UNLIKELY(plan_preorder == NULL)) {
+        if (UNDERLING_UNLIKELY(f->plan_preorder == NULL)) {
             UNDERLING_ERROR_NULL(
                     "FFTW returned NULL c2r_backward preorder plan",
                     UNDERLING_ESANITY);
         }
     }
 
-    // Plan in-place transform
-    fftw_plan plan_fft = NULL;
-    {
+    // Plan FFT for in-place transform
+    if (f->in_place) {
         const fftw_iodim dims[] = {       // Transform long_ni
             {
                 output.size[long_ni],     // Logical transform size
@@ -673,22 +685,24 @@ underling_fft_plan_create_c2r_backward_internal(
         howmany_dims[2].is = 1;
         howmany_dims[2].os = 1;
 
-        underling_real * const ri = data;
-        underling_real * const ii = data + input.size[3]; // From preorder plan
-        underling_real * const out = data;
+        // Find (in-ri) and (in-ii) offsets for fftw_execute_split_dft_c2r
+        // Store offsets to simplify using the new array execute interface
+        f->offset.ri = 0;
+        f->offset.ii = input.size[3]; // From preorder plan
 
-        plan_fft = fftw_plan_guru_split_dft_c2r(
-                rank, dims, howmany_rank, howmany_dims, ri, ii, out,
+        assert(in == out);
+        f->plan_fft = fftw_plan_guru_split_dft_c2r(
+                rank, dims, howmany_rank, howmany_dims,
+                in + f->offset.ri, in + f->offset.ii, out,
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
-        if (UNDERLING_UNLIKELY(plan_fft == NULL)) {
+        if (UNDERLING_UNLIKELY(f->plan_fft == NULL)) {
             UNDERLING_ERROR_NULL("FFTW returned NULL c2r_backward FFT plan",
                     UNDERLING_ESANITY);
         }
     }
 
-    // Prepare output reordering plan
-    fftw_plan plan_postorder = NULL;
-    {
+    // Prepare the post-ordering plan for in-place transforms
+    if (f->in_place) {
         const int howmany_rank = sizeof(input.size)/sizeof(input.size[0]);
         fftw_iodim howmany_dims[howmany_rank];
         int j = 0;
@@ -711,31 +725,16 @@ underling_fft_plan_create_c2r_backward_internal(
         howmany_dims[4].n  = 1;
         howmany_dims[4].is = howmany_dims[4].os = output.size[3];
 
-        plan_postorder = fftw_plan_guru_r2r(
-                0, NULL, howmany_rank, howmany_dims, data, data, NULL,
+        assert(in == out);
+        f->plan_postorder = fftw_plan_guru_r2r(
+                0, NULL, howmany_rank, howmany_dims, in, out, NULL,
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
-        if (UNDERLING_UNLIKELY(plan_postorder == NULL)) {
+        if (UNDERLING_UNLIKELY(f->plan_postorder == NULL)) {
             UNDERLING_ERROR_NULL(
                     "FFTW returned NULL c2r_backward postorder plan",
                     UNDERLING_ESANITY);
         }
     }
-
-    // Create and initialize the plan workspace
-    underling_fft_plan f = calloc(1, sizeof(struct underling_fft_plan_s));
-    if (UNDERLING_UNLIKELY(f == NULL)) {
-        UNDERLING_ERROR_NULL("failed to allocate space for plan",
-                             UNDERLING_ENOMEM);
-    }
-    // Copy the relevant parameters to the plan workspace
-    f->long_ni        = long_ni;
-    f->type           = transform_type_c2r_backward;
-    f->input          = input;
-    f->plan_preorder  = plan_preorder;
-    f->plan_fft       = plan_fft;
-    f->plan_postorder = plan_postorder;
-    f->output         = output;
-    f->in_place       = (in == out);
 
     return f;
 
@@ -1080,7 +1079,10 @@ underling_fft_plan_execute(
                                    out + plan->offset.io);
             break;
         case transform_type_c2r_backward:
-            fftw_execute(plan->plan_fft); // FIXME Use new array execute
+            fftw_execute_split_dft_c2r(plan->plan_fft,
+                                       in + plan->offset.ri,
+                                       in + plan->offset.ii,
+                                       out);
             break;
         case transform_type_r2c_forward:
             fftw_execute(plan->plan_fft); // FIXME Use new array execute
