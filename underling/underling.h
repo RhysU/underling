@@ -481,10 +481,10 @@ underling_global_memory_optimum(
  * overhead.
  *
  * Out-of-place plans are created by specifying input and output buffers such
- * that <tt>in != out</tt>.  Executing an out-of-place plans will always
- * destroy the contents of the input buffer \c in.  In-place plans can be
- * created by specifying <tt>in == out</tt>.  In-place plans always use less
- * memory but will often run more slowly than out-of-place plans.
+ * that <tt>in != out</tt>.  Executing an out-of-place plan will always destroy
+ * the contents of the input buffer \c in.  In-place plans can be created by
+ * specifying <tt>in == out</tt>.  In-place plans always use less memory but
+ * will often run more slowly than out-of-place plans.
  *
  * Planning cost can be reduced by only requesting the transform capabilities
  * you require using \c transform_flags.  It should contain the bitwise OR of
@@ -549,11 +549,13 @@ underling_plan_destroy(
 /**
  * Collectively transform data from being long in \c n2 within buffer \c in to
  * being long in \c n1 within buffer \c out.  Appropriate MPI calls and data
- * reordering will occur.
+ * reordering will occur.  The input and output buffers <em>must</em> be
+ * aligned identically to the input and output buffers provided during
+ * planning.
  *
  * @param plan Plan to be executed.
  * @param in  Input buffer on which to execute the plan.  For out-of-place
- *            transforms, this buffers contents will be destroyed.
+ *            transforms, this buffer's contents will be destroyed.
  * @param out Output buffer on which to execute the plan.  For in-place
  *            transforms, one must specify <tt>out == in</tt>.
  *
