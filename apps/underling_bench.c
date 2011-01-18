@@ -23,6 +23,9 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
+// TODO Allow out-of-place transforms
+// TODO Add FFTW threading details
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -38,10 +41,9 @@
 #include "argp.h"
 #include "mpi_argp.h"
 
-#include <H5public.h>
 #include <mpi.h>
-#include <esio/error.h>
-#include <esio/esio.h>
+#include <underling/error.h>
+#include <underling/underling.h>
 
 #ifdef HAVE_GRVY
 #include <grvy.h>
@@ -64,50 +66,21 @@
 // DATA STRUCTURES DATA STRUCTURES DATA STRUCTURES DATA STRUCTURES
 //****************************************************************
 
-struct field_details {
-    int cglobal, cstart, clocal;
-    int bglobal, bstart, blocal;
-    int aglobal, astart, alocal;
-    int ncomponents;
-    int layout, dims[3], coords[3], rank;
-    long bytes;
-    void *data;
-    long stride;
-};
-
-struct plane_details {
-    int bglobal, bstart, blocal;
-    int aglobal, astart, alocal;
-    int dims[2], coords[2], rank;
-    int ncomponents;
-    long bytes;
-    void *data;
-    long stride;
-};
-
-struct line_details {
-    int aglobal, astart, alocal;
-    int dims[1], coords[1], rank;
-    int ncomponents;
-    long bytes;
-    void *data;
-    long stride;
-};
-
 struct details {
     int world_rank;
     int world_size;
-    size_t typesize;
-    esio_handle h;
     int verbose;
     int repeat;
-    int nfields, nplanes, nlines;
-    char *uncommitted;
-    char *dst_template;
-    int   retain;
-    struct field_details *f;
-    struct plane_details *p;
-    struct line_details  *l;
+    int nfields;
+    int howmany;
+    int n0;
+    int n1;
+    int n2;
+    int pA;
+    int pB;
+    long bytes;
+    underling_real *buf1;
+    underling_real *buf2;
 };
 
 //*************************************************************
@@ -129,42 +102,21 @@ static void to_human_readable_byte_count(long bytes,
 
 static long from_human_readable_byte_count(const char *str);
 
-static int local(int nglobal, int nranks, int rank, int extralow);
-
-static int start(int nglobal, int nranks, int rank, int extralow);
-
-static int global_minmax(long val, long *min, long *max);
-
-static int field_initialize(struct details *d, struct field_details *f);
-
-static int plane_initialize(struct details *d, struct plane_details *p);
-
-static int line_initialize( struct details *d, struct line_details  *l);
-
 static void* malloc_and_fill(struct details *d, const long bytes);
-
-static int field_finalize(struct details *d, struct field_details *f);
-
-static int plane_finalize(struct details *d, struct plane_details *p);
-
-static int line_finalize( struct details *d, struct line_details  *l);
 
 //*******************************************************************
 // ARGP DETAILS: http://www.gnu.org/s/libc/manual/html_node/Argp.html
 //*******************************************************************
 
-const char *argp_program_version      = "esio_bench " PACKAGE_VERSION;
+const char *argp_program_version      = "underling_bench " PACKAGE_VERSION;
 void (*argp_program_version_hook)(FILE *stream, struct argp_state *state)
                                       = &print_version;
 const char *argp_program_bug_address  = PACKAGE_BUGREPORT;
 static const char doc[]               =
-"Simulate and benchmark ESIO-based application restart write operations."
+"Simulate and benchmark underling-based application transformation operations."
 "\v"
-"Write fields, planes, and lines with the specified problem sizes and "
-"parallel decompositions using ESIO's restart writing capabilities. "
-"With one argument, a restart file named FILENAME is written.  With two "
-"arguments, uncommitted restart files are written to UNCOMMITTED and "
-"then renamed to match DESTTEMPLATE.  Timing information is collected "
+"Transform parallel, 3D pencil decompositions using underling's data"
+"movement capabilities.  Timing information is collected "
 "over one or more iterations.\n"
 "\n"
 "Options taking a 'bytes' parameter can be given common byte-related "
@@ -172,58 +124,19 @@ static const char doc[]               =
 "5 gigabytes of memory should be used on each rank to store field data. "
 "SI units like 'Ki' or 'MiB' are also accepted.\n"
 ;
-static const char args_doc[] = "FILENAME\nUNCOMMITTED DESTTEMPLATE";
-
-enum {
-    FIELD_LAYOUT = 255 /* !isascii */,
-    FIELD_GLOBAL,
-    PLANE_GLOBAL,
-    LINE_GLOBAL,
-    FIELD_NCOMPONENTS,
-    PLANE_NCOMPONENTS,
-    LINE_NCOMPONENTS,
-    NFIELDS,
-    NPLANES,
-    NLINES
-};
 
 static struct argp_option options[] = {
-    {"verbose",     'v', 0,       0, "produce verbose output",            0 },
-    {"repeat",      'r', "count", 0, "number of repetitions",             0 },
-    {"retain",      'R', "count", 0, "number of restart files to retain", 0 },
-    {"nfields",      NFIELDS,      "count", 0, "number of fields",    1},
-    {"nplanes",      NPLANES,      "count", 0, "number of planes",    1},
-    {"nlines",       NLINES,       "count", 0, "number of lines",     1},
-    {"field-layout", FIELD_LAYOUT, "index", 0, "field layout to use", 0},
+    {"verbose",     'v', 0,       0, "produce verbose output",       0 },
+    {"repeat",      'r', "count", 0, "number of repetitions",        0 },
+    {"nfields",     'n', "count", 0, "number of independent fields", 0 },
+    {"howmany",     'h', "count", 0, "howmany components per field", 0 },
     {0, 0, 0, 0,
-     "Controlling field problem size (specify at most one)", 0 },
-    {"field-memory", 'f',          "bytes", 0, "per-rank field memory", 0 },
-    {"field-global", FIELD_GLOBAL, "CxBxA", 0, "field global extents",  0 },
-    {0, 0, 0, 0,
-     "Controlling plane problem size (specify at most one)", 0 },
-    {"plane-memory", 'p',          "bytes", 0, "per-rank plane memory", 0 },
-    {"plane-global", PLANE_GLOBAL, "BxA",   0, "plane global extents",  0 },
-    {0, 0, 0, 0,
-     "Controlling line problem size (specify at most one)", 0 },
-    {"line-memory",  'l',          "bytes", 0, "per-rank line memory", 0 },
-    {"line-global",  LINE_GLOBAL,  "A",     0, "line global extents",  0 },
-    {0, 0, 0, 0,
-     "Controlling number of components used in each problem type", 0 },
-    {"field-ncomponents", FIELD_NCOMPONENTS, "count", 0,
-            "number of components per field",   0 },
-    {"plane-ncomponents", PLANE_NCOMPONENTS, "count", 0,
-            "number of components per plane",   0 },
-    {"line-ncomponents",  LINE_NCOMPONENTS, "count", 0,
-            "number of components per line",   0 },
-    {0, 0, 0, 0,
-     "Changing the type of data written", 0 },
-    {"single",      's', 0,       0, "write single-precision data", 0 },
-    {"double",      'd', 0,       0, "write double-precision data", 0 },
+     "Controlling global problem size (specify at most one)",     0 },
+    {"field-memory", 'f', "bytes",    0, "per-rank field memory", 0 },
+    {"field-global", 'F', "n0xn1xn2", 0, "field global extents",  0 },
     {0, 0, 0, 0,
      "Controlling parallel decomposition per MPI_Dims_create semantics", 0 },
-    {"field-dims", 'F', "NCxNBxNA", 0, "field parallel decomposition",   0 },
-    {"plane-dims", 'P', "NBxNA",    0, "plane parallel decomposition",   0 },
-    {"line-dims",  'L', "NA",       0, "line parallel decomposition",    0 },
+    {"dims",       'P', "pAxpB",    0, "plane parallel decomposition",   0 },
     { 0, 0, 0, 0,  0, 0 }
 };
 
@@ -243,25 +156,12 @@ parse_opt(int key, char *arg, struct argp_state *state)
 
     switch (key) {
         case ARGP_KEY_ARG:
-            switch (state->arg_num) {
-                case 0:  d->uncommitted  = arg; break;
-                case 1:  d->dst_template = arg; break;
-                default: argp_usage(state);
-            }
+            argp_usage(state);
             break;
 
         case ARGP_KEY_END:
-            if (state->arg_num < 1) {
+            if (state->arg_num > 0) {
                 argp_usage(state);
-            }
-            if (state->arg_num == 1 && d->retain > 1) {
-                argp_error(state,
-                           "Cannot specify --retain without DESTTEMPLATE");
-            }
-            if (d->nfields <= 0 && d->nplanes <= 0 && d->nlines <= 0) {
-                argp_error(state,
-                           "At least one field, plane, or line problem size"
-                           " must be specified");
             }
             break;
 
@@ -282,20 +182,7 @@ parse_opt(int key, char *arg, struct argp_state *state)
             }
             break;
 
-        case 'R':
-            errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c", &d->retain, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "retain option is malformed: '%s'", arg);
-            }
-            if (d->retain < 1) {
-                argp_failure(state, EX_USAGE, 0,
-                        "retain value %d must be strictly positive",
-                        d->retain);
-            }
-            break;
-
-        case NFIELDS:
+        case 'n':
             errno = 0;
             if (1 != sscanf(arg ? arg : "", "%d %c", &d->nfields, &ignore)) {
                 argp_failure(state, EX_USAGE, errno,
@@ -307,200 +194,63 @@ parse_opt(int key, char *arg, struct argp_state *state)
             }
             break;
 
-        case NPLANES:
+        case 'h':
             errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c", &d->nplanes, &ignore)) {
+            if (1 != sscanf(arg ? arg : "", "%d %c", &d->howmany, &ignore)) {
                 argp_failure(state, EX_USAGE, errno,
-                        "nplanes is malformed: '%s'", arg);
+                        "howmany option is malformed: '%s'", arg);
             }
-            if (d->nplanes < 0) {
+            if (d->howmany < 1) {
                 argp_failure(state, EX_USAGE, 0,
-                        "nplanes value %d must be nonnegative", d->nplanes);
-            }
-            break;
-
-        case NLINES:
-            errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c", &d->nlines, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "nlines is malformed: '%s'", arg);
-            }
-            if (d->nlines < 0) {
-                argp_failure(state, EX_USAGE, 0,
-                        "nlines value %d must be nonnegative", d->nlines);
-            }
-            break;
-
-        case FIELD_LAYOUT:
-            errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c", &d->f->layout, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "field-layout option is malformed: '%s'", arg);
-            }
-            if (d->f->layout < 0 || d->f->layout > esio_field_layout_count()) {
-                argp_failure(state, EX_USAGE, 0,
-                        "field-layout value %d must be in range [%d, %d]",
-                        d->f->layout, 0, esio_field_layout_count());
-            }
-            break;
-
-        case 'd':
-            d->typesize = sizeof(double);
-            break;
-
-        case 's':
-            d->typesize = sizeof(float);
-            break;
-
-        case FIELD_NCOMPONENTS:
-            errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c",
-                            &d->f->ncomponents, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "field-ncomponents option is malformed: '%s'", arg);
-            }
-            if (d->f->ncomponents < 1) {
-                argp_failure(state, EX_USAGE, 0,
-                        "field-ncomponents value %d must be strictly positive",
-                        d->f->ncomponents);
-            }
-            break;
-
-        case PLANE_NCOMPONENTS:
-            errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c",
-                            &d->p->ncomponents, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "plane-ncomponents option is malformed: '%s'", arg);
-            }
-            if (d->p->ncomponents < 1) {
-                argp_failure(state, EX_USAGE, 0,
-                        "plane-ncomponents value %d must be strictly positive",
-                        d->p->ncomponents);
-            }
-            break;
-
-        case LINE_NCOMPONENTS:
-            errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c",
-                            &d->l->ncomponents, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "line-ncomponents option is malformed: '%s'", arg);
-            }
-            if (d->l->ncomponents < 1) {
-                argp_failure(state, EX_USAGE, 0,
-                        "line-ncomponents value %d must be strictly positive",
-                        d->l->ncomponents);
+                        "howmany value %d must be strictly positive",
+                        d->howmany);
             }
             break;
 
         case 'f':
-            if (d->f->cglobal || d->f->bglobal || d->f->aglobal ) {
+            if (d->n0 || d->n1 || d->n2 ) {
                 argp_error(state, "only one of --field-{memory,global}"
                            " may be specified");
             }
             if (arg) {
-                d->f->bytes = from_human_readable_byte_count(arg);
-                if (d->f->bytes < 1)
+                d->bytes = from_human_readable_byte_count(arg);
+                if (d->bytes < 1)
                     argp_failure(state, EX_USAGE, 0,
                             "field-memory option is malformed: '%s'", arg);
             }
-            d->nfields = max(d->nfields, 1); // Set nfields >= 1
-            break;
-
-        case 'p':
-            if (   d->p->bglobal || d->p->aglobal) {
-                argp_error(state, "only one of --plane-{memory,global}"
-                           " may be specified");
-            }
-            if (arg) {
-                d->p->bytes = from_human_readable_byte_count(arg);
-                if (d->p->bytes < 1)
-                    argp_failure(state, EX_USAGE, 0,
-                            "plane-memory option is malformed: '%s'", arg);
-            }
-            d->nplanes = max(d->nplanes, 1); // Set nplanes >= 1
-            break;
-
-        case 'l':
-            if (d->l->aglobal) {
-                argp_error(state, "only one of --line-{memory,global}"
-                           " may be specified");
-            }
-            if (arg) {
-                d->l->bytes = from_human_readable_byte_count(arg);
-                if (d->l->bytes < 1)
-                    argp_failure(state, EX_USAGE, 0,
-                            "line-memory option is malformed: '%s'", arg);
-            }
-            d->nlines = max(d->nlines, 1); // Set nlines >= 1
             break;
 
         case 'F':
+            if (d->bytes) {
+                argp_error(state, "only one of --field-{memory,global}"
+                           " may be specified");
+            }
             errno = 0;
             if (3 != sscanf(arg ? arg : "", "%d x %d x %d %c",
-                            &d->f->dims[0], &d->f->dims[1],
-                            &d->f->dims[2], &ignore)) {
+                            &d->n0, &d->n1, &d->n2, &ignore)) {
                 argp_failure(state, EX_USAGE, errno,
-                        "field-dims option is malformed: '%s'", arg);
+                        "field-global option is malformed: '%s'", arg);
             }
-            if (d->f->dims[0] < 0 || d->f->dims[1] < 0 || d->f->dims[2] < 0) {
+            if (d->n0 < 0 || d->n1 < 0 || d->n2 < 0) {
                 argp_failure(state, EX_USAGE, 0,
-                        "field-dims values %dx%dx%d must be nonnegative",
-                        d->f->dims[0], d->f->dims[1], d->f->dims[2]);
+                        "field-global values %dx%dx%d must be nonnegative",
+                        d->n0, d->n1, d->n2);
             }
             break;
-
 
         case 'P':
             errno = 0;
             if (2 != sscanf(arg ? arg : "", "%d x %d %c",
-                            &d->p->dims[0], &d->p->dims[1], &ignore)) {
+                            &d->pA, &d->pB, &ignore)) {
                 argp_failure(state, EX_USAGE, errno,
-                        "plane-dims option is malformed: '%s'", arg);
+                        "dims option not of form pAxpB: '%s'", arg);
             }
-            if (d->p->dims[0] < 0 || d->p->dims[1] < 0) {
+            if (d->pA < 0 || d->pB < 0) {
                 argp_failure(state, EX_USAGE, 0,
-                        "plane-dims values %dx%d must be nonnegative",
-                        d->p->dims[0], d->p->dims[1]);
+                        "field-global values %dx%d must be nonnegative",
+                        d->pA, d->pB);
             }
             break;
-
-
-        case 'L':
-            errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c",
-                            &d->l->dims[0], &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "line-global option is malformed: '%s'", arg);
-            }
-            if (d->l->dims[0] < 0) {
-                argp_failure(state, EX_USAGE, 0,
-                        "line-dims value '%d' must be nonnegative",
-                        d->l->dims[0]);
-            }
-            break;
-
-        case FIELD_GLOBAL:
-            if (d->f->bytes) {
-                argp_error(state, "only one of --field-{memory,global}"
-                           " may be specified");
-            }
-            errno = 0;
-            if (3 != sscanf(arg ? arg : "", "%d x %d x %d %c",
-                            &d->f->cglobal, &d->f->bglobal,
-                            &d->f->aglobal, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "field-global option not of form CxBxA: '%s'", arg);
-            }
-            if (d->f->cglobal < 1 || d->f->bglobal < 1 || d->f->aglobal < 1) {
-                argp_failure(state, EX_USAGE, 0,
-                        "field-global values %dx%dx%d must be strictly positive",
-                        d->f->cglobal, d->f->bglobal, d->f->aglobal);
-            }
-            d->nfields = max(d->nfields, 1); // Set nfields >= 1
-            break;
-
 
         case PLANE_GLOBAL:
             if (d->p->bytes) {
@@ -560,21 +310,17 @@ int main(int argc, char *argv[])
     GRVY_TIMER_INIT(argp_program_version);
 
     // Initialize default argument storage and default values
-    struct details d;        memset(&d, 0, sizeof(struct details));
-    struct field_details f;  memset(&f, 0, sizeof(struct field_details));
-    struct plane_details p;  memset(&p, 0, sizeof(struct plane_details));
-    struct line_details  l;  memset(&l, 0, sizeof(struct line_details));
-    d.typesize = sizeof(double);
-    d.repeat = 1;
-    d.retain = 1;
-    f.ncomponents = p.ncomponents = l.ncomponents = 1;
-    d.f = &f;
-    d.p = &p;
-    d.l = &l;
+    struct details d;
+    memset(&d, 0, sizeof(struct details));
+    d.repeat  = 1;
+    d.nfields = 1;
+    d.howmany = 2;
 
-    // Initialize/finalize MPI
+    // Initialize/finalize MPI, FFTW
     MPI_Init(&argc, &argv);
     atexit((void (*) ()) MPI_Finalize);
+    MPI_Pcontrol(0); // Disable MPI profiling on startup
+
     MPI_Comm_size(MPI_COMM_WORLD, &d.world_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &d.world_rank);
 
