@@ -488,32 +488,32 @@ underling_fft_plan_create_c2c_internal(
     // Prepare the input to fftw_plan_guru_split_dft, which allows using
     // underling_fft_extents.strides directly from transform_in, transform_out
     {
-        // Transform the long dimension given by transform_in->order[2]
-        assert(transform_in->order[2] == long_ni);
-        const fftw_iodim dims[] = {{
-            transform_in ->size  [transform_in ->order[2]],
-            transform_in ->stride[transform_in ->order[2]],
-            transform_out->stride[transform_out->order[2]]
-        }};
-
-        // Loop over non-transformed dimensions
-        const fftw_iodim howmany_dims[3] = {
+        const fftw_iodim dims[] = {       // Transform long_ni
             {
-                transform_in ->size  [transform_in ->order[4]],
-                transform_in ->stride[transform_in ->order[4]],
-                transform_out->stride[transform_out->order[4]]
-            },
-            {
-                transform_in ->size  [transform_in ->order[3]],
-                transform_in ->stride[transform_in ->order[3]],
-                transform_out->stride[transform_out->order[3]]
-            },
-            {
-                transform_in ->size[3],
-                transform_in ->size[4],
-                transform_out->size[4]
+                transform_in ->size  [long_ni],
+                transform_in ->stride[long_ni],
+                transform_out->stride[long_ni]
             }
         };
+        const int rank = sizeof(dims)/sizeof(dims[0]);
+
+        const int howmany_rank = 3;       // Loop over other directions
+        fftw_iodim howmany_dims[howmany_rank];
+        int j = 0;
+        for (const int *io = transform_in->order+4;
+             io >= transform_in->order+2; --io) {
+            if (*io == long_ni) continue; // Skip transformed direction
+            assert(*io < 3);
+            assert(j < 2);
+            howmany_dims[j].n  = transform_in->size[*io];
+            howmany_dims[j].is = transform_in->stride[*io];
+            howmany_dims[j].os = transform_out->stride[*io];
+            ++j;
+        }
+        assert(j == 2);
+        howmany_dims[2].n  = transform_in->size[3];
+        howmany_dims[2].is = transform_in->size[4];
+        howmany_dims[2].os = transform_out->size[4];
 
         // Find (in-ri), (in-ii), (out-ro), (out-io) for fftw_execute_split_dft
         // Store offsets to simply using the new array execute interface later
