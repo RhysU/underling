@@ -84,15 +84,15 @@ static void ensureFFTWTensor7PatchInPlace() {
 BOOST_FIXTURE_TEST_SUITE( underling_fft_general,
                           BoostFailErrorHandlerFixture )
 
-BOOST_AUTO_TEST_CASE( extents_consistency )
+static void test_extents_consistency(const bool in_place = true)
 {
-    UnderlingFixture f(MPI_COMM_WORLD, 2, 3, 5, 6);
+    UnderlingFixture f(MPI_COMM_WORLD, 2, 3, 5, 6, /*flags*/0, in_place);
 
     underling::fft::plan backward(underling::fft::plan::c2c_forward(),
                                   f.problem,
                                   0,
-                                  f.data.get(),
-                                  f.data.get(),
+                                  f.in,
+                                  f.out,
                                   FFTW_ESTIMATE);
 
     const int N = 5;
@@ -148,6 +148,12 @@ BOOST_AUTO_TEST_CASE( extents_consistency )
     }
 }
 
+BOOST_AUTO_TEST_CASE( extents_consistency )
+{
+    test_extents_consistency(true);
+    test_extents_consistency(false);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 
@@ -159,7 +165,8 @@ static void test_c2c_forward(MPI_Comm comm,
                              const int n0, const int n1, const int n2,
                              const int howmany,
                              const int long_ni,
-                             const unsigned transposed_flags = 0)
+                             const unsigned transposed_flags = 0,
+                             const bool in_place = true)
 
 {
     int procid;
@@ -169,7 +176,9 @@ static void test_c2c_forward(MPI_Comm comm,
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(comm, &nproc));
 
     if (!procid) {
-        BOOST_TEST_MESSAGE("Testing howmany = " << howmany
+        BOOST_TEST_MESSAGE("Testing "
+                           << (in_place ? "in-place" : "out-of-place")
+                           << " howmany = " << howmany
                            << " on " << n0 << "x" << n1 << "x" << n2
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
@@ -180,17 +189,17 @@ static void test_c2c_forward(MPI_Comm comm,
     const underling_real close
         = std::numeric_limits<underling_real>::epsilon()*100*n0*n1*n2;
 
-    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags);
+    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags, in_place);
     underling::fft::plan forward(underling::fft::plan::c2c_forward(),
                                  f.problem,
                                  long_ni,
-                                 f.data.get(),
-                                 f.data.get(),
+                                 f.in,
+                                 f.out,
                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
     underling::fft::plan backward(forward,         // Inverse constructor!
-                                  f.data.get(),
-                                  f.data.get(),
+                                  f.out,
+                                  f.in,
                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
 
@@ -214,7 +223,7 @@ static void test_c2c_forward(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    underling_real * const pencil = &f.data[
+                    underling_real * const pencil = &f.in[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -232,9 +241,11 @@ static void test_c2c_forward(MPI_Comm comm,
             }
         }
     }
+    if (!f.in_place) f.fill_out_with_NaNs();
 
     // Transform from physical to wave space
-    forward.execute(f.data.get(), f.data.get());
+    forward.execute(f.in, f.out);
+    if (!f.in_place) f.fill_in_with_NaNs(); // Poison old buffer
 
     // Check the sample data transformed as expected
     {
@@ -250,7 +261,7 @@ static void test_c2c_forward(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    const underling_real * const pencil = &f.data[
+                    const underling_real * const pencil = &f.out[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -278,7 +289,8 @@ static void test_c2c_forward(MPI_Comm comm,
     }
 
     // Transform from wave space to physical space
-    backward.execute(f.data.get(), f.data.get());
+    backward.execute(f.out, f.in);
+    if (!f.in_place) f.fill_out_with_NaNs(); // Poison old buffer
 
     // Check that we recovered the scaled sample data
     {
@@ -294,7 +306,7 @@ static void test_c2c_forward(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    const underling_real * const pencil = &f.data[
+                    const underling_real * const pencil = &f.in[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -444,7 +456,8 @@ static void test_c2c_backward(MPI_Comm comm,
                               const int n0, const int n1, const int n2,
                               const int howmany,
                               const int long_ni,
-                              const unsigned transposed_flags = 0)
+                              const unsigned transposed_flags = 0,
+                              const bool in_place = true)
 {
     int procid;
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_rank(comm, &procid));
@@ -453,7 +466,9 @@ static void test_c2c_backward(MPI_Comm comm,
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(comm, &nproc));
 
     if (!procid) {
-        BOOST_TEST_MESSAGE("Testing howmany = " << howmany
+        BOOST_TEST_MESSAGE("Testing "
+                           << (in_place ? "in-place" : "out-of-place")
+                           << " howmany = " << howmany
                            << " on " << n0 << "x" << n1 << "x" << n2
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
@@ -464,17 +479,17 @@ static void test_c2c_backward(MPI_Comm comm,
     const underling_real close
         = std::numeric_limits<underling_real>::epsilon()*100*n0*n1*n2;
 
-    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags);
+    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags, in_place);
     underling::fft::plan backward(underling::fft::plan::c2c_backward(),
                                   f.problem,
                                   long_ni,
-                                  f.data.get(),
-                                  f.data.get(),
+                                  f.in,
+                                  f.out,
                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
     underling::fft::plan forward(backward,         // Inverse constructor!
-                                 f.data.get(),
-                                 f.data.get(),
+                                 f.out,
+                                 f.in,
                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
 
@@ -498,7 +513,7 @@ static void test_c2c_backward(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    underling_real * const pencil = &f.data[
+                    underling_real * const pencil = &f.in[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -515,9 +530,11 @@ static void test_c2c_backward(MPI_Comm comm,
             }
         }
     }
+    if (!f.in_place) f.fill_out_with_NaNs();
 
     // Transform from wave space to physical space
-    backward.execute(f.data.get(), f.data.get());
+    backward.execute(f.in, f.out);
+    if (!f.in_place) f.fill_in_with_NaNs(); // Poison old buffer
 
     // Check the sample data transformed as expected
     {
@@ -533,7 +550,7 @@ static void test_c2c_backward(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    const underling_real * const pencil = &f.data[
+                    const underling_real * const pencil = &f.out[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -559,7 +576,8 @@ static void test_c2c_backward(MPI_Comm comm,
     }
 
     // Transform from physical to wave space
-    forward.execute(f.data.get(), f.data.get());
+    forward.execute(f.out, f.in);
+    if (!f.in_place) f.fill_out_with_NaNs(); // Poison old buffer
 
     // Check the sample data transformed as expected
     {
@@ -575,7 +593,7 @@ static void test_c2c_backward(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    const underling_real * const pencil = &f.data[
+                    const underling_real * const pencil = &f.in[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -727,7 +745,8 @@ static void test_c2r(MPI_Comm comm,
                      const int n0, const int n1, const int n2,
                      const int howmany,
                      const int long_ni,
-                     const unsigned transposed_flags = 0)
+                     const unsigned transposed_flags = 0,
+                     const bool in_place = true)
 {
     // FIXME Implement proper handling and enable these tests
     if (    long_ni == 2
@@ -750,25 +769,27 @@ static void test_c2r(MPI_Comm comm,
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(comm, &nproc));
 
     if (!procid) {
-        BOOST_TEST_MESSAGE("Testing howmany = " << howmany
+        BOOST_TEST_MESSAGE("Testing "
+                           << (in_place ? "in-place" : "out-of-place")
+                           << " howmany = " << howmany
                            << " on " << n0 << "x" << n1 << "x" << n2
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
                            << " with flags " << transposed_flags);
     }
-    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags);
+    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags, in_place);
 
     underling::fft::plan backward(underling::fft::plan::c2r_backward(),
                                   f.problem,
                                   long_ni,
-                                  f.data.get(),
-                                  f.data.get(),
+                                  f.in,
+                                  f.out,
                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
     underling::fft::plan forward(backward,       // Inverse constructor!
-                                 f.data.get(),
-                                 f.data.get(),
+                                 f.out,
+                                 f.in,
                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
 
@@ -797,7 +818,7 @@ static void test_c2r(MPI_Comm comm,
                     const periodic_function<double> pf(2*(e.size[long_ni]-1),
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    underling_real * const pencil = &f.data[
+                    underling_real * const pencil = &f.in[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -814,9 +835,11 @@ static void test_c2r(MPI_Comm comm,
             }
         }
     }
+    if (!f.in_place) f.fill_out_with_NaNs();
 
     // Transform from wave to physical space
-    backward.execute(f.data.get(), f.data.get());
+    backward.execute(f.in, f.out);
+    if (!f.in_place) f.fill_in_with_NaNs(); // Poison old buffer
 
     // Check data transformed as expected
     {
@@ -832,7 +855,7 @@ static void test_c2r(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    underling_real * const base = &f.data[
+                    underling_real * const base = &f.out[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -849,7 +872,8 @@ static void test_c2r(MPI_Comm comm,
     }
 
     // Transform physical to wave space
-    forward.execute(f.data.get(), f.data.get());
+    forward.execute(f.out, f.in);
+    if (!f.in_place) f.fill_out_with_NaNs(); // Poison old buffer
 
     // Check data transformed as expected
     {
@@ -865,7 +889,7 @@ static void test_c2r(MPI_Comm comm,
                     const periodic_function<double> pf(2*(e.size[long_ni]-1),
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    const underling_real * const pencil = &f.data[
+                    const underling_real * const pencil = &f.in[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -1191,7 +1215,8 @@ static void test_r2c(MPI_Comm comm,
                      const int n0, const int n1, const int n2,
                      const int howmany,
                      const int long_ni,
-                     const unsigned transposed_flags = 0)
+                     const unsigned transposed_flags = 0,
+                     const bool in_place = true)
 {
     // FIXME Implement proper handling and enable these tests
     if (    long_ni == 2
@@ -1214,25 +1239,27 @@ static void test_r2c(MPI_Comm comm,
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(comm, &nproc));
 
     if (!procid) {
-        BOOST_TEST_MESSAGE("Testing howmany = " << howmany
+        BOOST_TEST_MESSAGE("Testing "
+                           << (in_place ? "in-place" : "out-of-place")
+                           << " howmany = " << howmany
                            << " on " << n0 << "x" << n1 << "x" << n2
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
                            << " with flags " << transposed_flags);
     }
-    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags);
+    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags, in_place);
 
     underling::fft::plan forward(underling::fft::plan::r2c_forward(),
                                  f.problem,
                                  long_ni,
-                                 f.data.get(),
-                                 f.data.get(),
+                                 f.in,
+                                 f.out,
                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
     underling::fft::plan backward(forward,        // Inverse constructor!
-                                  f.data.get(),
-                                  f.data.get(),
+                                  f.out,
+                                  f.in,
                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
 
@@ -1261,7 +1288,7 @@ static void test_r2c(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    underling_real * const base = &f.data[
+                    underling_real * const base = &f.in[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -1274,9 +1301,11 @@ static void test_r2c(MPI_Comm comm,
             }
         }
     }
+    if (!f.in_place) f.fill_out_with_NaNs();
 
     // Transform physical to wave space
-    forward.execute(f.data.get(), f.data.get());
+    forward.execute(f.in, f.out);
+    if (!f.in_place) f.fill_in_with_NaNs(); // Poison old buffer
 
     // Check data transformed as expected
     {
@@ -1292,7 +1321,7 @@ static void test_r2c(MPI_Comm comm,
                     const periodic_function<double> pf(2*(e.size[long_ni]-1),
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    const underling_real * const pencil = &f.data[
+                    const underling_real * const pencil = &f.out[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]
@@ -1318,7 +1347,8 @@ static void test_r2c(MPI_Comm comm,
     }
 
     // Transform wave to physical
-    backward.execute(f.data.get(), f.data.get());
+    backward.execute(f.out, f.in);
+    if (!f.in_place) f.fill_out_with_NaNs(); // Poison old buffer
 
     // Checking data transformed as expected
     {
@@ -1334,7 +1364,7 @@ static void test_r2c(MPI_Comm comm,
                     const periodic_function<double> pf(e.size[long_ni],
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
-                    underling_real * const base = &f.data[
+                    underling_real * const base = &f.in[
                           i*e.stride[dir_i]
                         + j*e.stride[dir_j]
                         + k*e.stride[dir_k]

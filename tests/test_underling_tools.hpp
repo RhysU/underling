@@ -70,26 +70,46 @@ struct UnderlingFixture {
     UnderlingFixture(MPI_Comm comm,
                      const int n0, const int n1, const int n2,
                      const int howmany,
-                     const unsigned transposed_flags = 0)
-        : grid(comm, n0, n1, n2),
+                     const unsigned transposed_flags = 0,
+                     const bool in_place = true)
+        : in_place(in_place),
+          grid(comm, n0, n1, n2),
           problem(grid, howmany, transposed_flags),
-          data((underling_real *) fftw_malloc(
-                    problem.local_memory()*sizeof(underling_real)),
+          data((underling_real *) fftw_malloc(  (in_place ? 1 : 2)
+                                               * problem.local_memory()
+                                               * sizeof(underling_real)),
                 &fftw_free),
-          plan(problem, data.get(), data.get(),
-               underling::transpose::all, FFTW_ESTIMATE)
+          in(data.get()),
+          out(in_place ? in : in + problem.local_memory()),
+          plan(problem, in, out, underling::transpose::all, FFTW_ESTIMATE)
     {
         BOOST_REQUIRE(grid);
         BOOST_REQUIRE(problem);
         BOOST_REQUIRE(data);
+        BOOST_REQUIRE(in);
+        BOOST_REQUIRE(out);
         BOOST_REQUIRE(plan);
     }
 
+    const bool in_place;
     underling::grid grid;
     underling::problem problem;
+private:
     boost::shared_array<underling_real> data;
+public:
+    underling_real * const in;
+    underling_real * const out;
     underling::plan plan;
 
+    void fill_in_with_NaNs() {
+        std::fill_n(in, problem.local_memory(),
+                    std::numeric_limits<underling_real>::quiet_NaN());
+    }
+
+    void fill_out_with_NaNs() {
+        std::fill_n(out, problem.local_memory(),
+                    std::numeric_limits<underling_real>::quiet_NaN());
+    }
 };
 
 #endif // __TEST_UNDERLING_TOOLS_HPP
