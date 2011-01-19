@@ -625,7 +625,7 @@ underling_fft_plan_create_c2r_backward_internal(
     f->output         = output;
     f->in_place       = (in == out);
 
-    // Prepare the pre-ordering plan for in-place transforms
+    // Prepare the pre-ordering plan
     if (f->in_place) {
         const int howmany_rank = sizeof(input.size)/sizeof(input.size[0]);
         fftw_iodim howmany_dims[howmany_rank];
@@ -656,15 +656,18 @@ underling_fft_plan_create_c2r_backward_internal(
                     "FFTW returned NULL c2r_backward preorder plan",
                     UNDERLING_ESANITY);
         }
+    } else {
+        // NOP: No pre-ordering necessary for out-of-place
     }
 
-    // Plan FFT for transform
-    if (f->in_place) {
+    // Create in- or out-of-place plan for the FFT
+    // Special handling for in-place comes from pre/post-order plans
+    {
         const fftw_iodim dims[] = {       // Transform long_ni
             {
                 output.size[long_ni],     // Logical transform size
                 input.stride[long_ni],
-                input.size[3]             // From preorder plan
+                f->in_place ? input.size[3] : output.stride[long_ni]
             }
         };
         const int rank = sizeof(dims)/sizeof(dims[0]);
@@ -678,20 +681,20 @@ underling_fft_plan_create_c2r_backward_internal(
             assert(j < 2);
             howmany_dims[j].n  = input.size[*oo];
             howmany_dims[j].is = input.stride[*oo];
-            howmany_dims[j].os = input.stride[*oo];
+            howmany_dims[j].os =
+                f->in_place ?  input.stride[*oo] : output.stride[*oo];
             ++j;
         }
         assert(j == 2);
         howmany_dims[2].n  = input.size[3];
-        howmany_dims[2].is = 1;
-        howmany_dims[2].os = 1;
+        howmany_dims[2].is = f->in_place ? 1 : input.stride[3];
+        howmany_dims[2].os = f->in_place ? 1 : output.stride[3];
 
         // Find (in-ri) and (in-ii) offsets for fftw_execute_split_dft_c2r
         // Store offsets to simplify using the new array execute interface
         f->offset.ri = 0;
-        f->offset.ii = input.size[3]; // From preorder plan
+        f->offset.ii = f->in_place ? input.size[3] : 1;
 
-        assert(in == out);
         f->plan_fft = fftw_plan_guru_split_dft_c2r(
                 rank, dims, howmany_rank, howmany_dims,
                 in + f->offset.ri, in + f->offset.ii, out,
@@ -737,6 +740,8 @@ underling_fft_plan_create_c2r_backward_internal(
                     "FFTW returned NULL c2r_backward postorder plan",
                     UNDERLING_ESANITY);
         }
+    } else {
+        // NOP: No post-ordering necessary for out-of-place
     }
 
     return f;
@@ -815,21 +820,23 @@ underling_fft_plan_create_r2c_forward_internal(
     f->output         = output;
     f->in_place       = (in == out);
 
-    // Prepare the pre-ordering plan for in-place transforms
+    // Prepare the pre-ordering plan
     if (f->in_place) {
-        // We must always pay to reorder the output data.
-        // Ignoring the input reordering process avoids touching all the data a
-        // separate, third time.
+        // We must always pay to reorder the output data.  Ignoring input
+        // reordering process avoids touching all data a separate, third time.
         // TODO Evaluate performance impact since FFT may be non-stride 1
+    } else {
+        // NOP: No pre-ordering necessary for out-of-place
     }
 
-    // Plan FFT for in-place transform
-    if (f->in_place) {
+    // Create in- or out-of-place plan for the FFT
+    // Special handling for in-place comes from pre/post-order plans
+    {
         const fftw_iodim dims[] = {       // Transform long_ni
             {
                 input.size[long_ni],
                 input.stride[long_ni],
-                2*input.stride[long_ni]
+                f->in_place ? 2*input.stride[long_ni] : output.stride[long_ni]
             }
         };
         const int rank = sizeof(dims)/sizeof(dims[0]);
@@ -842,7 +849,8 @@ underling_fft_plan_create_r2c_forward_internal(
             assert((size_t) j < sizeof(howmany_dims)/sizeof(howmany_dims[0]));
             howmany_dims[j].n  = input.size[*io];
             howmany_dims[j].is = input.stride[*io];
-            howmany_dims[j].os = input.stride[*io];
+            howmany_dims[j].os =
+                f->in_place ? input.stride[*io] : output.stride[*io];
             ++j;
         }
         assert((size_t) j == sizeof(howmany_dims)/sizeof(howmany_dims[0]));
@@ -850,9 +858,8 @@ underling_fft_plan_create_r2c_forward_internal(
         // Find (out-ro) and (out-i0) offsets for fftw_execute_split_dft_r2c
         // Store offsets to simplify using the new array execute interface
         f->offset.ro = 0;
-        f->offset.io = input.stride[long_ni];
+        f->offset.io = f->in_place ? input.stride[long_ni] : 1;
 
-        assert(in == out);
         f->plan_fft = fftw_plan_guru_split_dft_r2c(
                 rank, dims, howmany_rank, howmany_dims,
                 in, out + f->offset.ro, out + f->offset.io,
@@ -864,9 +871,9 @@ underling_fft_plan_create_r2c_forward_internal(
         }
     }
 
-    // Prepare the post-ordering plan for in-place transforms
-    // Use "complex-centric" sizes since they cover the contiguous region.
+    // Prepare the post-ordering plan
     if (f->in_place) {
+        // Use "complex-centric" sizes since they cover the contiguous region.
         const int howmany_rank = sizeof(output.size)/sizeof(output.size[0]);
         fftw_iodim howmany_dims[howmany_rank];
         int j = 0;
@@ -898,6 +905,8 @@ underling_fft_plan_create_r2c_forward_internal(
                     "FFTW returned NULL r2c_forward postorder plan",
                     UNDERLING_ESANITY);
         }
+    } else {
+        // NOP: No post-ordering necessary for out-of-place
     }
 
     return f;
