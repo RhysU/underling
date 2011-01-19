@@ -517,23 +517,18 @@ underling_fft_plan_create_c2c_internal(
 
         // Find (in-ri), (in-ii), (out-ro), (out-io) for fftw_execute_split_dft
         // Store offsets to simply using the new array execute interface later
-        // guru_split_dft: FFTW_BACKWARD is FFTW_FORWARD with flipped parts
         if (f->in_place) {
-            f->offset.ri = 0;
-            f->offset.ii = transform_in->stride[4];
-            if (fftw_sign == FFTW_BACKWARD) {
-                swap(&f->offset.ri, &f->offset.ii);
-            }
-            f->offset.ro = f->offset.ri;
-            f->offset.io = f->offset.ii;
+            f->offset.ri = f->offset.ro = 0;
+            f->offset.ii = f->offset.io = transform_in->stride[4];
         } else {
-            f->offset.ri = 0;
+            f->offset.ri = f->offset.ro = 0;
             f->offset.ii = f->input.stride[4];
-            if (fftw_sign == FFTW_BACKWARD) {
-                swap(&f->offset.ri, &f->offset.ii);
-            }
-            f->offset.ro = 0;
             f->offset.io = f->output.stride[4];
+        }
+        // FFTW_BACKWARD is FFTW_FORWARD with flipped components
+        if (fftw_sign == FFTW_BACKWARD) {
+            swap(&f->offset.ri, &f->offset.ii);
+            swap(&f->offset.ro, &f->offset.io);
         }
 
         // Finally create the transformation plan

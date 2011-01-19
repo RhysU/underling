@@ -343,6 +343,16 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward )
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, 0, true);
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, 0, true);
 
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, 0, false); // 1 field
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, 0, false); // 2 fields
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, 0, false); // 3 fields
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, 0, false);
+
     // Cubic domain
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, 0, true); // 1 field
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, 0, true);
@@ -353,6 +363,16 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward )
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, 0, true); // 3 fields
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, 0, true);
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, 0, true);
+
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, 0, false); // 1 field
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, 0, false); // 2 fields
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, 0, false); // 3 fields
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, 0, false);
+    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, 0, false);
 }
 
 BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n2 )
@@ -372,6 +392,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n2 )
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n2, true);
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n2, true);
 
+    // TODO Add out-of-place tests
+
     // Cubic domain
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n2, true); // 1 field
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n2, true);
@@ -382,6 +404,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n2 )
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n2, true); // 3 fields
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n2, true);
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n2, true);
+
+    // TODO Add out-of-place tests
 }
 
 BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n0 )
@@ -401,6 +425,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n0 )
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n0, true);
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n0, true);
 
+    // TODO Add out-of-place tests
+
     // Cubic domain
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n0, true); // 1 field
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n0, true);
@@ -411,6 +437,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n0 )
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n0, true); // 3 fields
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n0, true);
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n0, true);
+
+    // TODO Add out-of-place tests
 }
 
 BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_both )
@@ -431,6 +459,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_both )
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n2 | long_n0, true);
     test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n2 | long_n0, true);
 
+    // TODO Add out-of-place tests
+
     // Cubic domain
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n2 | long_n0, true); // 1
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n2 | long_n0, true);
@@ -441,6 +471,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_both )
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n2 | long_n0, true); // 3
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n2 | long_n0, true);
     test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n2 | long_n0, true);
+
+    // TODO Add out-of-place tests
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -632,6 +664,16 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward )
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, 0, true);
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, 0, true);
 
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, 0, false); // 1 field
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, 0, false); // 2 fields
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, 0, false); // 3 fields
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, 0, false);
+
     // Cubic domain
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, 0, true); // 1 field
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, 0, true);
@@ -642,6 +684,16 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward )
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, 0, true); // 3 fields
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, 0, true);
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, 0, true);
+
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, 0, false); // 1 field
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, 0, false); // 2 fields
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, 0, false); // 3 fields
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, 0, false);
+    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, 0, false);
 }
 
 BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n2 )
@@ -661,6 +713,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n2 )
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n2, true);
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n2, true);
 
+    // TODO Add out-of-place tests
+
     // Cubic domain
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n2, true); // 1 field
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n2, true);
@@ -671,6 +725,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n2 )
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n2, true); // 3
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n2, true);
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n2, true);
+
+    // TODO Add out-of-place tests
 }
 
 BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n0 )
@@ -690,6 +746,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n0 )
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n0, true);
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n0, true);
 
+    // TODO Add out-of-place tests
+
     // Cubic domain
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n0, true); // 1 field
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n0, true);
@@ -700,6 +758,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n0 )
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n0, true); // 3
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n0, true);
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n0, true);
+
+    // TODO Add out-of-place tests
 }
 
 BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_both )
@@ -720,6 +780,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_both )
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n2 | long_n0, true);
     test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n2 | long_n0, true);
 
+    // TODO Add out-of-place tests
+
     // Cubic domain
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n2 | long_n0, true); // 1
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n2 | long_n0, true);
@@ -730,6 +792,8 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_both )
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n2 | long_n0, true); // 3
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n2 | long_n0, true);
     test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n2 | long_n0, true);
+
+    // TODO Add out-of-place tests
 }
 
 BOOST_AUTO_TEST_SUITE_END()
