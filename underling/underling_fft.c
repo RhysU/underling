@@ -658,7 +658,7 @@ underling_fft_plan_create_c2r_backward_internal(
         }
     }
 
-    // Plan FFT for in-place transform
+    // Plan FFT for transform
     if (f->in_place) {
         const fftw_iodim dims[] = {       // Transform long_ni
             {
@@ -1166,6 +1166,10 @@ underling_fft_fprint_plan(
     if (!plan) {
         fprintf(output_file, "NULL");
     } else {
+        fprintf(output_file,"long_ni=%d,type=%d",plan->long_ni, plan->type);
+        fprintf(output_file,",{input=");
+        underling_fft_fprint_extents(&plan->input,output_file);
+        fprintf(output_file,"}");
         if (plan->plan_preorder) {
             fprintf(output_file, "{plan_preorder:");
             fftw_fprint_plan(plan->plan_preorder, output_file);
@@ -1181,5 +1185,17 @@ underling_fft_fprint_plan(
             fftw_fprint_plan(plan->plan_postorder, output_file);
             fprintf(output_file, "}");
         }
+        fprintf(output_file,"{output=");
+        underling_fft_fprint_extents(&plan->output,output_file);
+        fprintf(output_file,"},");
+        if (plan->in_place) {
+            fprintf(output_file,"in-place");
+        } else {
+            fprintf(output_file,"out-of-place");
+        }
+        fprintf(output_file,",{offset:ri=%d,ii=%d,ro=%d,io=%d}",
+                plan->offset.ri, plan->offset.ii,
+                plan->offset.ro, plan->offset.io);
     }
+    fprintf(output_file, "}");
 }
