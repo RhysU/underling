@@ -495,7 +495,6 @@ underling_fft_plan_create_c2c_internal(
                 transform_out->stride[long_ni]
             }
         };
-        const int rank = sizeof(dims)/sizeof(dims[0]);
 
         const int howmany_rank = 3;       // Loop over other directions
         fftw_iodim howmany_dims[howmany_rank];
@@ -566,12 +565,10 @@ underling_fft_plan_create_c2r_backward(
     const underling_fft_extents output
         = create_underling_fft_extents_for_real(e, long_ni);
 
-    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
+    if (UNDERLING_UNLIKELY(input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
-                "Creation of in-place c2r_backward plans in"
-                " non-stride one directions is unavailable.  Check the"
-                " UNDERLING_TRANSPOSED_LONG_N{0,2} flags provided when"
-                " creating the underling_problem.",
+                "Creation of c2r_backward plans in"
+                " non-stride one directions is currently unimplemented",
                 UNDERLING_ESANITY);
     }
 
@@ -761,12 +758,10 @@ underling_fft_plan_create_r2c_forward(
     const underling_fft_extents output
         = create_underling_fft_extents_for_complex(e, long_ni);
 
-    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
+    if (UNDERLING_UNLIKELY(input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
-                "Creation of in-place c2r_backward plans in non-stride"
-                " one directions is unavailable.  Check the"
-                " UNDERLING_TRANSPOSED_LONG_N{0,2} flags provided when"
-                " creating the underling_problem.",
+                "Creation of r2c_forward plans in non-stride"
+                " one directions is currently unimplemented.",
                 UNDERLING_ESANITY);
     }
 
