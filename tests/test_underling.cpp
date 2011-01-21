@@ -96,6 +96,8 @@ static void test_round_trip(MPI_Comm comm,
                 if (j < 2) oss << ", ";
             }
             BOOST_TEST_MESSAGE(oss.str());
+            std::cout.flush();
+            std::cerr.flush();
         }
     }
 
@@ -138,6 +140,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8 )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, 0, true ); // In-place
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, 0, true );
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  3, 0, true );
+    test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  4, 0, true );
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  5, 0, true );
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  7, 0, true );
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 11, 0, true );
@@ -145,6 +148,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8 )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, 0, false); // Out-of-place
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, 0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  3, 0, false);
+    test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  4, 0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  5, 0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  7, 0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 11, 0, false);
@@ -157,6 +161,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_long_n2 )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  3, long_n2, true);
+    test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  4, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  5, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  7, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 11, long_n2, true);
@@ -164,6 +169,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_long_n2 )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  3, long_n2, false);
+    test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  4, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  5, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  7, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 11, long_n2, false);
@@ -176,6 +182,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_long_n0 )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  3, long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  4, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  5, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  7, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 11, long_n0, true);
@@ -183,6 +190,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_long_n0 )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  3, long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  4, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  5, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  7, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 11, long_n0, false);
@@ -196,6 +204,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_both )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  3, long_n2 | long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  4, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  5, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  7, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 11, long_n2 | long_n0, true);
@@ -203,6 +212,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_transposed_both )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  2, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  3, long_n2 | long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  4, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  5, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  7, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 11, long_n2 | long_n0, false);
@@ -229,6 +239,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5 )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, 0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, 0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, 0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, 0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, 0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  7, 0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, 0, true);
@@ -236,6 +247,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5 )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, 0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, 0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, 0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, 0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, 0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  7, 0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, 0, false);
@@ -248,6 +260,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n2 )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, long_n2, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  7, long_n2, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, long_n2, true);
@@ -255,6 +268,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n2 )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, long_n2, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  7, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, long_n2, false);
@@ -267,6 +281,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n0 )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  7, long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, long_n0, true);
@@ -274,6 +289,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n0 )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  7, long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, long_n0, false);
@@ -287,6 +303,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_both )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, long_n2 | long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  7, long_n2 | long_n0, true);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, long_n2 | long_n0, true);
@@ -294,6 +311,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_both )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, long_n2 | long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  7, long_n2 | long_n0, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, long_n2 | long_n0, false);
@@ -313,6 +331,105 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_degenerate_howmany )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 0, long_n2          , false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 0, long_n0          , false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 0, long_n2 | long_n0, false);
+}
+
+BOOST_AUTO_TEST_CASE( roundtrip2x3x4 )
+{
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, 0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  2, 0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  3, 0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  4, 0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  5, 0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  7, 0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 11, 0, true);
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, 0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  2, 0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  3, 0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  4, 0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  5, 0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  7, 0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 11, 0, false);
+}
+
+BOOST_AUTO_TEST_CASE( roundtrip2x3x4_transposed_long_n2 )
+{
+    using underling::transposed::long_n2;
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, long_n2, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  2, long_n2, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  3, long_n2, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  4, long_n2, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  5, long_n2, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  7, long_n2, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 11, long_n2, true);
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, long_n2, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  2, long_n2, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  3, long_n2, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  4, long_n2, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  5, long_n2, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  7, long_n2, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 11, long_n2, false);
+}
+
+BOOST_AUTO_TEST_CASE( roundtrip2x3x4_transposed_long_n0 )
+{
+    using underling::transposed::long_n0;
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  2, long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  3, long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  4, long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  5, long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  7, long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 11, long_n0, true);
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  2, long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  3, long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  4, long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  5, long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  7, long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 11, long_n0, false);
+}
+
+BOOST_AUTO_TEST_CASE( roundtrip2x3x4_transposed_long_both )
+{
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, long_n2 | long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  2, long_n2 | long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  3, long_n2 | long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  4, long_n2 | long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  5, long_n2 | long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  7, long_n2 | long_n0, true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 11, long_n2 | long_n0, true);
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, long_n2 | long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  2, long_n2 | long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  3, long_n2 | long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  4, long_n2 | long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  5, long_n2 | long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  7, long_n2 | long_n0, false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 11, long_n2 | long_n0, false);
+}
+
+BOOST_AUTO_TEST_CASE( roundtrip2x3x4_degenerate_howmany )
+{
+    using underling::transposed::long_n2;
+    using underling::transposed::long_n0;
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, 0                , true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, long_n2          , true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, long_n0          , true);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, long_n2 | long_n0, true);
+
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, 0                , false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, long_n2          , false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, long_n0          , false);
+    test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, long_n2 | long_n0, false);
 }
 
 static void test_extents_consistency(const bool in_place = true)
@@ -357,7 +474,6 @@ static void test_extents_consistency(const bool in_place = true)
                                       stride, stride + 4);
     }
 }
-
 
 BOOST_AUTO_TEST_CASE( extents_consistency )
 {
