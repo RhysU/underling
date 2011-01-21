@@ -43,6 +43,9 @@
 // INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL
 // ********************************************************************
 
+// Quasi-hidden flag used for debugging deadlock conditions
+static TLS MPI_Comm debug_comm = MPI_COMM_NULL;
+
 // TODO Document internal structures
 
 struct underling_grid_s {
@@ -609,6 +612,7 @@ underling_dump_transposes(
     UNDERLING_MPICHKV(MPI_Comm_size(dump_comm, &size));
     UNDERLING_MPICHKV(MPI_Comm_rank(dump_comm, &rank));
 
+    UNDERLING_MPICHKV(MPI_Barrier(dump_comm));
     fflush(out);
     for (int i = 0; i < size; ++i) {
         UNDERLING_MPICHKV(MPI_Barrier(dump_comm));
@@ -621,7 +625,6 @@ underling_dump_transposes(
         }
     }
     fflush(out);
-
     UNDERLING_MPICHKV(MPI_Barrier(dump_comm));
 }
 
@@ -1074,13 +1077,13 @@ underling_plan_create(
     const unsigned other_flags = p->in_place ? 0 : FFTW_DESTROY_INPUT;
 
     // Deadlock debugging logic which can be selectively enabled at runtime
-    // Irony: Using this on non-MPI_COMM_WORLD will deadlock you!!!
-    const int dump = !!getenv("UNDERLING_DEBUG_TRANSPOSE_DEADLOCK");
+    if (debug_comm != MPI_COMM_NULL) {
+        underling_dump_transposes(debug_comm, stdout,
+                "UNDERLING_DEBUG backwardA", problem->backwardA);
+    }
 
     // Create the requested FFTW MPI plans
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1) {
-        if (dump) underling_dump_transposes(MPI_COMM_WORLD, stdout,
-                "UNDERLING_DEBUG backwardA", problem->backwardA );
         p->plan_backwardA = underling_transpose_fftw_plan(
                 problem->backwardA, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardA == NULL)) {
@@ -1091,9 +1094,13 @@ underling_plan_create(
         }
     }
 
+    // Deadlock debugging logic which can be selectively enabled at runtime
+    if (debug_comm != MPI_COMM_NULL) {
+        underling_dump_transposes(debug_comm, stdout,
+                "UNDERLING_DEBUG backwardB", problem->backwardB);
+    }
+
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0) {
-        if (dump) underling_dump_transposes(MPI_COMM_WORLD, stdout,
-                "UNDERLING_DEBUG backwardB", problem->backwardB );
         p->plan_backwardB = underling_transpose_fftw_plan(
                 problem->backwardB, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardB == NULL)) {
@@ -1104,9 +1111,13 @@ underling_plan_create(
         }
     }
 
+    // Deadlock debugging logic which can be selectively enabled at runtime
+    if (debug_comm != MPI_COMM_NULL) {
+        underling_dump_transposes(debug_comm, stdout,
+                "UNDERLING_DEBUG forwardB", problem->forwardB);
+    }
+
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1) {
-        if (dump) underling_dump_transposes(MPI_COMM_WORLD, stdout,
-                "UNDERLING_DEBUG forwardB", problem->forwardB );
         p->plan_forwardB = underling_transpose_fftw_plan(
                 problem->forwardB, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardB == NULL)) {
@@ -1117,9 +1128,13 @@ underling_plan_create(
         }
     }
 
+    // Deadlock debugging logic which can be selectively enabled at runtime
+    if (debug_comm != MPI_COMM_NULL) {
+        underling_dump_transposes(debug_comm, stdout,
+                "UNDERLING_DEBUG forwardA", problem->forwardA);
+    }
+
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2) {
-        if (dump) underling_dump_transposes(MPI_COMM_WORLD, stdout,
-                "UNDERLING_DEBUG forwardA", problem->forwardA );
         p->plan_forwardA = underling_transpose_fftw_plan(
                 problem->forwardA, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardA == NULL)) {
@@ -1460,4 +1475,13 @@ underling_fprint_extents(
                 extents->stride[2],
                 extents->stride[3]);
     }
+}
+
+MPI_Comm
+underling_debug_transpose(
+        MPI_Comm comm)
+{
+    MPI_Comm last = debug_comm;
+    debug_comm = comm;
+    return last;
 }

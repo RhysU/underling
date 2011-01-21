@@ -42,6 +42,7 @@ AX_PROG_CC_C99_CFLAGS(,AC_MSG_ERROR([Compiler cannot support ISO C99]))
 AX_CFLAGS_WARN_ALL
 AX_COMPILER_VENDOR()
 AX_VISIBILITY([hidden])
+AX_TLS()
 if test "x$ax_enable_debug" != "xno"; then
     AX_TRACEBACK()
 fi

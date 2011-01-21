@@ -653,6 +653,13 @@ underling_fprint_plan(
         const underling_plan plan,
         FILE *output_file) UNDERLING_API;
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+// Quasi-hidden setting used for debugging deadlock conditions
+MPI_Comm
+underling_debug_transpose(
+        MPI_Comm comm) UNDERLING_API;
+#endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
