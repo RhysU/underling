@@ -56,10 +56,10 @@ struct underling_grid_s {
 
 typedef struct underling_transpose_s * underling_transpose; // Internal!
 struct underling_transpose_s {
+    MPI_Comm  comm;                   // Instance owns MPI resource
     ptrdiff_t d[2];
     ptrdiff_t howmany;
     ptrdiff_t block[2];
-    MPI_Comm  comm;                   // Instance owns MPI resource
     unsigned  flags;
     ptrdiff_t local[2];
     ptrdiff_t local_start[2];
@@ -122,6 +122,14 @@ underling_transpose_fftw_plan(
         underling_real *in,
         underling_real *out,
         unsigned fftw_flags);
+
+static
+void
+underling_dump_transposes(
+        MPI_Comm dump_comm,
+        FILE *out,
+        const char *prefix,
+        const underling_transpose transpose);
 
 static
 size_t
@@ -317,20 +325,25 @@ underling_grid_create(
     }
 
     // Name the three new communicators something mildly descriptive
+    // Intra-communicator names can be lexicographically ordered easily
+    const int pA_ndigits = snprintf(NULL, 0, "%d", g->pA);
+    const int pB_ndigits = snprintf(NULL, 0, "%d", g->pB);
+    assert(pA_ndigits > 0);
+    assert(pB_ndigits > 0);
     snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
-            "uGComm%dx%d", g->pA, g->pB);
+            "uGComm%0*dx%0*d", pA_ndigits, g->pA, pB_ndigits, g->pB);
     if ((error = MPI_Comm_set_name(g->g_comm, buffer))) {
         underling_grid_destroy(g);
         UNDERLING_MPICHKN(error);
     }
     snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
-            "uPACommXx%d", pB_rank);
+            "uPACommXx%0*d", pB_ndigits, pB_rank);
     if ((error = MPI_Comm_set_name(g->pA_comm, buffer))) {
         underling_grid_destroy(g);
         UNDERLING_MPICHKN(error);
     }
     snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
-            "uPBComm%dxX", pA_rank);
+            "uPBComm%0*dxX", pA_ndigits, pA_rank);
     if ((error = MPI_Comm_set_name(g->pB_comm, buffer))) {
         underling_grid_destroy(g);
         UNDERLING_MPICHKN(error);
@@ -422,12 +435,12 @@ underling_transpose_create(
     }
 
     // Fix struct values known from arguments
+    t->comm     = underling_MPI_Comm_dup_with_name(comm);
     t->d[0]     = d0;
     t->d[1]     = d1;
     t->howmany  = howmany;
     t->block[0] = block0;
     t->block[1] = block1;
-    t->comm     = underling_MPI_Comm_dup_with_name(comm);
     t->flags    = flags;
 
     if (t->comm == MPI_COMM_NULL) {
@@ -436,7 +449,7 @@ underling_transpose_create(
                             UNDERLING_ESANITY);
     }
 
-    if (UNDERLING_UNLIKELY(    t->howmany == 0
+    if (UNDERLING_UNLIKELY(   t->howmany == 0
                            || t->d[0] == 0
                            || t->d[1] == 0)) {
         // Trivial transpose required;
@@ -565,7 +578,7 @@ underling_transpose_fftw_plan(
         UNDERLING_ERROR_NULL("transpose == NULL", UNDERLING_EINVAL);
     }
 
-    if (UNDERLING_UNLIKELY(    transpose->howmany == 0
+    if (UNDERLING_UNLIKELY(   transpose->howmany == 0
                            || transpose->d[0] == 0
                            || transpose->d[1] == 0)) {
         // fftw_mpi_plan_many_transpose returns NULL on some trivial input.
@@ -582,6 +595,34 @@ underling_transpose_fftw_plan(
                                             transpose->comm,
                                             transpose->flags | fftw_flags);
     }
+}
+
+static
+void
+underling_dump_transposes(
+        MPI_Comm dump_comm,
+        FILE *out,
+        const char *prefix,
+        const underling_transpose transpose)
+{
+    int size, rank;
+    UNDERLING_MPICHKV(MPI_Comm_size(dump_comm, &size));
+    UNDERLING_MPICHKV(MPI_Comm_rank(dump_comm, &rank));
+
+    fflush(out);
+    for (int i = 0; i < size; ++i) {
+        UNDERLING_MPICHKV(MPI_Barrier(dump_comm));
+        if (i == rank) {
+            fputs(prefix, out);
+            fputc(' ', out);
+            underling_fprint_transpose(transpose, out);
+            fputs("\n", out);
+            fflush(out);
+        }
+    }
+    fflush(out);
+
+    UNDERLING_MPICHKV(MPI_Barrier(dump_comm));
 }
 
 underling_problem
@@ -1032,8 +1073,14 @@ underling_plan_create(
     // Always specify FFTW_DESTROY_INPUT on out-of-place transposes
     const unsigned other_flags = p->in_place ? 0 : FFTW_DESTROY_INPUT;
 
+    // Deadlock debugging logic which can be selectively enabled at runtime
+    // Irony: Using this on non-MPI_COMM_WORLD will deadlock you!!!
+    const int dump = !!getenv("UNDERLING_DEBUG_TRANSPOSE_DEADLOCK");
+
     // Create the requested FFTW MPI plans
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1) {
+        if (dump) underling_dump_transposes(MPI_COMM_WORLD, stdout,
+                "UNDERLING_DEBUG backwardA", problem->backwardA );
         p->plan_backwardA = underling_transpose_fftw_plan(
                 problem->backwardA, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardA == NULL)) {
@@ -1045,6 +1092,8 @@ underling_plan_create(
     }
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0) {
+        if (dump) underling_dump_transposes(MPI_COMM_WORLD, stdout,
+                "UNDERLING_DEBUG backwardB", problem->backwardB );
         p->plan_backwardB = underling_transpose_fftw_plan(
                 problem->backwardB, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardB == NULL)) {
@@ -1056,6 +1105,8 @@ underling_plan_create(
     }
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1) {
+        if (dump) underling_dump_transposes(MPI_COMM_WORLD, stdout,
+                "UNDERLING_DEBUG forwardB", problem->forwardB );
         p->plan_forwardB = underling_transpose_fftw_plan(
                 problem->forwardB, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardB == NULL)) {
@@ -1067,6 +1118,8 @@ underling_plan_create(
     }
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2) {
+        if (dump) underling_dump_transposes(MPI_COMM_WORLD, stdout,
+                "UNDERLING_DEBUG forwardA", problem->forwardA );
         p->plan_forwardA = underling_transpose_fftw_plan(
                 problem->forwardA, in, out, rigor_flags | other_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardA == NULL)) {
@@ -1292,29 +1345,25 @@ underling_fprint_transpose(
     if (!transpose) {
         fprintf(output_file, "NULL");
     } else {
-        fprintf(output_file,
-                "{d0=%td,d1=%td},{block0=%td,block1=%td},",
-                transpose->d[0], transpose->d[1],
-                transpose->block[0], transpose->block[1]);
-
         char buffer[MPI_MAX_OBJECT_NAME];
         int resultlen = 0;
         if (   MPI_Comm_get_name(transpose->comm, buffer, &resultlen)
             || resultlen == 0) {
-            fprintf(output_file, "{comm=%x", transpose->comm);
+            fprintf(output_file, "comm=%x", transpose->comm);
         } else {
-            fprintf(output_file, "{comm=%s", buffer);
+            fprintf(output_file, "comm=%s", buffer);
         }
         fprintf(output_file,
-                ",flags=%u,local_size=%td},",
+                ",{d=%td,%td},howmany=%td,{block=%td,%td}",
+                transpose->d[0], transpose->d[1], transpose->howmany,
+                transpose->block[0], transpose->block[1]);
+        fprintf(output_file,
+                ",flags=%u,local_size=%td",
                 transpose->flags,transpose->local_size);
-
         fprintf(output_file,
-                "{local0=%td,local_start0=%td},",
-                transpose->local[0],transpose->local_start[0]);
-        fprintf(output_file,
-                "{local1=%td,local_start1=%td}",
-                transpose->local[1],transpose->local_start[1]);
+                ",{local=%td,%td},{local_start=%td,%td}",
+                transpose->local[0],transpose->local[1],
+                transpose->local_start[0],transpose->local_start[1]);
     }
     fprintf(output_file, "}");
 }
