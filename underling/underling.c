@@ -628,6 +628,7 @@ underling_dump_transposes(
     UNDERLING_MPICHKV(MPI_Barrier(dump_comm));
 }
 
+// FIXME: Leaks memory on pretty much any MPI-based error
 underling_problem
 underling_problem_create(
         underling_grid grid,
