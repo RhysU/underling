@@ -135,6 +135,8 @@ static void test_round_trip(MPI_Comm comm,
             boost::make_counting_iterator(procid*10000.0 + long_n[2].extent));
 }
 
+BOOST_FIXTURE_TEST_SUITE( eightbyeightbyeight, FFTWMPIParanoiaFixture )
+
 BOOST_AUTO_TEST_CASE( roundtrip8x8x8 )
 {
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8,  1, 0, true ); // In-place
@@ -233,6 +235,10 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_degenerate_howmany )
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 0, long_n0          , false);
     test_round_trip(MPI_COMM_WORLD, 8, 8, 8, 0, long_n2 | long_n0, false);
 }
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_FIXTURE_TEST_SUITE( twobythreebyfive, FFTWMPIParanoiaFixture )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x5 )
 {
@@ -333,6 +339,10 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_degenerate_howmany )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 0, long_n2 | long_n0, false);
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_FIXTURE_TEST_SUITE( twobythreebyfoure, FFTWMPIParanoiaFixture )
+
 BOOST_AUTO_TEST_CASE( roundtrip2x3x4 )
 {
     test_round_trip(MPI_COMM_WORLD, 2, 3, 4,  1, 0, true);
@@ -431,6 +441,8 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x4_degenerate_howmany )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, long_n0          , false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 4, 0, long_n2 | long_n0, false);
 }
+
+BOOST_AUTO_TEST_SUITE_END()
 
 static void test_extents_consistency(const bool in_place = true)
 {

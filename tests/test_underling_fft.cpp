@@ -80,7 +80,7 @@ static void ensureFFTWTensor7PatchInPlace() {
 
 
 BOOST_FIXTURE_TEST_SUITE( underling_fft_general,
-                          BoostFailErrorHandlerFixture )
+                          FFTWMPIParanoiaFixture )
 
 static void test_extents_consistency(const bool in_place = true)
 {
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_FIXTURE_TEST_SUITE( underling_fft_c2c_forward,
-                          BoostFailErrorHandlerFixture )
+                          FFTWMPIParanoiaFixture )
 
 // Forward physical-to-wave followed by wave-to-physical
 static void test_c2c_forward(MPI_Comm comm,
@@ -531,7 +531,7 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_FIXTURE_TEST_SUITE( underling_fft_c2c_backward,
-                          BoostFailErrorHandlerFixture )
+                          FFTWMPIParanoiaFixture )
 
 // Backward wave-to-physical followed by physical-to-wave
 static void test_c2c_backward(MPI_Comm comm,
@@ -905,7 +905,7 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_FIXTURE_TEST_SUITE( underling_fft_c2r,
-                          BoostFailErrorHandlerFixture )
+                          FFTWMPIParanoiaFixture )
 
 // Test wave to physical transformation and inverse transform
 static void test_c2r(MPI_Comm comm,
@@ -1404,7 +1404,7 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_FIXTURE_TEST_SUITE( underling_fft_r2c,
-                          BoostFailErrorHandlerFixture )
+                          FFTWMPIParanoiaFixture )
 
 // Test physical to wave transformation and inverse transform
 static void test_r2c(MPI_Comm comm,

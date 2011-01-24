@@ -64,6 +64,17 @@ struct FFTWMPIFixture {
     }
 };
 
+/** A test fixture to help bump up independence between test cases */
+struct FFTWMPIParanoiaFixture {
+    ~FFTWMPIParanoiaFixture() {
+        fftw_mpi_cleanup();
+#ifdef HAVE_FFTW3_THREADS
+        fftw_cleanup_threads();
+#endif
+        fftw_cleanup();
+    }
+};
+
 /* A test fixture to setup and teardown an underling use case */
 struct UnderlingFixture {
 
