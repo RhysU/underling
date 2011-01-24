@@ -218,16 +218,20 @@ underling_extents_cmp(const underling_extents * const e1,
  *
  * All orders given are row-major; the rightmost index is fastest.  Expressions
  * like <tt>n{0,1,2}/p{A,B}</tt> indicate that the <tt>n{0,1,2}</tt> direction
- * is decomposed across a grid of size <tt>p{A,B}</tt>.  The decomposition is
- * balanced given communication overhead expectations.
+ * is decomposed across a grid of size <tt>p{A,B}</tt>.  It must be true that
+ * <tt>n0 >= pB</tt>, <tt>n1 >= pA, pB</tt>, and <tt>n2 >= pA</tt>.  The
+ * parallel decomposition is balanced given communication overhead
+ * expectations.
  *
  * \note It is much, much easier to obtain the appropriate storage order and
- * stride information from underling_local_extents or underling_local rather
- * than to compute it yourself.
+ * stride information in each direction by using underling_local_extents or
+ * underling_local rather than to computing it yourself.
  *
  * Specifying zero for either or both of \c pA and \c pB results in an
  * automatic decomposition of the communicator into a 2D Cartesian grid using
- * <tt>MPI_Dims_create</tt>.
+ * <tt>MPI_Dims_create</tt>.  Specifying zero for both \c pA and \c pB will
+ * "align" the resulting grid so that the larger of \c pA and \c pB decomposes
+ * the larger of \c n0 and \c n2.
  *
  * @param comm MPI communicator indicating the processes to be used
  *             for the parallel domain decomposition.  The communicator

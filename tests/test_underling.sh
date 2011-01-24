@@ -14,8 +14,7 @@ if ! which mpiexec > /dev/null ; then
     exit 0
 fi
 
-# FIXME: Seeing some out-of-place hangs when np = 3, 5
-for np in 1 2 4
+for np in 1 2 3 4
 do
     cmd="mpiexec -np $np ./test_underling"
     echo $cmd

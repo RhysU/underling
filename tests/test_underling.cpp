@@ -266,9 +266,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_transposed_long_n2 )
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5, 11, long_n2, true);
 
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  1, long_n2, false);
-    underling_debug_transpose(MPI_COMM_WORLD);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  2, long_n2, false);
-    underling_debug_transpose(MPI_COMM_NULL);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  3, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  4, long_n2, false);
     test_round_trip(MPI_COMM_WORLD, 2, 3, 5,  5, long_n2, false);

@@ -273,17 +273,56 @@ underling_grid_create(
         underling_grid_destroy(g);
         UNDERLING_MPICHKN(error);
     }
-    // If both directions automatic, ensure dims[0] <= dims[1]
-    if (g->pA == 0 && g->pB == 0 && dims[0] > dims[1]) {
-        const int tmp = dims[0]; dims[0] = dims[1]; dims[1] = tmp;
+
+    // Specifying zero for both pA and pB "aligns" the resulting grid so that
+    // the larger of pA and pB decomposes the larger of n0 and n2.
+    if (g->pA == 0 && g->pB == 0) {
+        if (dims[0] > dims[1]) {           // Ensure dims[0] < dims[1]
+            const int tmp = dims[0]; dims[0] = dims[1]; dims[1] = tmp;
+        }
+
+        if (g->n[2] < g->n[0]) {
+            // NOP: See assignment to g->p{A,B} just below
+        } else {
+            // Swap: See assignment to g->p{A,B} just below
+            const int tmp = dims[0]; dims[0] = dims[1]; dims[1] = tmp;
+        }
     }
+
     // Store new values of pA, pB within workspace
-    g->pA = dims[0];
-    g->pB = dims[1];
+    g->pA = dims[0]; // Most closely associated with n2 decomposition
+    g->pB = dims[1]; // Most closely associated with n0 decomposition
+
+    // Sanity check decomposition against processor count
     if (UNDERLING_UNLIKELY(g->pA * g->pB != nproc)) {
         snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
                 "Invalid processor grid: pA {%d} * pB {%d} != nproc {%d}",
                 g->pA, g->pB, nproc);
+        underling_grid_destroy(g);
+        UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
+    }
+
+    // Sanity check decomposition against grid size requirements. See Redmine
+    // ticket #1297 for a discussion about handling degenerate transposes.
+    // Eliminating this requirement will require updating the Doxygen.
+    if (UNDERLING_UNLIKELY(g->n[0] < g->pB)) {
+        snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+                "Decomposition requires n0 {%d} >= pB {%d}",
+                g->n[0], g->pB);
+        underling_grid_destroy(g);
+        UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
+    }
+    if (UNDERLING_UNLIKELY(g->n[1] < g->pA || g->n[1] < g->pB)) {
+        snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+                "Decomposition requires n1 {%d} >= pA {%d}, pB {%d}",
+                g->n[1], g->pA, g->pB);
+        underling_grid_destroy(g);
+        UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
+    }
+    if (UNDERLING_UNLIKELY(g->n[0] < g->pB)) {
+        snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+                "Decomposition requires n2 {%d} >= pA {%d}",
+                g->n[2], g->pA);
         underling_grid_destroy(g);
         UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
     }
@@ -678,6 +717,10 @@ underling_problem_create(
         p->long_n[i].start[3] = 0;
         p->long_n[i].size[3]  = p->howmany;
     }
+
+    // underling_grid_create() already enforced that n0 >= pB, n1 >= pA, pB,
+    // and n2 >= pA.  See Redmine ticket #1297 for a discussion about handling
+    // degenerate transposes.
 
     // Decompose {n0,n1}/pB and store details in p->long_{(n2,n1),n0}
     {
