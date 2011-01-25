@@ -23,9 +23,6 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-// TODO Allow out-of-place transforms
-// TODO Add FFTW threading details
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -42,6 +39,7 @@
 #include "mpi_argp.h"
 
 #include <mpi.h>
+#include <fftw3.h>
 #include <underling/error.h>
 #include <underling/underling.h>
 
@@ -62,6 +60,13 @@
 #define GRVY_TIMER_SUMMARIZE()
 #endif
 
+// TODO Allow in-place transpose profiling
+// TODO Allow UNDERLING_TRANSPOSED_LONG_{N2,N0}
+// TODO Allow FFTs in particular directions
+// TODO Allow different transform_flags
+// TODO Allow load, broadcast, gather, save of FFTW wisdom
+// TODO Verify memory contents after all transposes complete
+
 //****************************************************************
 // DATA STRUCTURES DATA STRUCTURES DATA STRUCTURES DATA STRUCTURES
 //****************************************************************
@@ -73,14 +78,16 @@ struct details {
     int repeat;
     int nfields;
     int howmany;
+    int nthreads;
     int n0;
     int n1;
     int n2;
     int pA;
     int pB;
     long bytes;
-    underling_real *buf1;
-    underling_real *buf2;
+    unsigned transposed_flags;
+    unsigned transform_flags;
+    unsigned fftw_rigor_flags;
 };
 
 //*************************************************************
@@ -102,7 +109,9 @@ static void to_human_readable_byte_count(long bytes,
 
 static long from_human_readable_byte_count(const char *str);
 
-static void* malloc_and_fill(struct details *d, const long bytes);
+static void* malloc_and_fill(struct details *d,
+                             const long bytes,
+                             unsigned salt);
 
 //*******************************************************************
 // ARGP DETAILS: http://www.gnu.org/s/libc/manual/html_node/Argp.html
@@ -128,6 +137,7 @@ static const char doc[]               =
 static struct argp_option options[] = {
     {"verbose",     'v', 0,       0, "produce verbose output",       0 },
     {"repeat",      'r', "count", 0, "number of repetitions",        0 },
+    {"nthreads",    't', "count", 0, "number of concurrent threads", 0 },
     {"nfields",     'n', "count", 0, "number of independent fields", 0 },
     {"howmany",     'h', "count", 0, "howmany components per field", 0 },
     {0, 0, 0, 0,
@@ -179,6 +189,18 @@ parse_opt(int key, char *arg, struct argp_state *state)
                 argp_failure(state, EX_USAGE, 0,
                         "repeat value %d must be strictly positive",
                         d->repeat);
+            }
+            break;
+
+        case 't':
+            errno = 0;
+            if (1 != sscanf(arg ? arg : "", "%d %c", &d->nthreads, &ignore)) {
+                argp_failure(state, EX_USAGE, errno,
+                        "nthreads is malformed: '%s'", arg);
+            }
+            if (d->nthreads < 0) {
+                argp_failure(state, EX_USAGE, 0,
+                        "nthreads value %d must be nonnegative", d->nthreads);
             }
             break;
 
@@ -252,44 +274,6 @@ parse_opt(int key, char *arg, struct argp_state *state)
             }
             break;
 
-        case PLANE_GLOBAL:
-            if (d->p->bytes) {
-                argp_error(state, "only one of --plane-{memory,global}"
-                           " may be specified");
-            }
-            errno = 0;
-            if (2 != sscanf(arg ? arg : "", "%d x %d %c",
-                            &d->p->bglobal, &d->p->aglobal, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "plane-global option not of form BxA: '%s'", arg);
-            }
-            if (d->p->bglobal < 1 || d->p->aglobal < 1) {
-                argp_failure(state, EX_USAGE, 0,
-                        "plane-global values %dx%d must be strictly positive",
-                        d->p->bglobal, d->p->aglobal);
-            }
-            d->nplanes = max(d->nplanes, 1); // Set nplanes >= 1
-            break;
-
-        case LINE_GLOBAL:
-            if (d->l->bytes) {
-                argp_error(state, "only one of --line-{memory,global}"
-                           " may be specified");
-            }
-            errno = 0;
-            if (1 != sscanf(arg ? arg : "", "%d %c",
-                             &d->l->aglobal, &ignore)) {
-                argp_failure(state, EX_USAGE, errno,
-                        "line-global option is malformed: '%s'", arg);
-            }
-            if (d->l->aglobal < 0) {
-                argp_failure(state, EX_USAGE, 0,
-                        "line-global value %d must be strictly positive",
-                        d->l->aglobal);
-            }
-            d->nlines = max(d->nlines, 1); // Set nlines >= 1
-            break;
-
         default:
             return ARGP_ERR_UNKNOWN;
     }
@@ -298,7 +282,7 @@ parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 static struct argp argp = {
-    options, parse_opt, args_doc, doc,
+    options, parse_opt, "", doc,
     0 /*children*/, 0 /*help_filter*/, 0 /*argp_domain*/
 };
 
@@ -312,15 +296,16 @@ int main(int argc, char *argv[])
     // Initialize default argument storage and default values
     struct details d;
     memset(&d, 0, sizeof(struct details));
-    d.repeat  = 1;
-    d.nfields = 1;
-    d.howmany = 2;
+    d.repeat           = 1;
+    d.nthreads         = 0;
+    d.nfields          = 1;
+    d.howmany          = 2;
+    d.fftw_rigor_flags = FFTW_PATIENT;
 
-    // Initialize/finalize MPI, FFTW
+    // Initialize/finalize MPI with profiling initially disabled
     MPI_Init(&argc, &argv);
     atexit((void (*) ()) MPI_Finalize);
-    MPI_Pcontrol(0); // Disable MPI profiling on startup
-
+    MPI_Pcontrol(0);
     MPI_Comm_size(MPI_COMM_WORLD, &d.world_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &d.world_rank);
 
@@ -341,6 +326,10 @@ int main(int argc, char *argv[])
     // Parse command line arguments using MPI-savvy argp extension
     mpi_argp_parse(d.world_rank, &argp, argc, argv, 0, 0, &d);
 
+    // Initialize/finalize FFTW threads, FFTW MPI, underling
+    underling_init(&argc, &argv, d.nthreads);
+    atexit(&underling_cleanup);
+
     // Print program banner that shows version and program arguments
     fprintf(rankout, "%s invoked as\n\t", argp_program_version);
     for (int i = 0; i < argc; ++i) {
@@ -348,166 +337,159 @@ int main(int argc, char *argv[])
     }
     fprintf(rankout, "\n");
 
-    // Initialize ESIO handle
-    d.h = esio_handle_initialize(MPI_COMM_WORLD);
+    // If necessary, compute global grid size from per-rank memory constraint
+    if (d.bytes) {
+        const double nvectors = (d.bytes * d.world_size)
+                              / ((double) d.howmany * sizeof(underling_real))
+                              / ((double) d.nfields);
+        d.n0 = d.n1 = d.n2 = ceil(cbrt(nvectors));
 
-    // Initialize the field, plane, and line problems
-    if (d.nfields) field_initialize(&d, &f);
-    if (d.nplanes) plane_initialize(&d, &p);
-    if (d.nlines)  line_initialize( &d, &l);
-
-    // Prepare scratch space to hold names for fields, planes, and lines
-    char  *names   = NULL;
-    size_t namelen = 0;    // Includes null terminator
-    {
-        int m = d.nfields;
-        m     = (m > d.nplanes) ? m : d.nplanes;
-        m     = (m > d.nlines)  ? m : d.nlines;
-        int ndigits = ceil(log(m)/log(10));
-        namelen = 1 /* f|p|l */ + ndigits + 1 /* null */;
-        names = malloc(m * namelen);
-        assert(names);
-        char *n = names;
-        for (int i = 0; i < m; ++i) {
-            sprintf(n, "X%0*d", ndigits, i);
-            n += namelen;
-        }
+        double coeff;
+        const char *units;
+        to_human_readable_byte_count(d.bytes, 0, &coeff, &units);
+        fprintf(rankout,
+            "Per-rank %.2f %s memory requested => %d x %d x %d problem\n",
+            coeff, units, d.n0, d.n1, d.n2);
     }
 
-    // Determine combined size of problem across all ranks
-    long localbytes = f.bytes + p.bytes + l.bytes;
-    long globalbytes;
-    ESIO_MPICHKQ(MPI_Allreduce(&localbytes, &globalbytes, 1,
-                               MPI_LONG, MPI_SUM, MPI_COMM_WORLD));
+    // Ensure a non-trivial grid was requested
+    if (!d.n0 || !d.n1 || !d.n2) {
+        fprintf(rankout,
+                "You must specify either --field-memory or --field-global!\n");
+        MPI_Abort(MPI_COMM_WORLD, EX_USAGE);
+    }
+
+    // Initialize underling_grid and print decomposition banner
+    underling_grid grid = underling_grid_create(
+            MPI_COMM_WORLD, d.n0, d.n1, d.n2, d.pA, d.pB);
+    assert(grid);
+    d.pA = underling_grid_pA_size(grid); // Obtain any automagic pA value
+    d.pB = underling_grid_pB_size(grid); // Obtain any automagic pB value
+    fprintf(rankout,
+        "\n"
+        "Global pencil decomposition details (for transposed_flags == 0)\n"
+        "---------------------------------------------------------------\n"
+        "Long in n2:                                       (%1$6d/%5$6d x %2$6d/%4$6d) x %3$6d\n"
+        "Long in n1: %3$6d/%4$6d x (%1$6d/%5$6d x %2$6d) = (%3$6d/%4$6d x %1$6d/%5$6d) x %2$6d\n"
+        "Long in n0: %2$6d/%5$6d x (%3$6d/%4$6d x %1$6d) = (%2$6d/%5$6d x %3$6d/%4$6d) x %1$6d\n"
+        "---------------------------------------------------------------\n"
+        "\n", d.n0, d.n1, d.n2, d.pA, d.pB);
+
+    // Initialize underling_problem and find per-field memory requirements
+    underling_problem problem = underling_problem_create(
+            grid, d.howmany, d.transposed_flags);
+    assert(grid);
+    const size_t local_memory = underling_local_memory(problem);
+
+    // Display some information about the problem's memory requirements
     {
         double coeff;
         const char *units;
-        to_human_readable_byte_count(globalbytes, 0, &coeff, &units);
-        fprintf(rankout, "Global overall problem size is %.3f %s\n",
+
+        to_human_readable_byte_count(
+                underling_global_memory_optimum(grid, problem), 0, &coeff, &units);
+        fprintf(rankout, "Optimum global, per-field memory is %.4f %s\n",
+                coeff, units);
+        to_human_readable_byte_count(
+                underling_global_memory(grid, problem), 0, &coeff, &units);
+        fprintf(rankout, "Actual global, per-field memory is %.4f %s\n",
+                coeff, units);
+
+        to_human_readable_byte_count(
+                underling_local_memory_optimum(problem), 0, &coeff, &units);
+        fprintf(rankout, "Optimum per-rank, per-field memory is %.4f %s\n",
+                coeff, units);
+        to_human_readable_byte_count(
+                underling_local_memory_minimum(grid, problem), 0, &coeff, &units);
+        fprintf(rankout, "Minimum per-rank, per-field memory is %.4f %s\n",
+                coeff, units);
+        to_human_readable_byte_count(
+                underling_local_memory_maximum(grid, problem), 0, &coeff, &units);
+        fprintf(rankout, "Maximum per-rank, per-field memory is %.4f %s\n",
                 coeff, units);
     }
 
-    fprintf(rankout, "Allocating and filling required memory buffers\n");
-    if (d.nfields) f.data = malloc_and_fill(&d, f.bytes);
-    if (d.nplanes) p.data = malloc_and_fill(&d, p.bytes);
-    if (d.nlines)  l.data = malloc_and_fill(&d, l.bytes);
-
-    // Determine which functions to invoke below based on d.typesize
-    int (*p_esio_field_writev)(const esio_handle, const char *,
-                               const void *, int, int, int, int) = NULL;
-    int (*p_esio_plane_writev)(const esio_handle, const char *,
-                               const void *, int, int, int) = NULL;
-    int (*p_esio_line_writev)(const esio_handle, const char *,
-                              const void *, int, int) = NULL;
-    // TODO Understand "warning: assignment from incompatible pointer type"
-    // which arise from the function pointer assignments that follow.
-    switch (d.typesize)
-    {
-        case sizeof(double):
-            p_esio_field_writev = &esio_field_writev_double;
-            p_esio_plane_writev = &esio_plane_writev_double;
-            p_esio_line_writev  = &esio_line_writev_double;
-            break;
-        case sizeof(float):
-            p_esio_field_writev = &esio_field_writev_float;
-            p_esio_plane_writev = &esio_plane_writev_float;
-            p_esio_line_writev  = &esio_line_writev_float;
-            break;
-        default:
-            MPI_Abort(MPI_COMM_WORLD, 1); // Sanity failure
+    // Allocate memory for each field plus one additional scratch buffer
+    underling_real *f[d.nfields + 1]; // C99
+    for (int i = 0; i < d.nfields + 1; ++i) {
+        f[i] = (underling_real *) malloc_and_fill(&d, local_memory, i);
+        assert(f[i]);
     }
 
-    fprintf(rankout, "Beginning benchmark...\n");
-    ESIO_MPICHKQ(MPI_Barrier(MPI_COMM_WORLD)); // Synchronize
-    const double start = MPI_Wtime();
-
-    char *n;
+    // Begin GRVY-based timing
     GRVY_TIMER_RESET();
+
+    // Create the out-of-place transpose plan
+    fprintf(rankout, "Invoking underling_plan_create...\n");
+    GRVY_TIMER_BEGIN("underling_plan_create");
+    underling_plan plan = underling_plan_create(
+            problem, f[0], f[1], d.transform_flags, d.fftw_rigor_flags);
+    GRVY_TIMER_END("underling_plan_create");
+    fprintf(rankout, "...underling_plan_create returned.\n");
+
+    fprintf(rankout, "Beginning benchmark main loop...\n");
+    const double start = MPI_Wtime();
     for (int i = 0; i < d.repeat; ++i) {
         fprintf(rankout, "\tIteration %d\n", i);
 
-        GRVY_TIMER_BEGIN("esio_file_create");
-        esio_file_create(d.h, d.uncommitted, 1 /*overwrite*/);
-        GRVY_TIMER_END("esio_file_create");
+        // Fields pointed to by f[0..(d.nfields-1)] are, say, long n2 to start
 
-        if (d.nfields) {
-            GRVY_TIMER_BEGIN("esio_field_write");
-            n = names;
-            for (int j = 0; j < d.nfields; ++j) {
-                *n = 'f';
-                p_esio_field_writev(d.h, n,
-                        f.data + j * f.stride, 0, 0, 0, f.ncomponents);
-                n += namelen;
-            }
-            GRVY_TIMER_END("esio_field_write");
+        for (int j = d.nfields-1; j >= 0; --j) {
+            GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
+            underling_execute_long_n2_to_long_n1(plan, f[j], f[j+1]);
+            GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
         }
 
-        if (d.nplanes) {
-            GRVY_TIMER_BEGIN("esio_plane_write");
-            n = names;
-            for (int j = 0; j < d.nplanes; ++j) {
-                *n = 'p';
-                p_esio_plane_writev(d.h, n,
-                        p.data + j * p.stride, 0, 0, p.ncomponents);
-                n += namelen;
-            }
-            GRVY_TIMER_END("esio_plane_write");
+        // Fields pointed to by f[1..(d.nfields)] are now long n1
+
+        for (int j = 0; j < d.nfields; ++j) {
+            GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
+            underling_execute_long_n1_to_long_n0(plan, f[j+1], f[j]);
+            GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
         }
 
-        if (d.nlines) {
-            GRVY_TIMER_BEGIN("esio_line_write");
-            n = names;
-            for (int j = 0; j < d.nlines; ++j) {
-                *n = 'l';
-                p_esio_line_writev(d.h, n,
-                        l.data + j * l.stride, 0, l.ncomponents);
-                n += namelen;
-            }
-            GRVY_TIMER_END("esio_line_write");
+        // Fields pointed to by f[0..(d.nfields-1)] are now long n0
+
+        for (int j = d.nfields-1; j >= 0; --j) {
+            GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
+            underling_execute_long_n0_to_long_n1(plan, f[j], f[j+1]);
+            GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
         }
 
-        GRVY_TIMER_BEGIN("esio_file_flush");
-        esio_file_flush(d.h);
-        GRVY_TIMER_END("esio_file_flush");
+        // Fields pointed to by f[1..(d.nfields)] are now long n1
 
-        if (d.dst_template) {
-            GRVY_TIMER_BEGIN("esio_file_close_restart");
-            esio_file_close_restart(d.h, d.dst_template, d.retain);
-            GRVY_TIMER_END("esio_file_close_restart");
-        } else {
-            GRVY_TIMER_BEGIN("esio_file_close");
-            esio_file_close(d.h);
-            GRVY_TIMER_END("esio_file_close");
+        for (int j = 0; j < d.nfields; ++j) {
+            GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
+            underling_execute_long_n1_to_long_n2(plan, f[j+1], f[j]);
+            GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
         }
+
+        // Fields pointed to by f[0..(d.nfields-1)] are now long n2
     }
-    GRVY_TIMER_FINALIZE();
-
     const double end = MPI_Wtime();
-    ESIO_MPICHKQ(MPI_Barrier(MPI_COMM_WORLD)); // Synchronize
-    fprintf(rankout, "Ending benchmark...\n");
+    GRVY_TIMER_FINALIZE();
+    fprintf(rankout, "...ended benchmark main loop\n");
 
     const double elapsed = end - start;
     const double mean = elapsed / d.repeat;
-    {
-        double coeff;
-        const char *units;
-        to_human_readable_byte_count(
-                floor(globalbytes / mean), 0, &coeff, &units);
-        fprintf(rankout,
-            "Mean global transfer rate across %d iteration(s) was %.4f %s/s\n",
-            d.repeat, coeff, units);
-    }
+    fprintf(rankout, "Mean time across %d iteration(s) was %8.6f seconds\n",
+            d.repeat, mean);
 
     // TODO Get timing information back from multiple ranks
     if (d.world_rank == 0) GRVY_TIMER_SUMMARIZE();
 
-    // Finalize the field, plane, and line problems
-    if (d.nfields) field_finalize(&d, &f);
-    if (d.nplanes) plane_finalize(&d, &p);
-    if (d.nlines)  line_finalize( &d, &l);
+    // Deallocate memory for each field plus one additional scratch buffer
+    for (int i = 0; i < d.nfields + 1; ++i) {
+        fftw_free(f[i]);
+        f[i] = NULL;
+    }
 
-    // Finalize ESIO handle
-    esio_handle_finalize(d.h);
+    // Tear down underling_plan, underling_problem, underling_grid
+    underling_plan_destroy(plan);
+    underling_problem_destroy(problem);
+    underling_grid_destroy(grid);
+
+    // Finalizing of MPI, FFTW, underling handled by atexit()
 
     return 0;
 }
@@ -517,11 +499,7 @@ void print_version(FILE *stream, struct argp_state *state)
     (void) state; // Unused
 
     fputs(argp_program_version, stream);
-    unsigned majnum, minnum, relnum;
-    if (H5get_libversion(&majnum, &minnum, &relnum) >= 0) {
-        fprintf(stream, " linked against HDF5 %u.%u.%u",
-                         majnum, minnum, relnum);
-    }
+    fprintf(stream, " linked against FFTW3 %s", fftw_version);
     int version, subversion;
     if (MPI_SUCCESS == MPI_Get_version(&version, &subversion)) {
         fprintf(stream, " running atop MPI %d.%d", version, subversion);
@@ -641,274 +619,11 @@ done:
     return exp ? coeff * pow(unit, exp / 3) : coeff;
 }
 
-
-// Compute rank's portion of nglobal elements distributed uniformly across
-// nranks ranks.  Any "extra" elements are spread across the lower ranks
-// when extralow is set.
-static int local(int nglobal, int nranks, int rank, int extralow)
+static void* malloc_and_fill(struct details *d,
+                             const long bytes,
+                             unsigned salt)
 {
-    if (extralow) {
-        return nglobal / nranks + (rank < nglobal % nranks);
-    } else {
-        return nglobal / nranks + ((nranks - rank - 1) < nglobal % nranks);
-    }
-}
-
-
-// Determine the starting, zero-based offset for a particular rank.
-// Not particularly efficient, but effective.
-static int start(int nglobal, int nranks, int rank, int extralow)
-{
-    int offset = 0;
-    for (int i = 0; i < rank; ++i) {
-        offset += local(nglobal, nranks, rank, extralow);
-    }
-    return offset;
-}
-
-
-static int global_minmax(long val, long *min, long *max)
-{
-    long send[2] = { -val, val };
-    long recv[2];
-    ESIO_MPICHKQ(MPI_Allreduce(
-                send, recv, 2, MPI_LONG, MPI_MAX, MPI_COMM_WORLD));
-    *min = -recv[0];
-    *max =  recv[1];
-
-    return ESIO_SUCCESS;
-}
-
-
-static int field_initialize(struct details *d, struct field_details *f)
-{
-    double coeff;
-    const char *units;
-
-    fprintf(rankout, "Initializing field problem...\n");
-
-    // Use MPI (temporarily) to find topology for field problem
-    ESIO_MPICHKQ(MPI_Dims_create(d->world_size, 3, f->dims));
-    MPI_Comm tmp;
-    int periods[3] = { 0, 0, 0 };
-    ESIO_MPICHKQ(MPI_Cart_create(
-                MPI_COMM_WORLD, 3, f->dims, periods, 0, &tmp));
-    ESIO_MPICHKQ(MPI_Comm_rank(tmp, &f->rank));
-    ESIO_MPICHKQ(MPI_Cart_coords(tmp, f->rank, 3, f->coords));
-    ESIO_MPICHKQ(MPI_Comm_free(&tmp));
-
-    fprintf(rankout,
-            "\tField spread across (%d x %d x %d)-rank MPI topology\n",
-            f->dims[0], f->dims[1], f->dims[2]);
-
-    // Compute global problem size, if necessary, from memory constraint
-    if (f->bytes) {
-        const double nvectors = (f->bytes * d->world_size)
-                              / ((double) f->ncomponents * d->typesize)
-                              / ((double) d->nfields);
-        f->cglobal = f->bglobal = f->aglobal = ceil(cbrt(nvectors));
-
-        to_human_readable_byte_count(f->bytes, 0, &coeff, &units);
-        fprintf(rankout,
-            "\tPer-rank %.2f %s memory requested => %d x %d x %d problem\n",
-            coeff, units, f->cglobal, f->bglobal, f->aglobal);
-    }
-
-    // Ensure a non-trivial problem was requested
-    if (!f->cglobal || !f->bglobal || !f->aglobal) {
-        fprintf(rankout,
-                "You must specify a non-trivial field when nfields > 0!\n");
-        MPI_Abort(MPI_COMM_WORLD, EX_USAGE);
-    }
-
-    // Compute local portion of global problem
-    f->clocal = local(f->cglobal, f->dims[0], f->coords[0], 1);
-    f->cstart = start(f->cglobal, f->dims[0], f->coords[0], 1);
-    f->blocal = local(f->bglobal, f->dims[1], f->coords[1], 0);
-    f->bstart = start(f->bglobal, f->dims[1], f->coords[1], 0);
-    f->alocal = local(f->aglobal, f->dims[2], f->coords[2], 1);
-    f->astart = start(f->aglobal, f->dims[2], f->coords[2], 1);
-
-    // Compute memory requirement for local portion
-    f->stride = f->clocal * f->blocal * f->alocal
-              * f->ncomponents * d->typesize;
-    f->bytes  = f->stride * d->nfields;
-
-    // Output minimum and maximum memory required across all ranks
-    long minbytes, maxbytes;
-    global_minmax(f->bytes, &minbytes, &maxbytes); // Allreduce
-    to_human_readable_byte_count(minbytes, 0, &coeff, &units);
-    fprintf(rankout, "\tMinimum per-rank field memory is %.3f %s\n",
-            coeff, units);
-    to_human_readable_byte_count(maxbytes, 0, &coeff, &units);
-    fprintf(rankout, "\tMaximum per-rank field memory is %.3f %s\n",
-            coeff, units);
-
-    // Establish field problem decomposition within ESIO handle
-    fprintf(rankout,
-            "\tEstablishing field problem within ESIO using layout %d\n",
-            f->layout);
-    esio_field_layout_set(d->h, f->layout);
-    esio_field_establish(d->h, f->cglobal, f->cstart, f->clocal,
-                               f->bglobal, f->bstart, f->blocal,
-                               f->aglobal, f->astart, f->alocal);
-
-    fprintf(rankout, "Problem contains %d field(s) of size %d x %d x %d"
-            " each with %d %zu-byte component(s)\n", d->nfields,
-            f->cglobal, f->bglobal, f->aglobal, f->ncomponents,
-            d->typesize);
-
-    return ESIO_SUCCESS;
-}
-
-
-static int plane_initialize(struct details *d, struct plane_details *p)
-{
-    double coeff;
-    const char *units;
-
-    fprintf(rankout, "Initializing plane problem...\n");
-
-    // Use MPI (temporarily) to find topology for field problem
-    ESIO_MPICHKQ(MPI_Dims_create(d->world_size, 2, p->dims));
-    MPI_Comm tmp;
-    int periods[2] = { 0, 0 };
-    ESIO_MPICHKQ(MPI_Cart_create(
-                MPI_COMM_WORLD, 2, p->dims, periods, 0, &tmp));
-    ESIO_MPICHKQ(MPI_Comm_rank(tmp, &p->rank));
-    ESIO_MPICHKQ(MPI_Cart_coords(tmp, p->rank, 2, p->coords));
-    ESIO_MPICHKQ(MPI_Comm_free(&tmp));
-
-    fprintf(rankout, "\tPlane spread across (%d x %d)-rank MPI topology\n",
-            p->dims[0], p->dims[1]);
-
-    // Compute global problem size, if necessary, from memory constraint
-    if (p->bytes) {
-        const double nvectors = (p->bytes * d->world_size)
-                              / ((double) p->ncomponents * d->typesize)
-                              / ((double) d->nplanes);
-        p->bglobal = p->aglobal = ceil(sqrt(nvectors));
-
-        to_human_readable_byte_count(p->bytes, 0, &coeff, &units);
-        fprintf(rankout,
-            "\tPer-rank %.2f %s memory requested => %d x %d problem\n",
-            coeff, units, p->bglobal, p->aglobal);
-    }
-
-    // Ensure a non-trivial problem was requested
-    if (!p->bglobal || !p->aglobal) {
-        fprintf(rankout,
-                "You must specify a non-trivial plane when nplanes > 0!\n");
-        MPI_Abort(MPI_COMM_WORLD, EX_USAGE);
-    }
-
-    // Compute local portion of global problem
-    p->blocal = local(p->bglobal, p->dims[0], p->coords[0], 0);
-    p->bstart = start(p->bglobal, p->dims[0], p->coords[0], 0);
-    p->alocal = local(p->aglobal, p->dims[1], p->coords[1], 1);
-    p->astart = start(p->aglobal, p->dims[1], p->coords[1], 1);
-
-    // Compute memory requirement for local portion
-    p->stride = p->blocal * p->alocal * p->ncomponents * d->typesize;
-    p->bytes  = p->stride * d->nplanes;
-
-    // Output minimum and maximum memory required across all ranks
-    long minbytes, maxbytes;
-    global_minmax(p->bytes, &minbytes, &maxbytes); // Allreduce
-    to_human_readable_byte_count(minbytes, 0, &coeff, &units);
-    fprintf(rankout, "\tMinimum per-rank plane memory is %.3f %s\n",
-            coeff, units);
-    to_human_readable_byte_count(maxbytes, 0, &coeff, &units);
-    fprintf(rankout, "\tMaximum per-rank plane memory is %.3f %s\n",
-            coeff, units);
-
-    // Establish plane problem decomposition within ESIO handle
-    fprintf(rankout, "\tEstablishing plane problem within ESIO\n");
-    esio_plane_establish(d->h, p->bglobal, p->bstart, p->blocal,
-                               p->aglobal, p->astart, p->alocal);
-
-    fprintf(rankout, "Problem contains %d plane(s) of size %d x %d"
-            " each with %d %zu-byte component(s)\n", d->nplanes,
-            p->bglobal, p->aglobal, p->ncomponents, d->typesize);
-
-    return ESIO_SUCCESS;
-}
-
-
-static int line_initialize(struct details *d, struct line_details  *l)
-{
-    double coeff;
-    const char *units;
-
-    fprintf(rankout, "Initializing line problem...\n");
-
-    // Use MPI (temporarily) to find topology for field problem
-    ESIO_MPICHKQ(MPI_Dims_create(d->world_size, 1, l->dims));
-    MPI_Comm tmp;
-    int periods[1] = { 0 };
-    ESIO_MPICHKQ(MPI_Cart_create(
-                MPI_COMM_WORLD, 1, l->dims, periods, 0, &tmp));
-    ESIO_MPICHKQ(MPI_Comm_rank(tmp, &l->rank));
-    ESIO_MPICHKQ(MPI_Cart_coords(tmp, l->rank, 1, l->coords));
-    ESIO_MPICHKQ(MPI_Comm_free(&tmp));
-
-    fprintf(rankout, "\tLine spread across %d-rank MPI topology\n",
-            l->dims[0]);
-
-    // Compute global problem size, if necessary, from memory constraint
-    if (l->bytes) {
-        const double nvectors = (l->bytes * d->world_size)
-                              / ((double) l->ncomponents * d->typesize)
-                              / ((double) d->nlines);
-        l->aglobal = ceil(nvectors);
-
-        to_human_readable_byte_count(l->bytes, 0, &coeff, &units);
-        fprintf(rankout,
-            "\tPer-rank %.2f %s memory requested => %d problem\n",
-            coeff, units, l->aglobal);
-    }
-
-    // Ensure a non-trivial problem was requested
-    if (!l->aglobal) {
-        fprintf(rankout,
-                "You must specify a non-trivial line when nlines > 0!\n");
-        MPI_Abort(MPI_COMM_WORLD, EX_USAGE);
-    }
-
-    // Compute local portion of global problem
-    l->alocal = local(l->aglobal, l->dims[0], l->coords[0], 1);
-    l->astart = start(l->aglobal, l->dims[0], l->coords[0], 1);
-
-    // Compute memory requirement for local portion
-    l->stride = l->alocal * l->ncomponents * d->typesize;
-    l->bytes  = l->stride * d->nlines;
-
-    // Output minimum and maximum memory required across all ranks
-    long minbytes, maxbytes;
-    global_minmax(l->bytes, &minbytes, &maxbytes); // Allreduce
-    to_human_readable_byte_count(minbytes, 0, &coeff, &units);
-    fprintf(rankout, "\tMinimum per-rank line memory is %.3f %s\n",
-            coeff, units);
-    to_human_readable_byte_count(maxbytes, 0, &coeff, &units);
-    fprintf(rankout, "\tMaximum per-rank line memory is %.3f %s\n",
-            coeff, units);
-
-    // Establish line problem decomposition within ESIO handle
-    fprintf(rankout, "\tEstablishing line problem within ESIO\n");
-    esio_line_establish(d->h, l->aglobal, l->astart, l->alocal);
-
-    fprintf(rankout, "Problem contains %d line(s) of size %d"
-            " each with %d %zu-byte component(s)\n", d->nlines,
-            l->aglobal, l->ncomponents, d->typesize);
-
-    return ESIO_SUCCESS;
-}
-
-
-static void* malloc_and_fill(struct details *d, const long bytes)
-{
-    // Malloc
-    void *p = malloc(bytes);
+    void *p = fftw_malloc(bytes); // Aligned malloc
     if (!p) {
         double coeff;
         const char *units;
@@ -918,66 +633,18 @@ static void* malloc_and_fill(struct details *d, const long bytes)
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
-    // Store previous random seed and provide a new one
+    // Store previous random seed and provide a new one based on rank, salt
     char state[64];
-    initstate(d->world_rank, state, sizeof(state)/sizeof(state[0]));
+    initstate(d->world_rank + salt, state, sizeof(state)/sizeof(state[0]));
     char *previous = setstate(state);
 
     // Fill
-    const size_t count = bytes / d->typesize;
-    switch (d->typesize)
-    {
-        case sizeof(double):
-            for (size_t i = 0; i < count; ++i)
-                ((double *) p)[i] = (double) random();
-            break;
-        case sizeof(float):
-            for (size_t i = 0; i < count; ++i)
-                ((float *) p)[i] = (float) random();
-            break;
-    }
+    const size_t count = bytes / sizeof(underling_real);
+    for (size_t i = 0; i < count; ++i)
+        ((double *) p)[i] = (double) random();
 
     // Restore previous random state
     setstate(previous);
 
     return p;
-}
-
-
-static int field_finalize(struct details *d, struct field_details *f)
-{
-    (void) d; // Unused
-
-    if (f && f->data) {
-        free(f->data);
-        f->data = NULL;
-    }
-
-    return ESIO_SUCCESS;
-}
-
-
-static int plane_finalize(struct details *d, struct plane_details *p)
-{
-    (void) d; // Unused
-
-    if (p && p->data) {
-        free(p->data);
-        p->data = NULL;
-    }
-
-    return ESIO_SUCCESS;
-}
-
-
-static int line_finalize( struct details *d, struct line_details  *l)
-{
-    (void) d; // Unused
-
-    if (l && l->data) {
-        free(l->data);
-        l->data = NULL;
-    }
-
-    return ESIO_SUCCESS;
 }
