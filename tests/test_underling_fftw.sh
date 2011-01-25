@@ -16,7 +16,7 @@ fi
 
 for np in 1 2 3 4
 do
-    cmd="mpiexec -np $np ./test_underling_fft"
+    cmd="mpiexec -np $np ./test_underling_fftw"
     echo $cmd
     $cmd
 done

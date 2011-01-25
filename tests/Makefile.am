@@ -45,15 +45,15 @@ test_underling_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
-TESTS                      += test_underling_fft.sh  # NB Wrapper script
-EXTRA_DIST                 += test_underling_fft.sh  # NB Wrapper script
-check_PROGRAMS             += test_underling_fft
-test_underling_fft_SOURCES  = test_underling_fft.cpp
-test_underling_fft_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_THREADS_CFLAGS)
-test_underling_fft_LDADD    = ../underling/libunderling.la
-test_underling_fft_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
-test_underling_fft_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_underling_fft_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
+TESTS                      += test_underling_fftw.sh  # NB Wrapper script
+EXTRA_DIST                 += test_underling_fftw.sh  # NB Wrapper script
+check_PROGRAMS             += test_underling_fftw
+test_underling_fftw_SOURCES  = test_underling_fftw.cpp
+test_underling_fftw_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_THREADS_CFLAGS)
+test_underling_fftw_LDADD    = ../underling/libunderling.la
+test_underling_fftw_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
+test_underling_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
+test_underling_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
 #############################################################################
 ### MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS ###

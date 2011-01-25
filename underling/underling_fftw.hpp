@@ -23,27 +23,27 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_FFT_HPP
-#define __UNDERLING_FFT_HPP
+#ifndef __UNDERLING_FFTW_HPP
+#define __UNDERLING_FFTW_HPP
 
-#include <underling/underling_fft.h>
+#include <underling/underling_fftw.h>
 #include <underling/underling.hpp>
 
 /** @file
- * Provides C++ wrappers for the C-based API in underling_fft.h.  In
+ * Provides C++ wrappers for the C-based API in underling_fftw.h.  In
  * particular, provides RAII semantics for opaque types.
  */
 
 namespace underling {
 
-namespace fft {
+namespace fftw {
 
-/** @see underling_fft_extents */
-typedef underling_fft_extents extents;
+/** @see underling_fftw_extents */
+typedef underling_fftw_extents extents;
 
 /**
- * Provides a thin RAII wrapper for underling_fft_plan.
- * @see underling_fft_plan.
+ * Provides a thin RAII wrapper for underling_fftw_plan.
+ * @see underling_fftw_plan.
  */
 class plan : public boost::noncopyable {
 public:
@@ -60,113 +60,113 @@ public:
     /** A tag type used to indicate a complex-to-real backward transform */
     struct c2r_backward {};
 
-    /** @see underling_fft_plan_create_c2c_forward */
+    /** @see underling_fftw_plan_create_c2c_forward */
     plan(const c2c_forward tag,
          const problem &p,
          int long_ni,
          underling_real *in,
          underling_real *out,
          unsigned fftw_rigor_flags)
-        : plan_(underling_fft_plan_create_c2c_forward(
+        : plan_(underling_fftw_plan_create_c2c_forward(
                     p.get(), long_ni, in, out, fftw_rigor_flags)) {
         (void) tag; // unused
     }
 
-    /** @see underling_fft_plan_create_c2c_backward */
+    /** @see underling_fftw_plan_create_c2c_backward */
     plan(const c2c_backward tag,
          const problem &p,
          int long_ni,
          underling_real *in,
          underling_real *out,
          unsigned fftw_rigor_flags)
-        : plan_(underling_fft_plan_create_c2c_backward(
+        : plan_(underling_fftw_plan_create_c2c_backward(
                     p.get(), long_ni, in, out, fftw_rigor_flags)) {
         (void) tag; // unused
     }
 
-    /** @see underling_fft_plan_create_r2c_forward */
+    /** @see underling_fftw_plan_create_r2c_forward */
     plan(const r2c_forward tag,
          const problem &p,
          int long_ni,
          underling_real *in,
          underling_real *out,
          unsigned fftw_rigor_flags)
-        : plan_(underling_fft_plan_create_r2c_forward(
+        : plan_(underling_fftw_plan_create_r2c_forward(
                     p.get(), long_ni, in, out, fftw_rigor_flags)) {
         (void) tag; // unused
     }
 
-    /** @see underling_fft_plan_create_c2r_backward */
+    /** @see underling_fftw_plan_create_c2r_backward */
     plan(const c2r_backward tag,
          const problem &p,
          int long_ni,
          underling_real *in,
          underling_real *out,
          unsigned fftw_rigor_flags)
-        : plan_(underling_fft_plan_create_c2r_backward(
+        : plan_(underling_fftw_plan_create_c2r_backward(
                     p.get(), long_ni, in, out, fftw_rigor_flags)) {
         (void) tag; // unused
     }
 
-    /** @see underling_fft_plan_create_inverse */
+    /** @see underling_fftw_plan_create_inverse */
     plan(const plan& plan_to_invert,
          underling_real * in,
          underling_real * out,
          unsigned fftw_rigor_flags)
-        : plan_(underling_fft_plan_create_inverse(
+        : plan_(underling_fftw_plan_create_inverse(
                     plan_to_invert.get(), in, out, fftw_rigor_flags)) {};
 
-    /** @see underling_fft_plan_destroy */
-    ~plan() { underling_fft_plan_destroy(plan_); }
+    /** @see underling_fftw_plan_destroy */
+    ~plan() { underling_fftw_plan_destroy(plan_); }
 
-    /** @return The wrapped underling_fft_plan instance. */
-    underling_fft_plan get() const { return plan_; }
+    /** @return The wrapped underling_fftw_plan instance. */
+    underling_fftw_plan get() const { return plan_; }
 
-    /** @see underling_fft_local_extents_input */
-    underling_fft_extents local_extents_input() const {
-        return underling_fft_local_extents_input(plan_);
+    /** @see underling_fftw_local_extents_input */
+    underling_fftw_extents local_extents_input() const {
+        return underling_fftw_local_extents_input(plan_);
     }
 
-    /** @see underling_fft_local_extents_output */
-    underling_fft_extents local_extents_output() const {
-        return underling_fft_local_extents_output(plan_);
+    /** @see underling_fftw_local_extents_output */
+    underling_fftw_extents local_extents_output() const {
+        return underling_fftw_local_extents_output(plan_);
     }
 
-    /** @see underling_fft_local_input */
+    /** @see underling_fftw_local_input */
     int local_input(int *start  = NULL,
                     int *size   = NULL,
                     int *stride = NULL,
                     int *order  = NULL) const {
-        return underling_fft_local_input(plan_, start, size, stride, order);
+        return underling_fftw_local_input(plan_, start, size, stride, order);
     }
 
-    /** @see underling_fft_local_output */
+    /** @see underling_fftw_local_output */
     int local_output(int *start  = NULL,
                      int *size   = NULL,
                      int *stride = NULL,
                      int *order  = NULL) const {
-        return underling_fft_local_output(plan_, start, size, stride, order);
+        return underling_fftw_local_output(plan_, start, size, stride, order);
     }
 
-    /** @return True if the wrapped underling_fft_plan instance is non-NULL. */
+    /** @return True if wrapped underling_fftw_plan instance is non-NULL. */
     operator bool () const { return plan_ != NULL; };
 
-    /** @see underling_fft_plan_execute */
+    /** @see underling_fftw_plan_execute */
     int execute(underling_real *in,
                 underling_real *out) const {
-        return underling_fft_plan_execute(plan_, in, out);
+        return underling_fftw_plan_execute(plan_, in, out);
     }
 
 private:
-    underling_fft_plan plan_; /**< The wrapped underling_fft_plan instance */
+    underling_fftw_plan plan_; /**< The wrapped underling_fftw_plan instance */
 };
 
-} // namespace fft
+} // namespace fftw
 
 } // namespace underling
 
 /**
- * Outputs an underling_extents or underling::fft::extents instance
+ * Outputs an underling_extents or underling::fftw::extents instance
  * as a human-readable string on any std::basic_ostream.
  *
  * @param os On which to output \c e.
@@ -177,7 +177,7 @@ private:
 template< typename charT, typename traits >
 std::basic_ostream<charT,traits>& operator<<(
         std::basic_ostream<charT,traits> &os,
-        const underling::fft::extents &e)
+        const underling::fftw::extents &e)
 {
     return os << '['
               << e.start[0] << ',' << (e.start[0] + e.size[0])
@@ -192,10 +192,10 @@ std::basic_ostream<charT,traits>& operator<<(
               << ')';
 }
 
-/** @see underling_fft_extents_cmp */
-bool operator==(const underling::fft::extents &e1,
-                const underling::fft::extents &e2) {
-    return !underling_fft_extents_cmp(&e1, &e2);
+/** @see underling_fftw_extents_cmp */
+bool operator==(const underling::fftw::extents &e1,
+                const underling::fftw::extents &e2) {
+    return !underling_fftw_extents_cmp(&e1, &e2);
 }
 
-#endif // __UNDERLING_FFT_HPP
+#endif // __UNDERLING_FFTW_HPP

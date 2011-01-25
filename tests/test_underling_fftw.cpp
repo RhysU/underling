@@ -30,7 +30,7 @@
 #include <boost/test/parameterized_test.hpp>
 #include <mpi.h>
 #include <underling/error.h>
-#include <underling/underling_fft.hpp>
+#include <underling/underling_fftw.hpp>
 #include <fftw3-mpi.h>
 #include "test_tools.hpp"
 #include "test_underling_tools.hpp"
@@ -123,17 +123,17 @@ static void test_c2c_forward(tc t)
         = std::numeric_limits<underling_real>::epsilon()*100*n0*n1*n2;
 
     UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
-    underling::fft::plan forward(underling::fft::plan::c2c_forward(),
-                                 f.problem,
-                                 long_ni,
-                                 f.in,
-                                 f.out,
-                                 FFTW_ESTIMATE);
-    BOOST_REQUIRE(forward);
-    underling::fft::plan backward(forward,         // Inverse constructor!
-                                  f.out,
+    underling::fftw::plan forward(underling::fftw::plan::c2c_forward(),
+                                  f.problem,
+                                  long_ni,
                                   f.in,
+                                  f.out,
                                   FFTW_ESTIMATE);
+    BOOST_REQUIRE(forward);
+    underling::fftw::plan backward(forward,         // Inverse constructor!
+                                   f.out,
+                                   f.in,
+                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
 
     // Stride information consistency check
@@ -149,7 +149,7 @@ static void test_c2c_forward(tc t)
 
     // Load up sample data
     {
-        const underling::fft::extents e = forward.local_extents_input();
+        const underling::fftw::extents e = forward.local_extents_input();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -187,7 +187,7 @@ static void test_c2c_forward(tc t)
 
     // Check the sample data transformed as expected
     {
-        const underling::fft::extents e = forward.local_extents_output();
+        const underling::fftw::extents e = forward.local_extents_output();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -232,7 +232,7 @@ static void test_c2c_forward(tc t)
 
     // Check that we recovered the scaled sample data
     {
-        const underling::fft::extents e = backward.local_extents_output();
+        const underling::fftw::extents e = backward.local_extents_output();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -308,17 +308,17 @@ static void test_c2c_backward(tc t)
         = std::numeric_limits<underling_real>::epsilon()*100*n0*n1*n2;
 
     UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
-    underling::fft::plan backward(underling::fft::plan::c2c_backward(),
-                                  f.problem,
-                                  long_ni,
-                                  f.in,
-                                  f.out,
-                                  FFTW_ESTIMATE);
+    underling::fftw::plan backward(underling::fftw::plan::c2c_backward(),
+                                   f.problem,
+                                   long_ni,
+                                   f.in,
+                                   f.out,
+                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
-    underling::fft::plan forward(backward,         // Inverse constructor!
-                                 f.out,
-                                 f.in,
-                                 FFTW_ESTIMATE);
+    underling::fftw::plan forward(backward,         // Inverse constructor!
+                                  f.out,
+                                  f.in,
+                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
 
     // Stride information consistency check
@@ -334,7 +334,7 @@ static void test_c2c_backward(tc t)
 
     // Load up sample data
     {
-        const underling::fft::extents e = backward.local_extents_input();
+        const underling::fftw::extents e = backward.local_extents_input();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -371,7 +371,7 @@ static void test_c2c_backward(tc t)
 
     // Check the sample data transformed as expected
     {
-        const underling::fft::extents e = backward.local_extents_output();
+        const underling::fftw::extents e = backward.local_extents_output();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -414,7 +414,7 @@ static void test_c2c_backward(tc t)
 
     // Check the sample data transformed as expected
     {
-        const underling::fft::extents e = forward.local_extents_output();
+        const underling::fftw::extents e = forward.local_extents_output();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -498,17 +498,17 @@ static void test_c2r(tc t)
 
     UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
 
-    underling::fft::plan backward(underling::fft::plan::c2r_backward(),
-                                  f.problem,
-                                  long_ni,
-                                  f.in,
-                                  f.out,
-                                  FFTW_ESTIMATE);
+    underling::fftw::plan backward(underling::fftw::plan::c2r_backward(),
+                                   f.problem,
+                                   long_ni,
+                                   f.in,
+                                   f.out,
+                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
-    underling::fft::plan forward(backward,       // Inverse constructor!
-                                 f.out,
-                                 f.in,
-                                 FFTW_ESTIMATE);
+    underling::fftw::plan forward(backward,       // Inverse constructor!
+                                  f.out,
+                                  f.in,
+                                  FFTW_ESTIMATE);
     BOOST_REQUIRE(forward);
 
     // Stride information consistency check
@@ -529,7 +529,7 @@ static void test_c2r(tc t)
 
     // Load up sample data
     {
-        const underling::fft::extents e = backward.local_extents_input();
+        const underling::fftw::extents e = backward.local_extents_input();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -566,7 +566,7 @@ static void test_c2r(tc t)
 
     // Check data transformed as expected
     {
-        const underling::fft::extents e = backward.local_extents_output();
+        const underling::fftw::extents e = backward.local_extents_output();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -600,7 +600,7 @@ static void test_c2r(tc t)
 
     // Check data transformed as expected
     {
-        const underling::fft::extents e = backward.local_extents_input();
+        const underling::fftw::extents e = backward.local_extents_input();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -682,17 +682,17 @@ static void test_r2c(tc t)
 
     UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
 
-    underling::fft::plan forward(underling::fft::plan::r2c_forward(),
-                                 f.problem,
-                                 long_ni,
-                                 f.in,
-                                 f.out,
-                                 FFTW_ESTIMATE);
-    BOOST_REQUIRE(forward);
-    underling::fft::plan backward(forward,        // Inverse constructor!
-                                  f.out,
+    underling::fftw::plan forward(underling::fftw::plan::r2c_forward(),
+                                  f.problem,
+                                  long_ni,
                                   f.in,
+                                  f.out,
                                   FFTW_ESTIMATE);
+    BOOST_REQUIRE(forward);
+    underling::fftw::plan backward(forward,        // Inverse constructor!
+                                   f.out,
+                                   f.in,
+                                   FFTW_ESTIMATE);
     BOOST_REQUIRE(backward);
 
     // Stride information consistency check
@@ -713,7 +713,7 @@ static void test_r2c(tc t)
 
     // Load up sample data
     {
-        const underling::fft::extents e = forward.local_extents_input();
+        const underling::fftw::extents e = forward.local_extents_input();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -746,7 +746,7 @@ static void test_r2c(tc t)
 
     // Check data transformed as expected
     {
-        const underling::fft::extents e = forward.local_extents_output();
+        const underling::fftw::extents e = forward.local_extents_output();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -789,7 +789,7 @@ static void test_r2c(tc t)
 
     // Checking data transformed as expected
     {
-        const underling::fft::extents e = forward.local_extents_input();
+        const underling::fftw::extents e = forward.local_extents_input();
         int dir_i, dir_j;
         slow_non_long_directions(e.order, long_ni, dir_i, dir_j);
         const int dir_k = e.order[1];
@@ -901,18 +901,18 @@ static void test_extents_consistency(const bool in_place = true)
 {
     UnderlingFixture f(MPI_COMM_WORLD, 2, 3, 5, 6, /*flags*/0, in_place);
 
-    underling::fft::plan backward(underling::fft::plan::c2c_forward(),
-                                  f.problem,
-                                  0,
-                                  f.in,
-                                  f.out,
-                                  FFTW_ESTIMATE);
+    underling::fftw::plan backward(underling::fftw::plan::c2c_forward(),
+                                   f.problem,
+                                   0,
+                                   f.in,
+                                   f.out,
+                                   FFTW_ESTIMATE);
 
     const int N = 5;
 
     // Check input information
     {
-        const underling::fft::extents input = backward.local_extents_input();
+        const underling::fftw::extents input = backward.local_extents_input();
 
         int start[N];
         backward.local_input(start);
@@ -937,7 +937,7 @@ static void test_extents_consistency(const bool in_place = true)
 
     // Check output information
     {
-        const underling::fft::extents output = backward.local_extents_output();
+        const underling::fftw::extents output = backward.local_extents_output();
 
         int start[N];
         backward.local_output(start);
