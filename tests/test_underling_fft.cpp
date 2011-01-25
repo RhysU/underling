@@ -823,6 +823,8 @@ static void test_r2c(tc t)
 boost::unit_test::test_suite*
 init_unit_test_suite( int argc, char* argv[] )
 {
+    boost::unit_test::framework::master_test_suite().p_name.value = __FILE__;
+
     // Size of global extents
     const int extents[][3] = { { 2, 3, 5 },
                                { 7, 5, 3 },
