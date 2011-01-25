@@ -86,28 +86,26 @@ struct UnderlingFixture {
         : in_place(in_place),
           grid(comm, n0, n1, n2),
           problem(grid, howmany, transposed_flags),
-          data((underling_real *) fftw_malloc(  (in_place ? 1 : 2)
-                                               * problem.local_memory()
-                                               * sizeof(underling_real)),
-                &fftw_free),
-          in(data.get()),
-          out(in_place ? in : in + problem.local_memory()),
+          in(allocate_(problem.local_memory())),
+          out(in_place ? in : allocate_(problem.local_memory())),
           plan(problem, in, out, underling::transpose::all, FFTW_ESTIMATE)
     {
         BOOST_REQUIRE(grid);
         BOOST_REQUIRE(problem);
-        BOOST_REQUIRE(data);
         BOOST_REQUIRE(in);
         BOOST_REQUIRE(out);
         BOOST_REQUIRE(plan);
     }
 
+    ~UnderlingFixture()
+    {
+        if (in)               fftw_free(in);
+        if (!in_place && out) fftw_free(out);
+    }
+
     const bool in_place;
     underling::grid grid;
     underling::problem problem;
-private:
-    boost::shared_array<underling_real> data;
-public:
     underling_real * const in;
     underling_real * const out;
     underling::plan plan;
@@ -120,6 +118,11 @@ public:
     void fill_out_with_NaNs() {
         std::fill_n(out, problem.local_memory(),
                     std::numeric_limits<underling_real>::quiet_NaN());
+    }
+
+private:
+    static underling_real * allocate_(size_t count) {
+        return (underling_real *) fftw_malloc(sizeof(underling_real) * count);
     }
 };
 
