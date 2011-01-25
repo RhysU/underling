@@ -174,6 +174,85 @@ underling_extents_cmp(const underling_extents * const e1,
     return 0;
 }
 
+int
+underling_only_init(int *argc, char **argv[])
+{
+    // Placeholder for future function.  Does nothing currently.
+
+    (void) argc; // Unused
+    (void) argv; // Unused
+
+    return UNDERLING_SUCCESS;
+}
+
+int
+underling_init(int *argc, char **argv[], int nthreads)
+{
+    int error, flag;
+
+    // Initialize MPI (if necessary)
+    if ((error = MPI_Initialized(&flag))) {
+        UNDERLING_MPICHKR(error);
+        return UNDERLING_ESANITY;
+    }
+    if (!flag) {
+        if ((error = MPI_Init(argc, argv))) {
+            UNDERLING_MPICHKR(error);
+            return UNDERLING_ESANITY;
+        }
+    }
+
+    // Initialize FFTW threads (if necessary)
+#ifdef HAVE_FFTW3_THREADS
+    if (!fftw_init_threads()) {
+        UNDERLING_ERROR("fftw_init_threads reported an error",
+                        UNDERLING_ESANITY);
+    }
+
+    // Possibly lookup nthreads from environment for both OpenMP /and/ pthreads
+    if (nthreads == 0) {
+        const char * const envstr = getenv("OMP_NUM_THREADS");
+        if (envstr) {
+            const int envnum = atoi(envstr);
+            if (envnum < 1) {
+                UNDERLING_ERROR(
+                        "Malformed OMP_NUM_THREADS environment variable",
+                        UNDERLING_EINVAL);
+            }
+            nthreads = envnum;
+        } else {
+            // Value not found in environment so use a sane default
+            nthreads = 1;
+        }
+    }
+    fftw_plan_with_nthreads(nthreads);
+#endif /* HAVE_FFTW3_THREADS */
+
+    // Initialize FFTW MPI
+    fftw_mpi_init();
+
+    // Finally, initialize underling itself
+    return underling_only_init(argc, argv);
+}
+
+void
+underling_only_cleanup()
+{
+    // Placeholder for future function.  Does nothing currently.
+    return;
+}
+
+void underling_cleanup()
+{
+    fftw_mpi_cleanup();
+#ifdef HAVE_FFTW3_THREADS
+    fftw_cleanup_threads();
+#endif
+    underling_only_cleanup();
+
+    return;
+}
+
 static
 MPI_Comm
 underling_MPI_Comm_dup_with_name(MPI_Comm comm)

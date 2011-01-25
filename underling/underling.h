@@ -126,6 +126,76 @@ typedef struct underling_extents {
 extern const underling_extents UNDERLING_EXTENTS_INVALID;
 
 /**
+ * Initialize underling.  Caller must have initialized MPI, FFTW MPI, and
+ * set any required FFTW threading parameters prior to invoking this method.
+ *
+ * @param argc     <tt>&argc</tt> from <tt>main(argc,argv)</tt>.
+ *                 May be \c NULL if the caller cannot obtain <tt>&argc</tt>.
+ * @param argv     <tt>&argv</tt> from <tt>main(argv,argv)</tt>.
+ *                 May be \c NULL if the caller cannot obtain <tt>&argv</tt>.
+ *
+ * @return UNDERLING_SUCCESS (zero) on success.  On failure, On failure, calls
+ *         underling_error and returns one of ::underling_status.
+ *
+ * @see The method \c underling_init() initializes underling's entire
+ *      prerequisite chain (MPI, FFTW, FFTW threads, FFTW MPI) in one call.
+ */
+int underling_only_init(int *argc, char **argv[]) UNDERLING_API;
+
+/**
+ * Initialize MPI (if necessary), FFTW threading, FFTW MPI, and underling.  As
+ * necessary, calls are made to \c MPI_Init(), \c fftw_init_threads(),
+ * \c fftw_plan_with_nthreads(), and finally \c fftw_mpi_init(), and finally
+ * \c underling_only_init.  Threading initialization is only performed when
+ * threads are available.
+ *
+ * FFTW wisdom is neither loaded with \c fftw_wisdom_import_from_file nor
+ * broadcast with \c fftw_mpi_broadcast_wisdom.  You may wish to perform
+ * your own FFTW wisdom handling after this method has been called.
+ *
+ * @param argc     <tt>&argc</tt> from <tt>main(argc,argv)</tt>.
+ *                 May be \c NULL if the caller cannot obtain <tt>&argc</tt>.
+ * @param argv     <tt>&argv</tt> from <tt>main(argv,argv)</tt>.
+ *                 May be \c NULL if the caller cannot obtain <tt>&argv</tt>.
+ * @param nthreads Number of threads to use for planning.  If zero, the
+ *                 environment variable \c OMP_NUM_THREADS is used
+ *                 (for both OpenMP- and pthread-based FFTW installations).
+ *
+ * @return UNDERLING_SUCCESS (zero) on success.  On failure, On failure, calls
+ *         underling_error and returns one of ::underling_status.
+ *
+ * @see The method \c underling_only_init() initializes only underling
+ *      without interacting with MPI or FFTW.
+ */
+int underling_init(int *argc, char **argv[], int nthreads) UNDERLING_API;
+
+/**
+ * Release all resources held by underling.  You may wish to invoke
+ * clean up methods for FFTW MPI, FFTW threading, and MPI after this
+ * method has been called.
+ *
+ * @see The method \c underling_cleanup() cleans up underling's entire
+ *      non-MPI prerequisite chain (FFTW, FFTW threads, FFTW MPI) in one call.
+ */
+void underling_only_cleanup() UNDERLING_API;
+
+ /**
+  * Release all resources held by FFTW MPI, FFTW threading, and underling.  As
+  * necessary, calls are made to \c fftw_mpi_cleanup(), \c
+  * fftw_cleanup_threads(), and \c underling_only_cleanup().  Threading cleanup
+  * is only performed when threads are available.  \c MPI_Finalize() is
+  * <em>not</em> invoked.
+  *
+  * FFTW wisdom is neither gathered with \c fftw_mpi_gather_wisdom nor saved
+  * with \c fftw_wisdom_export_to_file.  You may wish to perform your own FFTW
+  * wisdom handling prior to calling this method.
+  *
+  * @see The method \c underling_only_init() initializes only underling
+  *      without interacting with MPI or FFTW.
+  */
+void underling_cleanup() UNDERLING_API;
+
+/**
  * Compare two underling_extents instances using lexicographic ordering.
  *
  * @param e1 First instance to compare.

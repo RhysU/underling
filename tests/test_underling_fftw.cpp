@@ -35,8 +35,6 @@
 #include "test_tools.hpp"
 #include "test_underling_tools.hpp"
 
-BOOST_GLOBAL_FIXTURE(FFTWMPIFixture);
-
 // For unary function-based test case registration
 struct tc
 {
@@ -823,6 +821,11 @@ static void test_r2c(tc t)
 boost::unit_test::test_suite*
 init_unit_test_suite( int argc, char* argv[] )
 {
+    MPI_Init(&argc, &argv);            // Initialize MPI
+    atexit((void (*)()) MPI_Finalize); // Register finalize MPI
+    underling_init(&argc, &argv, 0);   // Initialize underling prereqs
+    atexit(&underling_cleanup);        // Register finalize underling prereqs
+
     boost::unit_test::framework::master_test_suite().p_name.value = __FILE__;
 
     // Size of global extents

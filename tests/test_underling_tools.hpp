@@ -30,52 +30,7 @@
 #include <fftw3-mpi.h>
 #include <underling/underling.hpp>
 
-/** A test fixture to setup and teardown MPI and FFTW MPI */
-struct FFTWMPIFixture {
-
-    FFTWMPIFixture() {
-        MPI_Init(NULL, NULL); // NULL valid per MPI standard section 8.7
-#ifdef HAVE_FFTW3_THREADS
-        assert(fftw_init_threads());
-        int nthreads = 1;
-#if defined HAVE_OPENMP
-        const char * const envstr = getenv("OMP_NUM_THREADS");
-        if (envstr) {
-            const int envnum = atoi(envstr);
-            if (envnum > 0) nthreads = envnum;
-        }
-#elif defined HAVE_PTHREAD
-    // TODO Provide sane nthreads default for FFTW pthread environment
-#else
-#error "Sanity check failed; unknown FFTW threading model in use."
-#endif
-        BOOST_TEST_MESSAGE("Using FFTW with " << nthreads << " threads.");
-        fftw_plan_with_nthreads(nthreads);
-#endif
-        fftw_mpi_init();
-    }
-
-    ~FFTWMPIFixture() {
-        fftw_mpi_cleanup();
-#ifdef HAVE_FFTW3_THREADS
-        fftw_cleanup_threads();
-#endif
-        MPI_Finalize();
-    }
-};
-
-/** A test fixture to help bump up independence between test cases */
-struct FFTWMPIParanoiaFixture {
-    ~FFTWMPIParanoiaFixture() {
-        fftw_mpi_cleanup();
-#ifdef HAVE_FFTW3_THREADS
-        fftw_cleanup_threads();
-#endif
-        fftw_cleanup();
-    }
-};
-
-/* A test fixture to setup and teardown an underling use case */
+/* A test fixture to setup and teardown an underling-based test case */
 struct UnderlingFixture {
 
     UnderlingFixture(MPI_Comm comm,
