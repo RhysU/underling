@@ -33,9 +33,10 @@
 #include <underling/underling_fft.hpp>
 #include <fftw3-mpi.h>
 #include "test_tools.hpp"
-
-// Contains UnderlingFixture, FFTWMPIFixture
 #include "test_underling_tools.hpp"
+
+struct TestFixture : BoostFailErrorHandlerFixture, FFTWMPIParanoiaFixture {};
+
 BOOST_GLOBAL_FIXTURE(FFTWMPIFixture);
 
 // Pull out the two slow directions, excluding long_ni
@@ -79,8 +80,7 @@ static void ensureFFTWTensor7PatchInPlace() {
 }
 
 
-BOOST_FIXTURE_TEST_SUITE( underling_fft_general,
-                          FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( underling_fft_general, TestFixture )
 
 static void test_extents_consistency(const bool in_place = true)
 {
@@ -155,8 +155,7 @@ BOOST_AUTO_TEST_CASE( extents_consistency )
 BOOST_AUTO_TEST_SUITE_END()
 
 
-BOOST_FIXTURE_TEST_SUITE( underling_fft_c2c_forward,
-                          FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( underling_fft_c2c_forward, TestFixture )
 
 // Forward physical-to-wave followed by wave-to-physical
 static void test_c2c_forward(MPI_Comm comm,
@@ -530,8 +529,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_both )
 BOOST_AUTO_TEST_SUITE_END()
 
 
-BOOST_FIXTURE_TEST_SUITE( underling_fft_c2c_backward,
-                          FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( underling_fft_c2c_backward, TestFixture )
 
 // Backward wave-to-physical followed by physical-to-wave
 static void test_c2c_backward(MPI_Comm comm,
@@ -904,8 +902,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_both )
 BOOST_AUTO_TEST_SUITE_END()
 
 
-BOOST_FIXTURE_TEST_SUITE( underling_fft_c2r,
-                          FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( underling_fft_c2r, TestFixture )
 
 // Test wave to physical transformation and inverse transform
 static void test_c2r(MPI_Comm comm,
@@ -1403,8 +1400,7 @@ BOOST_AUTO_TEST_CASE( underling_fft_c2r_n2_transposed_long_both )
 BOOST_AUTO_TEST_SUITE_END()
 
 
-BOOST_FIXTURE_TEST_SUITE( underling_fft_r2c,
-                          FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( underling_fft_r2c, TestFixture )
 
 // Test physical to wave transformation and inverse transform
 static void test_r2c(MPI_Comm comm,

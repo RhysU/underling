@@ -35,6 +35,9 @@
 #include <underling/underling.hpp>
 #include <fftw3-mpi.h>
 #include "test_tools.hpp"
+#include "test_underling_tools.hpp"
+
+struct TestFixture : BoostFailErrorHandlerFixture, FFTWMPIParanoiaFixture {};
 
 // Contains UnderlingFixture, FFTWMPIFixture
 #include "test_underling_tools.hpp"
@@ -135,7 +138,7 @@ static void test_round_trip(MPI_Comm comm,
             boost::make_counting_iterator(procid*10000.0 + long_n[2].extent));
 }
 
-BOOST_FIXTURE_TEST_SUITE( eightbyeightbyeight, FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( eightbyeightbyeight, TestFixture )
 
 BOOST_AUTO_TEST_CASE( roundtrip8x8x8 )
 {
@@ -238,7 +241,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_degenerate_howmany )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-BOOST_FIXTURE_TEST_SUITE( twobythreebyfive, FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( twobythreebyfive, TestFixture )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x5 )
 {
@@ -341,7 +344,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_degenerate_howmany )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-BOOST_FIXTURE_TEST_SUITE( twobythreebyfour, FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( twobythreebyfour, TestFixture )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x4 )
 {
