@@ -14,7 +14,7 @@ TESTS             = # Append below
 TESTS_ENVIRONMENT = # Append below
 
 noinst_HEADERS += test_tools.hpp
-noinst_HEADERS += test_underling_tools.hpp
+noinst_HEADERS += fixtures.hpp
 
 # FIXME: Ugly, separate MPI compilation into separate dir, maybe
 CC=@MPICC@

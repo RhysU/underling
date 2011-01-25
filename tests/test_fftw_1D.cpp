@@ -27,9 +27,12 @@
 #include <underling/config.h>
 #endif
 #define BOOST_TEST_MODULE $Id$
-#include <boost/test/included/unit_test.hpp>
 #include <fftw3.h>
+#include <boost/test/included/unit_test.hpp>
+#include <underling/periodic_function.hpp>
 #include "test_tools.hpp"
+
+using underling::periodic_function;
 
 // Not so much a test as a way to check our periodic test function definition.
 // Getting it correct is key to all other FFT-related tests

@@ -40,13 +40,14 @@ BUILT_SOURCES += underling-config.h
 # Headers shipped with the library
 underling_includedir       = $(includedir)/underling
 underling_include_HEADERS  = error.h
-underling_include_HEADERS += underling.h
-underling_include_HEADERS += underling.hpp
+underling_include_HEADERS += periodic_function.hpp
+underling_include_HEADERS += underling-config.h
 underling_include_HEADERS += underling_fftw.h
 underling_include_HEADERS += underling_fftw.hpp
+underling_include_HEADERS += underling.h
+underling_include_HEADERS += underling.hpp
 underling_include_HEADERS += version.h
 underling_include_HEADERS += visibility.h
-underling_include_HEADERS += underling-config.h
 
 # Extra things to clean up
 CLEANFILES += *.gcno *.gcna

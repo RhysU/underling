@@ -23,11 +23,12 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __TEST_UNDERLING_TOOLS_HPP
-#define __TEST_UNDERLING_TOOLS_HPP
+#ifndef __FIXTURES_HPP
+#define __FIXTURES_HPP
 
 #include <mpi.h>
-#include <fftw3-mpi.h>
+#include <limits.h>
+#include <underling/error.h>
 #include <underling/underling.hpp>
 
 /* A test fixture to setup and teardown an underling-based test case */
@@ -81,4 +82,36 @@ private:
     }
 };
 
-#endif // __TEST_UNDERLING_TOOLS_HPP
+/** A fixture for the Boost.Test that replaces underling_error */
+#pragma warning(push,disable:2017 2021)
+class BoostFailErrorHandlerFixture {
+public:
+    /** A underling_error_handler_t that invokes BOOST_FAIL */
+    static void boost_fail_error_handler(
+            const char *reason, const char *file, int line, int underling_errno)
+    {
+        std::ostringstream oss;
+        oss << "Encountered '"
+            << underling_strerror(underling_errno)
+            << "' at "
+            << file
+            << ':'
+            << line
+            << " with reason '"
+            << reason
+            << "'";
+        BOOST_FAIL(oss.str());
+    }
+
+    BoostFailErrorHandlerFixture()
+        : previous_(underling_set_error_handler(&boost_fail_error_handler)) {}
+
+    ~BoostFailErrorHandlerFixture() {
+        underling_set_error_handler(previous_);
+    }
+private:
+    underling_error_handler_t * previous_;
+};
+#pragma warning(pop)
+
+#endif // __FIXTURES_HPP

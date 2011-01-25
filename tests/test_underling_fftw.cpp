@@ -29,11 +29,14 @@
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/parameterized_test.hpp>
 #include <mpi.h>
+#include <fftw3-mpi.h>
 #include <underling/error.h>
 #include <underling/underling_fftw.hpp>
-#include <fftw3-mpi.h>
+#include <underling/periodic_function.hpp>
 #include "test_tools.hpp"
-#include "test_underling_tools.hpp"
+#include "fixtures.hpp"
+
+using underling::periodic_function;
 
 // For unary function-based test case registration
 struct tc

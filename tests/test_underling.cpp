@@ -35,7 +35,7 @@
 #include <underling/underling.hpp>
 #include <fftw3-mpi.h>
 #include "test_tools.hpp"
-#include "test_underling_tools.hpp"
+#include "fixtures.hpp"
 
 // Currently this test focuses on round-trip correctness
 // TODO Test that data which should be long is in fact long
