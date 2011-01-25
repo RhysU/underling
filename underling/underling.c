@@ -1176,14 +1176,12 @@ underling_plan_create(
     }
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2) {
-        // Employing FFTW_DESTROY_INPUT on the forwardA transpose will
+        // Employing FFTW_DESTROY_INPUT on the forwardA transpose /MAY/
         // (deterministically) cause deadlock.  See Redmine ticket #1297.
         // Certainly a functional error but I have been unable to isolate the
-        // root cause in underling or to reproduce it directly with FFTW.  For
-        // now, we choose functional correctness and a potentially slower
-        // forwardA plan by preserving input for this transpose.
+        // root cause in underling or to reproduce it directly with FFTW.
         p->plan_forwardA = underling_transpose_fftw_plan(
-                problem->forwardA, in, out, rigor_flags);
+                problem->forwardA, in, out, rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(p->plan_forwardA == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
