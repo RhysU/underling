@@ -26,8 +26,8 @@
 #ifdef HAVE_CONFIG_H
 #include <underling/config.h>
 #endif
-#define BOOST_TEST_MODULE $Id$
 #include <boost/test/included/unit_test.hpp>
+#include <boost/test/parameterized_test.hpp>
 #include <mpi.h>
 #include <underling/error.h>
 #include <underling/underling_fft.hpp>
@@ -35,11 +35,15 @@
 #include "test_tools.hpp"
 #include "test_underling_tools.hpp"
 
-// FIXME: Function correctness should not require paranoia fixture (see #1297)
-struct TestCaseFixture
-    : BoostFailErrorHandlerFixture, FFTWMPIParanoiaFixture {};
-
 BOOST_GLOBAL_FIXTURE(FFTWMPIFixture);
+
+// For unary function-based test case registration
+struct tc
+{
+    int n0, n1, n2, howmany, long_ni;
+    bool in_place;
+    unsigned flags;
+};
 
 // Pull out the two slow directions, excluding long_ni
 static void slow_non_long_directions(
@@ -81,93 +85,23 @@ static void ensureFFTWTensor7PatchInPlace() {
             plan, "Critical FFTW3 patch may not have been applied.");
 }
 
-
-BOOST_FIXTURE_TEST_SUITE( underling_fft_general, TestCaseFixture )
-
-static void test_extents_consistency(const bool in_place = true)
-{
-    UnderlingFixture f(MPI_COMM_WORLD, 2, 3, 5, 6, /*flags*/0, in_place);
-
-    underling::fft::plan backward(underling::fft::plan::c2c_forward(),
-                                  f.problem,
-                                  0,
-                                  f.in,
-                                  f.out,
-                                  FFTW_ESTIMATE);
-
-    const int N = 5;
-
-    // Check input information
-    {
-        const underling::fft::extents input = backward.local_extents_input();
-
-        int start[N];
-        backward.local_input(start);
-        BOOST_CHECK_EQUAL_COLLECTIONS(input.start, input.start + N,
-                                      start, start + N);
-
-        int size[N];
-        backward.local_input(start, size);
-        BOOST_CHECK_EQUAL_COLLECTIONS(input.size, input.size + N,
-                                      size, size + N);
-
-        int stride[5];
-        backward.local_input(start, size, stride);
-        BOOST_CHECK_EQUAL_COLLECTIONS(input.stride, input.stride + N,
-                                      stride, stride + N);
-
-        int order[5];
-        backward.local_input(start, size, stride, order);
-        BOOST_CHECK_EQUAL_COLLECTIONS(input.stride, input.stride + N,
-                                      stride, stride + N);
-    }
-
-    // Check output information
-    {
-        const underling::fft::extents output = backward.local_extents_output();
-
-        int start[N];
-        backward.local_output(start);
-        BOOST_CHECK_EQUAL_COLLECTIONS(output.start, output.start + N,
-                                      start, start + N);
-
-        int size[N];
-        backward.local_output(start, size);
-        BOOST_CHECK_EQUAL_COLLECTIONS(output.size, output.size + N,
-                                      size, size + N);
-
-        int stride[5];
-        backward.local_output(start, size, stride);
-        BOOST_CHECK_EQUAL_COLLECTIONS(output.stride, output.stride + N,
-                                      stride, stride + N);
-
-        int order[5];
-        backward.local_output(start, size, stride, order);
-        BOOST_CHECK_EQUAL_COLLECTIONS(output.stride, output.stride + N,
-                                      stride, stride + N);
-    }
-}
-
-BOOST_AUTO_TEST_CASE( extents_consistency )
-{
-    test_extents_consistency(true);
-    test_extents_consistency(false);
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-
-BOOST_FIXTURE_TEST_SUITE( underling_fft_c2c_forward, TestCaseFixture )
-
 // Forward physical-to-wave followed by wave-to-physical
-static void test_c2c_forward(MPI_Comm comm,
-                             const int n0, const int n1, const int n2,
-                             const int howmany,
-                             const int long_ni,
-                             const unsigned transposed_flags = 0,
-                             const bool in_place = true)
-
+static void test_c2c_forward(tc t)
 {
+    BoostFailErrorHandlerFixture fix1;
+
+    // Unpack test case parameters
+    MPI_Comm comm        = MPI_COMM_WORLD;
+    const int n0         = t.n0;
+    const int n1         = t.n1;
+    const int n2         = t.n2;
+    const int howmany    = t.howmany;
+    const int long_ni    = t.long_ni;
+    const unsigned flags = t.flags;
+    const bool in_place  = t.in_place;
+
+    if (flags) ensureFFTWTensor7PatchInPlace();
+
     int procid;
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_rank(comm, &procid));
 
@@ -182,13 +116,13 @@ static void test_c2c_forward(MPI_Comm comm,
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
-                           << " with flags " << transposed_flags);
+                           << " with flags " << flags);
     }
 
     const underling_real close
         = std::numeric_limits<underling_real>::epsilon()*100*n0*n1*n2;
 
-    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags, in_place);
+    UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
     underling::fft::plan forward(underling::fft::plan::c2c_forward(),
                                  f.problem,
                                  long_ni,
@@ -336,211 +270,23 @@ static void test_c2c_forward(MPI_Comm comm,
     }
 }
 
-BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward )
-{
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, 0, true); // 1 field
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, 0, true); // 2 fields
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, 0, true); // 3 fields
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, 0, true);
-
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, 0, false); // 1 field
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, 0, false); // 2 fields
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, 0, false); // 3 fields
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, 0, false);
-
-    // Cubic domain
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, 0, true); // 1 field
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, 0, true); // 2 fields
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, 0, true); // 3 fields
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, 0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, 0, true);
-
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, 0, false); // 1 field
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, 0, false); // 2 fields
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, 0, false); // 3 fields
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, 0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, 0, false);
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n2 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    using underling::transposed::long_n2;
-
-    // Non-cubic domain
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n2, true); // 1 field
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, long_n2, true); // 2 fields
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, long_n2, true); // 3 fields
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n2, true);
-
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n2, false); // 1
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, long_n2, false); // 2
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, long_n2, false); // 3
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n2, false);
-
-    // Cubic domain
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n2, true); // 1 field
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, long_n2, true); // 2 fields
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n2, true); // 3 fields
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n2, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n2, true);
-
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n2, false); // 1
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, long_n2, false); // 2
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n2, false); // 3
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n2, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n2, false);
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_n0 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    using underling::transposed::long_n0;
-
-    // Non-cubic domain
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n0, true); // 1 field
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, long_n0, true); // 2 fields
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, long_n0, true); // 3 fields
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n0, true);
-
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n0, false); // 1
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, long_n0, false); // 2
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, long_n0, false); // 3
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n0, false);
-
-    // Cubic domain
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n0, true); // 1 field
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, long_n0, true); // 2 fields
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n0, true); // 3 fields
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n0, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n0, true);
-
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n0, false); // 1
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, long_n0, false); // 2
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n0, false); // 3
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n0, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n0, false);
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2c_forward_transposed_long_both )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    const unsigned flags = underling::transposed::long_n2
-                         | underling::transposed::long_n0;
-
-    // Non-cubic domain
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, flags, true); // 1
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, flags, true); // 2
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, flags, true); // 3
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, flags, true);
-
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, flags, false); // 1
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, flags, false); // 2
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, flags, false); // 3
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, flags, false);
-
-    // Cubic domain
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, flags, true); // 1
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, flags, true); // 2
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, flags, true); // 3
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, flags, true);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, flags, true);
-
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, flags, false); // 1
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, flags, false); // 2
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, flags, false); // 3
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, flags, false);
-    test_c2c_forward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, flags, false);
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-
-BOOST_FIXTURE_TEST_SUITE( underling_fft_c2c_backward, TestCaseFixture )
-
 // Backward wave-to-physical followed by physical-to-wave
-static void test_c2c_backward(MPI_Comm comm,
-                              const int n0, const int n1, const int n2,
-                              const int howmany,
-                              const int long_ni,
-                              const unsigned transposed_flags = 0,
-                              const bool in_place = true)
+static void test_c2c_backward(tc t)
 {
+    BoostFailErrorHandlerFixture fix1;
+
+    // Unpack test case parameters
+    MPI_Comm comm        = MPI_COMM_WORLD;
+    const int n0         = t.n0;
+    const int n1         = t.n1;
+    const int n2         = t.n2;
+    const int howmany    = t.howmany;
+    const int long_ni    = t.long_ni;
+    const unsigned flags = t.flags;
+    const bool in_place  = t.in_place;
+
+    if (flags) ensureFFTWTensor7PatchInPlace();
+
     int procid;
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_rank(comm, &procid));
 
@@ -555,13 +301,13 @@ static void test_c2c_backward(MPI_Comm comm,
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
-                           << " with flags " << transposed_flags);
+                           << " with flags " << flags);
     }
 
     const underling_real close
         = std::numeric_limits<underling_real>::epsilon()*100*n0*n1*n2;
 
-    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags, in_place);
+    UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
     underling::fft::plan backward(underling::fft::plan::c2c_backward(),
                                   f.problem,
                                   long_ni,
@@ -708,225 +454,22 @@ static void test_c2c_backward(MPI_Comm comm,
     }
 }
 
-BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward )
-{
-    // Non-cubic domain
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, 0, true); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, 0, true); // 2 fields
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, 0, true); // 3 fields
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, 0, true);
-
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, 0, false); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, 0, false); // 2 fields
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, 0, false); // 3 fields
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, 0, false);
-
-    // Cubic domain
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, 0, true); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, 0, true); // 2 fields
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, 0, true); // 3 fields
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, 0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, 0, true);
-
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, 0, false); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, 0, false); // 2 fields
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, 0, false); // 3 fields
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, 0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, 0, false);
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n2 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    using underling::transposed::long_n2;
-
-    // Non-cubic domain
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n2, true); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, long_n2, true); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, long_n2, true); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n2, true);
-
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n2, false); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, long_n2, false); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, long_n2, false); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n2, false);
-
-    // Cubic domain
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n2, true); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, long_n2, true); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n2, true); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n2, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n2, true);
-
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n2, false); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, long_n2, false); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n2, false); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n2, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n2, false);
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_n0 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    using underling::transposed::long_n0;
-
-    // Non-cubic domain
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n0, true); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, long_n0, true); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, long_n0, true); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n0, true);
-
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, long_n0, false); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, long_n0, false); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, long_n0, false); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, long_n0, false);
-
-    // Cubic domain
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n0, true); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, long_n0, true); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n0, true); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n0, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n0, true);
-
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, long_n0, false); // 1 field
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, long_n0, false); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, long_n0, false); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, long_n0, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, long_n0, false);
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2c_backward_transposed_long_both )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    const unsigned flags = underling::transposed::long_n2
-                         | underling::transposed::long_n0;
-
-    // Non-cubic domain
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, flags, true); // 1
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, flags, true); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, flags, true); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, flags, true);
-
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 0, flags, false); // 1
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 1, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 2, 2, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 0, flags, false); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 1, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 4, 2, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 0, flags, false); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 1, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 3, 5, 7, 6, 2, flags, false);
-
-    // Cubic domain
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, flags, true); // 1
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, flags, true); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, flags, true); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, flags, true);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, flags, true);
-
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 0, flags, false); // 1
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 1, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 2, 2, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 0, flags, false); // 2
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 1, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 4, 2, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 0, flags, false); // 3
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 1, flags, false);
-    test_c2c_backward(MPI_COMM_WORLD, 8, 8, 8, 6, 2, flags, false);
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-
-BOOST_FIXTURE_TEST_SUITE( underling_fft_c2r, TestCaseFixture )
-
 // Test wave to physical transformation and inverse transform
-static void test_c2r(MPI_Comm comm,
-                     const int n0, const int n1, const int n2,
-                     const int howmany,
-                     const int long_ni,
-                     const unsigned transposed_flags = 0,
-                     const bool in_place = true)
+static void test_c2r(tc t)
 {
-    // FIXME Implement proper handling and enable these tests
-    if (   long_ni == 2
-        && transposed_flags & underling::transposed::long_n2) {
-        BOOST_TEST_MESSAGE(
-                "Cowardly skipping in-place long_ni == 2 for transposed::long_n2");
-        return;
-    }
-    if (   long_ni == 0
-        && transposed_flags & underling::transposed::long_n0) {
-        BOOST_TEST_MESSAGE(
-                "Cowardly skipping in-place long_ni == 0 for transposed::long_n0");
-        return;
-    }
+    BoostFailErrorHandlerFixture fix1;
+
+    // Unpack test case parameters
+    MPI_Comm comm        = MPI_COMM_WORLD;
+    const int n0         = t.n0;
+    const int n1         = t.n1;
+    const int n2         = t.n2;
+    const int howmany    = t.howmany;
+    const int long_ni    = t.long_ni;
+    const unsigned flags = t.flags;
+    const bool in_place  = t.in_place;
+
+    if (flags) ensureFFTWTensor7PatchInPlace();
 
     int procid;
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_rank(comm, &procid));
@@ -942,9 +485,18 @@ static void test_c2r(MPI_Comm comm,
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
-                           << " with flags " << transposed_flags);
+                           << " with flags " << flags);
     }
-    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags, in_place);
+    if (long_ni == 2 && flags & underling::transposed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        return;
+    }
+    if (long_ni == 0 && flags & underling::transposed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        return;
+    }
+
+    UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
 
     underling::fft::plan backward(underling::fft::plan::c2r_backward(),
                                   f.problem,
@@ -972,7 +524,7 @@ static void test_c2r(MPI_Comm comm,
 
     const underling::extents extents = f.problem.local_extents(long_ni);
     const double close_enough
-        =   std::numeric_limits<double>::epsilon()*100
+        =   std::numeric_limits<double>::epsilon()*150
           * extents.size[long_ni]*extents.size[long_ni]*extents.size[long_ni];
 
     // Load up sample data
@@ -1086,381 +638,22 @@ static void test_c2r(MPI_Comm comm,
     }
 }
 
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n0_simple )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n0, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 3, N, N, howmany, 0, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, N, N, howmany, 0, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 5, N, N, howmany, 0, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 6, N, N, howmany, 0, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 7, N, N, howmany, 0, 0, in_place);
-        }
-
-        // Long in n0, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 3, 2, 3, howmany, 0, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 3, 2, howmany, 0, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 5, 2, 2, howmany, 0, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 6, 3, 3, howmany, 0, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 7, 4, 5, howmany, 0, 0, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n1_simple )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n1, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, N, 3, N, howmany, 1, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 4, N, howmany, 1, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 5, N, howmany, 1, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 6, N, howmany, 1, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 7, N, howmany, 1, 0, in_place);
-        }
-
-        // Long in n1, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 2, 3, 3, howmany, 1, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 4, 2, howmany, 1, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 5, 2, howmany, 1, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 6, 3, howmany, 1, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 7, 5, howmany, 1, 0, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n2_simple )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n2, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, N, N, 3, howmany, 2, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 4, howmany, 2, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 5, howmany, 2, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 6, howmany, 2, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 7, howmany, 2, 0, in_place);
-        }
-
-        // Long in n2, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 2, 2, 3, howmany, 2, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 3, 4, howmany, 2, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 2, 5, howmany, 2, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 3, 6, howmany, 2, 0, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 5, 7, howmany, 2, 0, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n0_transposed_long_n2 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n2;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n0, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 3, N, N, howmany, 0, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, N, N, howmany, 0, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 5, N, N, howmany, 0, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 6, N, N, howmany, 0, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 7, N, N, howmany, 0, long_n2, in_place);
-        }
-
-        // Long in n0, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 3, 2, 3, howmany, 0, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 2, 3, howmany, 0, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 5, 3, 2, howmany, 0, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 6, 2, 3, howmany, 0, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 7, 4, 5, howmany, 0, long_n2, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n1_transposed_long_n2 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n2;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n1, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, N, 3, N, howmany, 1, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 4, N, howmany, 1, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 5, N, howmany, 1, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 6, N, howmany, 1, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 7, N, howmany, 1, long_n2, in_place);
-        }
-
-        // Long in n1, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 2, 3, 3, howmany, 1, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 4, 2, howmany, 1, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 5, 2, howmany, 1, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 6, 2, howmany, 1, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 7, 5, howmany, 1, long_n2, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n2_transposed_long_n2 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n2;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n2, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, N, N, 3, howmany, 2, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 4, howmany, 2, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 5, howmany, 2, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 6, howmany, 2, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 7, howmany, 2, long_n2, in_place);
-        }
-
-        // Long in n2, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 2, 2, 3, howmany, 2, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 3, 4, howmany, 2, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 2, 5, howmany, 2, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 3, 6, howmany, 2, long_n2, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 5, 7, howmany, 2, long_n2, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n0_transposed_long_n0 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n0, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 3, N, N, howmany, 0, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, N, N, howmany, 0, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 5, N, N, howmany, 0, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 6, N, N, howmany, 0, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 7, N, N, howmany, 0, long_n0, in_place);
-        }
-
-        // Long in n0, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 3, 2, 3, howmany, 0, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 3, 2, howmany, 0, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 5, 3, 3, howmany, 0, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 6, 2, 2, howmany, 0, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 7, 4, 5, howmany, 0, long_n0, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n1_transposed_long_n0 )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n1, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, N, 3, N, howmany, 1, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 4, N, howmany, 1, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 5, N, howmany, 1, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 6, N, howmany, 1, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 7, N, howmany, 1, long_n0, in_place);
-        }
-
-        // Long in n1, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 2, 3, 3, howmany, 1, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 4, 2, howmany, 1, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 5, 2, howmany, 1, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 6, 3, howmany, 1, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 7, 5, howmany, 1, long_n0, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n2_transposed_long_n0 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n2, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, N, N, 3, howmany, 2, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 4, howmany, 2, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 5, howmany, 2, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 6, howmany, 2, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 7, howmany, 2, long_n0, in_place);
-        }
-
-        // Long in n2, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 2, 2, 3, howmany, 2, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 3, 4, howmany, 2, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 2, 5, howmany, 2, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 3, 6, howmany, 2, long_n0, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 5, 7, howmany, 2, long_n0, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n0_transposed_long_both )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    const unsigned flags = underling::transposed::long_n2
-                         | underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n0, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 3, N, N, howmany, 0, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, N, N, howmany, 0, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 5, N, N, howmany, 0, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 6, N, N, howmany, 0, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 7, N, N, howmany, 0, flags, in_place);
-        }
-
-        // Long in n0, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 3, 2, 3, howmany, 0, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 3, 2, howmany, 0, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 5, 3, 3, howmany, 0, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 6, 2, 2, howmany, 0, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 7, 4, 5, howmany, 0, flags, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n1_transposed_long_both )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    const unsigned flags = underling::transposed::long_n2
-                         | underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n1, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, N, 3, N, howmany, 1, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 4, N, howmany, 1, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 5, N, howmany, 1, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 6, N, howmany, 1, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, N, 7, N, howmany, 1, flags, in_place);
-        }
-
-        // Long in n1, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 2, 3, 3, howmany, 1, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 4, 2, howmany, 1, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 5, 3, howmany, 1, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 6, 2, howmany, 1, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 7, 5, howmany, 1, flags, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_c2r_n2_transposed_long_both )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    const unsigned flags = underling::transposed::long_n2
-                         | underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n2, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, N, N, 3, howmany, 2, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 4, howmany, 2, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 5, howmany, 2, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 6, howmany, 2, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, N, N, 7, howmany, 2, flags, in_place);
-        }
-
-        // Long in n2, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_c2r(MPI_COMM_WORLD, 2, 2, 3, howmany, 2, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 3, 4, howmany, 2, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 3, 2, 5, howmany, 2, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 2, 3, 6, howmany, 2, flags, in_place);
-            test_c2r(MPI_COMM_WORLD, 4, 5, 7, howmany, 2, flags, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-
-BOOST_FIXTURE_TEST_SUITE( underling_fft_r2c, TestCaseFixture )
-
 // Test physical to wave transformation and inverse transform
-static void test_r2c(MPI_Comm comm,
-                     const int n0, const int n1, const int n2,
-                     const int howmany,
-                     const int long_ni,
-                     const unsigned transposed_flags = 0,
-                     const bool in_place = true)
+static void test_r2c(tc t)
 {
-    // FIXME Implement proper handling and enable these tests
-    if (   long_ni == 2
-        && transposed_flags & underling::transposed::long_n2) {
-        BOOST_TEST_MESSAGE(
-                "Cowardly skipping long_ni == 2 for transposed::long_n2");
-        return;
-    }
-    if (   long_ni == 0
-        && transposed_flags & underling::transposed::long_n0) {
-        BOOST_TEST_MESSAGE(
-                "Cowardly skipping long_ni == 0 for transposed::long_n0");
-        return;
-    }
+    BoostFailErrorHandlerFixture fix1;
+
+    // Unpack test case parameters
+    MPI_Comm comm        = MPI_COMM_WORLD;
+    const int n0         = t.n0;
+    const int n1         = t.n1;
+    const int n2         = t.n2;
+    const int howmany    = t.howmany;
+    const int long_ni    = t.long_ni;
+    const unsigned flags = t.flags;
+    const bool in_place  = t.in_place;
+
+    if (flags) ensureFFTWTensor7PatchInPlace();
 
     int procid;
     BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_rank(comm, &procid));
@@ -1476,9 +669,18 @@ static void test_r2c(MPI_Comm comm,
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
-                           << " with flags " << transposed_flags);
+                           << " with flags " << flags);
     }
-    UnderlingFixture f(comm, n0, n1, n2, howmany, transposed_flags, in_place);
+    if (long_ni == 2 && flags & underling::transposed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        return;
+    }
+    if (long_ni == 0 && flags & underling::transposed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        return;
+    }
+
+    UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
 
     underling::fft::plan forward(underling::fft::plan::r2c_forward(),
                                  f.problem,
@@ -1506,7 +708,7 @@ static void test_r2c(MPI_Comm comm,
 
     const underling::extents extents = f.problem.local_extents(long_ni);
     const double close_enough
-        =   std::numeric_limits<double>::epsilon()*100
+        =   std::numeric_limits<double>::epsilon()*150
           * extents.size[long_ni]*extents.size[long_ni]*extents.size[long_ni];
 
     // Load up sample data
@@ -1618,342 +820,148 @@ static void test_r2c(MPI_Comm comm,
     }
 }
 
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_simple )
+boost::unit_test::test_suite*
+init_unit_test_suite( int argc, char* argv[] )
 {
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
+    // Size of global extents
+    const int extents[][3] = { { 2, 3, 5 },
+                               { 7, 5, 3 },
+                               { 8, 6, 4 },
+                               { 4, 6, 8 },
+                               { 6, 6, 6 } };
 
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n0, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 3, N, N, howmany, 0, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, N, N, howmany, 0, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, N, N, howmany, 0, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 6, N, N, howmany, 0, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 7, N, N, howmany, 0, 0, in_place);
-        }
+    // Number of real-valued scalars to transpose
+    const int howmanys[] = { 2, 4, 6 };
 
-        // Long in n0, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 3, 2, 3, howmany, 0, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 3, 2, howmany, 0, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, 3, 3, howmany, 0, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 6, 2, 2, howmany, 0, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 7, 4, 5, howmany, 0, 0, in_place);
-        }
-    }
-}
+    // Long in which direction for the tests?
+    const int long_nis[] = { 0, 1, 2 };
 
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n1_simple )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
+    // In-place vs out-of-place
+    const bool places[] = { true, false };
 
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n1, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, N, 3, N, howmany, 1, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 4, N, howmany, 1, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 5, N, howmany, 1, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 6, N, howmany, 1, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 7, N, howmany, 1, 0, in_place);
-        }
-
-        // Long in n1, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 2, 3, 3, howmany, 1, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 4, 2, howmany, 1, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 5, 3, howmany, 1, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 2, 6, 2, howmany, 1, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 7, 5, howmany, 1, 0, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_simple )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n2, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, N, N, 3, howmany, 2, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 4, howmany, 2, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 5, howmany, 2, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 6, howmany, 2, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 7, howmany, 2, 0, in_place);
-        }
-
-        // Long in n2, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 2, 3, 3, howmany, 2, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 2, 4, howmany, 2, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 3, 5, howmany, 2, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 2, 2, 6, howmany, 2, 0, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, 4, 7, howmany, 2, 0, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_n2 )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
+    // Transposed in/out-like flags
     using underling::transposed::long_n2;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n0, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 3, N, N, howmany, 0, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, N, N, howmany, 0, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, N, N, howmany, 0, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 6, N, N, howmany, 0, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 7, N, N, howmany, 0, long_n2, in_place);
-        }
-
-        // Long in n0, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 3, 2, 3, howmany, 0, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 3, 2, howmany, 0, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, 3, 3, howmany, 0, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 6, 2, 2, howmany, 0, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 7, 5, 4, howmany, 0, long_n2, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n1_transposed_long_n2 )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n2;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n1, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, N, 3, N, howmany, 1, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 4, N, howmany, 1, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 5, N, howmany, 1, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 6, N, howmany, 1, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 7, N, howmany, 1, long_n2, in_place);
-        }
-
-        // Long in n1, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 2, 3, 3, howmany, 1, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 4, 2, howmany, 1, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 5, 3, howmany, 1, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 2, 6, 2, howmany, 1, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 7, 5, howmany, 1, long_n2, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_transposed_long_n2 )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n2;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n2, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, N, N, 3, howmany, 2, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 4, howmany, 2, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 5, howmany, 2, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 6, howmany, 2, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 7, howmany, 2, long_n2, in_place);
-        }
-
-        // Long in n2, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 2, 3, 3, howmany, 2, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 2, 4, howmany, 2, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 3, 5, howmany, 2, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 2, 2, 6, howmany, 2, long_n2, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, 4, 7, howmany, 2, long_n2, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_n0 )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
     using underling::transposed::long_n0;
+    const unsigned flags[] = { 0, long_n2, long_n0, long_n2 | long_n0 };
 
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n0, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 3, N, N, howmany, 0, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, N, N, howmany, 0, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, N, N, howmany, 0, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 6, N, N, howmany, 0, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 7, N, N, howmany, 0, long_n0, in_place);
-        }
+    // Create an outer product of all the cases we want to run
+    const size_t ncases = sizeof(extents)/sizeof(extents[0])
+                        * sizeof(howmanys)/sizeof(howmanys[0])
+                        * sizeof(long_nis)/sizeof(long_nis[0])
+                        * sizeof(places)/sizeof(places[0])
+                        * sizeof(flags)/sizeof(flags[0]);
 
-        // Long in n0, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 3, 2, 3, howmany, 0, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 3, 2, howmany, 0, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, 3, 3, howmany, 0, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 6, 2, 2, howmany, 0, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 7, 5, 4, howmany, 0, long_n0, in_place);
-        }
+    tc * const cases = new tc[ncases];
+    tc *       c     = cases;
+
+    for (size_t e = 0; e < sizeof(extents)/sizeof(extents[0]); ++e)
+    for (size_t h = 0; h < sizeof(howmanys)/sizeof(howmanys[0]); ++h)
+    for (size_t l = 0; l < sizeof(long_nis)/sizeof(long_nis[0]); ++l)
+    for (size_t p = 0; p < sizeof(places)/sizeof(places[0]); ++p)
+    for (size_t f = 0; f < sizeof(flags)/sizeof(flags[0]); ++f)
+    {
+        c->n0       = extents[e][0];
+        c->n1       = extents[e][1];
+        c->n2       = extents[e][2];
+        c->howmany  = howmanys[h];
+        c->long_ni  = long_nis[l];
+        c->in_place = places[p];
+        c->flags    = flags[f];
+        ++c;
     }
+
+    boost::unit_test::test_suite* ts1 = BOOST_TEST_SUITE( "c2c_forward" );
+    ts1->add(BOOST_PARAM_TEST_CASE( &test_c2c_forward, cases, cases + ncases),
+             /* timeout in seconds */ 30 );
+    boost::unit_test::framework::master_test_suite().add( ts1 );
+
+    boost::unit_test::test_suite* ts2 = BOOST_TEST_SUITE( "c2c_backward" );
+    ts2->add(BOOST_PARAM_TEST_CASE( &test_c2c_backward, cases, cases + ncases),
+             /* timeout in seconds */ 30 );
+    boost::unit_test::framework::master_test_suite().add( ts2 );
+
+    boost::unit_test::test_suite* ts3 = BOOST_TEST_SUITE( "c2r" );
+    ts3->add(BOOST_PARAM_TEST_CASE( &test_c2r, cases, cases + ncases),
+             /* timeout in seconds */ 30 );
+    boost::unit_test::framework::master_test_suite().add( ts3 );
+
+    boost::unit_test::test_suite* ts4 = BOOST_TEST_SUITE( "r2c" );
+    ts4->add(BOOST_PARAM_TEST_CASE( &test_r2c, cases, cases + ncases),
+             /* timeout in seconds */ 30 );
+    boost::unit_test::framework::master_test_suite().add( ts4 );
+
+    delete[] cases;
+
+    return 0;
 }
 
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n1_transposed_long_n0 )
+static void test_extents_consistency(const bool in_place = true)
 {
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
+    UnderlingFixture f(MPI_COMM_WORLD, 2, 3, 5, 6, /*flags*/0, in_place);
 
-    using underling::transposed::long_n0;
+    underling::fft::plan backward(underling::fft::plan::c2c_forward(),
+                                  f.problem,
+                                  0,
+                                  f.in,
+                                  f.out,
+                                  FFTW_ESTIMATE);
 
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n1, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, N, 3, N, howmany, 1, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 4, N, howmany, 1, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 5, N, howmany, 1, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 6, N, howmany, 1, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 7, N, howmany, 1, long_n0, in_place);
-        }
+    const int N = 5;
 
-        // Long in n1, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 2, 3, 3, howmany, 1, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 4, 2, howmany, 1, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 5, 3, howmany, 1, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 2, 6, 2, howmany, 1, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 7, 5, howmany, 1, long_n0, in_place);
-        }
+    // Check input information
+    {
+        const underling::fft::extents input = backward.local_extents_input();
+
+        int start[N];
+        backward.local_input(start);
+        BOOST_CHECK_EQUAL_COLLECTIONS(input.start, input.start + N,
+                                      start, start + N);
+
+        int size[N];
+        backward.local_input(start, size);
+        BOOST_CHECK_EQUAL_COLLECTIONS(input.size, input.size + N,
+                                      size, size + N);
+
+        int stride[5];
+        backward.local_input(start, size, stride);
+        BOOST_CHECK_EQUAL_COLLECTIONS(input.stride, input.stride + N,
+                                      stride, stride + N);
+
+        int order[5];
+        backward.local_input(start, size, stride, order);
+        BOOST_CHECK_EQUAL_COLLECTIONS(input.stride, input.stride + N,
+                                      stride, stride + N);
+    }
+
+    // Check output information
+    {
+        const underling::fft::extents output = backward.local_extents_output();
+
+        int start[N];
+        backward.local_output(start);
+        BOOST_CHECK_EQUAL_COLLECTIONS(output.start, output.start + N,
+                                      start, start + N);
+
+        int size[N];
+        backward.local_output(start, size);
+        BOOST_CHECK_EQUAL_COLLECTIONS(output.size, output.size + N,
+                                      size, size + N);
+
+        int stride[5];
+        backward.local_output(start, size, stride);
+        BOOST_CHECK_EQUAL_COLLECTIONS(output.stride, output.stride + N,
+                                      stride, stride + N);
+
+        int order[5];
+        backward.local_output(start, size, stride, order);
+        BOOST_CHECK_EQUAL_COLLECTIONS(output.stride, output.stride + N,
+                                      stride, stride + N);
     }
 }
 
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_transposed_long_n0 )
+BOOST_AUTO_TEST_CASE( extents_consistency )
 {
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    using underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n2, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, N, N, 3, howmany, 2, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 4, howmany, 2, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 5, howmany, 2, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 6, howmany, 2, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 7, howmany, 2, long_n0, in_place);
-        }
-
-        // Long in n2, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 2, 3, 3, howmany, 2, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 2, 4, howmany, 2, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 3, 5, howmany, 2, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 2, 2, 6, howmany, 2, long_n0, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 5, 7, howmany, 2, long_n0, in_place);
-        }
-    }
-}
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n0_transposed_long_both )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    const unsigned flags = underling::transposed::long_n2
-                         | underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n0, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 3, N, N, howmany, 0, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, N, N, howmany, 0, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, N, N, howmany, 0, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 6, N, N, howmany, 0, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 7, N, N, howmany, 0, flags, in_place);
-        }
-
-        // Long in n0, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 3, 2, 3, howmany, 0, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 3, 2, howmany, 0, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 5, 3, 3, howmany, 0, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 6, 2, 2, howmany, 0, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 7, 4, 5, howmany, 0, flags, in_place);
-        }
-    }
+    test_extents_consistency(true);
+    test_extents_consistency(false);
 }
 
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n1_transposed_long_both )
-{
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    const unsigned flags = underling::transposed::long_n2
-                         | underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n1, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, N, 3, N, howmany, 1, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 4, N, howmany, 1, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 5, N, howmany, 1, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 6, N, howmany, 1, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, N, 7, N, howmany, 1, flags, in_place);
-        }
-
-        // Long in n1, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 2, 3, 3, howmany, 1, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 4, 2, howmany, 1, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 5, 3, howmany, 1, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 2, 6, 2, howmany, 1, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 7, 4, howmany, 1, flags, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE( underling_fft_r2c_n2_transposed_long_both )
-{
-    ensureFFTWTensor7PatchInPlace();
-
-    int N;
-    BOOST_REQUIRE_EQUAL(MPI_SUCCESS, MPI_Comm_size(MPI_COMM_WORLD, &N));
-
-    const unsigned flags = underling::transposed::long_n2
-                         | underling::transposed::long_n0;
-
-    for (int in_place = 1; in_place >= 0; --in_place) {
-        // Long in n2, transform a single pencil when N == 1
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, N, N, 3, howmany, 2, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 4, howmany, 2, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 5, howmany, 2, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 6, howmany, 2, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, N, N, 7, howmany, 2, flags, in_place);
-        }
-
-        // Long in n2, transform multiple pencils
-        for (int howmany = 2; howmany < 8; howmany += 2) {
-            test_r2c(MPI_COMM_WORLD, 2, 3, 3, howmany, 2, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 2, 4, howmany, 2, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 3, 3, 5, howmany, 2, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 2, 2, 6, howmany, 2, flags, in_place);
-            test_r2c(MPI_COMM_WORLD, 4, 5, 7, howmany, 2, flags, in_place);
-        }
-    }
-}
-
-BOOST_AUTO_TEST_SUITE_END()

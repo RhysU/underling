@@ -26,7 +26,6 @@
 #ifdef HAVE_CONFIG_H
 #include <underling/config.h>
 #endif
-//#define BOOST_TEST_MODULE $Id$
 #include <cstdio>
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/test/included/unit_test.hpp>
@@ -157,7 +156,7 @@ init_unit_test_suite( int argc, char* argv[] )
                                { 8, 8, 8 } };
 
     // Number of scalars to transpose
-    const int howmanys[] = { 1, 2, 3, 4, 5, 7, 11, /* degenerate */ };
+    const int howmanys[] = { 1, 2, 3, 4, 5, 7, 11, /* degenerate */0 };
 
     // In-place vs out-of-place
     const bool places[] = { true, false };
@@ -168,10 +167,10 @@ init_unit_test_suite( int argc, char* argv[] )
     const unsigned flags[] = { 0, long_n2, long_n0, long_n2 | long_n0 };
 
     // Create an outer product of all the cases we want to run
-    const int ncases = sizeof(extents)/sizeof(extents[0])
-                     * sizeof(howmanys)/sizeof(howmanys[0])
-                     * sizeof(places)/sizeof(places[0])
-                     * sizeof(flags)/sizeof(flags[0]);
+    const size_t ncases = sizeof(extents)/sizeof(extents[0])
+                        * sizeof(howmanys)/sizeof(howmanys[0])
+                        * sizeof(places)/sizeof(places[0])
+                        * sizeof(flags)/sizeof(flags[0]);
 
     tc * const cases = new tc[ncases];
     tc *       c     = cases;
@@ -195,7 +194,7 @@ init_unit_test_suite( int argc, char* argv[] )
             BOOST_PARAM_TEST_CASE( &test_round_trip, cases, cases + ncases),
             /* timeout in seconds */ 30 );
 
-    delete cases;
+    delete[] cases;
 
     return 0;
 }
