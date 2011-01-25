@@ -37,20 +37,20 @@
 #include "test_tools.hpp"
 #include "test_underling_tools.hpp"
 
-struct TestFixture : BoostFailErrorHandlerFixture, FFTWMPIParanoiaFixture {};
-
-// Contains UnderlingFixture, FFTWMPIFixture
-#include "test_underling_tools.hpp"
-BOOST_GLOBAL_FIXTURE(FFTWMPIFixture);
-
-BOOST_AUTO_TEST_SUITE(RoundTrip)
-
 // Currently this test focuses on round-trip correctness
 // TODO Test that data which should be long is in fact long
 // TODO Test the provided stride information
 // TODO Test reuse of grids for multiple problems
 // TODO Test reuse of problems on multiple data sets
 // TODO Test unidirectional (i.e. down-only) transforms
+
+// FIXME: Function correctness should not require paranoia fixture (see #1297)
+struct TestCaseFixture
+    : BoostFailErrorHandlerFixture, FFTWMPIParanoiaFixture {};
+
+BOOST_GLOBAL_FIXTURE(FFTWMPIFixture);
+
+BOOST_AUTO_TEST_SUITE(RoundTrip)
 
 static void test_round_trip(MPI_Comm comm,
                             const int n0, const int n1, const int n2,
@@ -138,7 +138,7 @@ static void test_round_trip(MPI_Comm comm,
             boost::make_counting_iterator(procid*10000.0 + long_n[2].extent));
 }
 
-BOOST_FIXTURE_TEST_SUITE( eightbyeightbyeight, TestFixture )
+BOOST_FIXTURE_TEST_SUITE( eightbyeightbyeight, TestCaseFixture )
 
 BOOST_AUTO_TEST_CASE( roundtrip8x8x8 )
 {
@@ -241,7 +241,7 @@ BOOST_AUTO_TEST_CASE( roundtrip8x8x8_degenerate_howmany )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-BOOST_FIXTURE_TEST_SUITE( twobythreebyfive, TestFixture )
+BOOST_FIXTURE_TEST_SUITE( twobythreebyfive, TestCaseFixture )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x5 )
 {
@@ -344,7 +344,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_degenerate_howmany )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-BOOST_FIXTURE_TEST_SUITE( twobythreebyfour, TestFixture )
+BOOST_FIXTURE_TEST_SUITE( twobythreebyfour, TestCaseFixture )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x4 )
 {

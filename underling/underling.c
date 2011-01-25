@@ -1117,9 +1117,6 @@ underling_plan_create(
     // Copy the problem parameters to the problem workspace
     p->in_place = (in == out);
 
-    // Always specify FFTW_DESTROY_INPUT on out-of-place transposes
-    const unsigned other_flags = p->in_place ? 0 : FFTW_DESTROY_INPUT;
-
     // Deadlock debugging logic which can be selectively enabled at runtime
     if (debug_comm != MPI_COMM_NULL) {
         underling_dump_transposes(debug_comm, stdout,
@@ -1129,7 +1126,7 @@ underling_plan_create(
     // Create the requested FFTW MPI plans
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1) {
         p->plan_backwardA = underling_transpose_fftw_plan(
-                problem->backwardA, in, out, rigor_flags | other_flags);
+                problem->backwardA, in, out, rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(p->plan_backwardA == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
@@ -1146,7 +1143,7 @@ underling_plan_create(
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0) {
         p->plan_backwardB = underling_transpose_fftw_plan(
-                problem->backwardB, in, out, rigor_flags | other_flags);
+                problem->backwardB, in, out, rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(p->plan_backwardB == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
@@ -1163,7 +1160,7 @@ underling_plan_create(
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1) {
         p->plan_forwardB = underling_transpose_fftw_plan(
-                problem->forwardB, in, out, rigor_flags | other_flags);
+                problem->forwardB, in, out, rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(p->plan_forwardB == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
@@ -1179,8 +1176,14 @@ underling_plan_create(
     }
 
     if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2) {
+        // Employing FFTW_DESTROY_INPUT on the forwardA transpose will
+        // (deterministically) cause deadlock.  See Redmine ticket #1297.
+        // Certainly a functional error but I have been unable to isolate the
+        // root cause in underling or to reproduce it directly with FFTW.  For
+        // now, we choose functional correctness and a potentially slower
+        // forwardA plan by preserving input for this transpose.
         p->plan_forwardA = underling_transpose_fftw_plan(
-                problem->forwardA, in, out, rigor_flags | other_flags);
+                problem->forwardA, in, out, rigor_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardA == NULL)) {
             underling_plan_destroy(p);
             UNDERLING_ERROR_NULL(
