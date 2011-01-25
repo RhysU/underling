@@ -341,7 +341,7 @@ BOOST_AUTO_TEST_CASE( roundtrip2x3x5_degenerate_howmany )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-BOOST_FIXTURE_TEST_SUITE( twobythreebyfoure, FFTWMPIParanoiaFixture )
+BOOST_FIXTURE_TEST_SUITE( twobythreebyfour, FFTWMPIParanoiaFixture )
 
 BOOST_AUTO_TEST_CASE( roundtrip2x3x4 )
 {
