@@ -137,7 +137,14 @@ static const char doc[]               =
 "SI units like 'Ki' or 'MiB' are also accepted.\n"
 ;
 
-static const char args_doc[] = "WISDOM_FILE\n";
+static const char args_doc[] = "\nWISDOM_FILE";
+
+enum {
+    KEY_ESTIMATE = 1024, // !isascii
+    KEY_MEASURE,
+    KEY_PATIENT,
+    KEY_EXHAUSTIVE
+};
 
 static struct argp_option options[] = {
     {"verbose",     'v', 0,       0, "produce verbose output",       0 },
@@ -152,6 +159,12 @@ static struct argp_option options[] = {
     {0, 0, 0, 0,
      "Controlling parallel decomposition per MPI_Dims_create semantics", 0 },
     {"dims",       'P', "pAxpB",    0, "process grid for decomposition",   0 },
+    {0, 0, 0, 0,
+     "Controlling FFTW planning rigor",     0 },
+    {"estimate",   KEY_ESTIMATE,   0, 0, "plan with FFTW_ESTIMATE", 0},
+    {"measure",    KEY_MEASURE,    0, 0, "plan with FFTW_MEASURE (default)", 0},
+    {"patient",    KEY_PATIENT,    0, 0, "plan with FFTW_PATIENT", 0},
+    {"exhaustive", KEY_EXHAUSTIVE, 0, 0, "plan with FFTW_EXHAUSTIVE", 0},
     { 0, 0, 0, 0,  0, 0 }
 };
 
@@ -183,6 +196,22 @@ parse_opt(int key, char *arg, struct argp_state *state)
             if (state->arg_num > 1) {
                 argp_usage(state);
             }
+            break;
+
+        case KEY_ESTIMATE:
+            d->fftw_rigor_flags = FFTW_ESTIMATE;
+            break;
+
+        case KEY_MEASURE:
+            d->fftw_rigor_flags = FFTW_MEASURE;
+            break;
+
+        case KEY_PATIENT:
+            d->fftw_rigor_flags = FFTW_PATIENT;
+            break;
+
+        case KEY_EXHAUSTIVE:
+            d->fftw_rigor_flags = FFTW_EXHAUSTIVE;
             break;
 
         case 'v':
@@ -310,7 +339,6 @@ int main(int argc, char *argv[])
     d.nthreads         = 0;
     d.nfields          = 1;
     d.howmany          = 2;
-    d.fftw_rigor_flags = FFTW_PATIENT;
 
     // Initialize/finalize MPI with profiling initially disabled
     MPI_Init(&argc, &argv);
