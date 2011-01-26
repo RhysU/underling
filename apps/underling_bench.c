@@ -29,6 +29,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +41,7 @@
 
 #include <mpi.h>
 #include <fftw3.h>
+#include <fftw3-mpi.h>
 #include <underling/error.h>
 #include <underling/underling.h>
 
@@ -64,7 +66,6 @@
 // TODO Allow UNDERLING_TRANSPOSED_LONG_{N2,N0}
 // TODO Allow FFTs in particular directions
 // TODO Allow different transform_flags
-// TODO Allow load, broadcast, gather, save of FFTW wisdom
 // TODO Verify memory contents after all transposes complete
 
 //****************************************************************
@@ -88,6 +89,7 @@ struct details {
     unsigned transposed_flags;
     unsigned transform_flags;
     unsigned fftw_rigor_flags;
+    char *wisdom_file;
 };
 
 //*************************************************************
@@ -126,13 +128,16 @@ static const char doc[]               =
 "\v"
 "Transform parallel, 3D pencil decompositions using underling's data"
 "movement capabilities.  Timing information is collected "
-"over one or more iterations.\n"
+"over one or more iterations.  If provided, FFTW wisdom is imported from "
+"and accumulated within WISDOM_FILE.\n"
 "\n"
 "Options taking a 'bytes' parameter can be given common byte-related "
 "units.  For example --field-memory=5G indicates that approximately "
 "5 gigabytes of memory should be used on each rank to store field data. "
 "SI units like 'Ki' or 'MiB' are also accepted.\n"
 ;
+
+static const char args_doc[] = "WISDOM_FILE\n";
 
 static struct argp_option options[] = {
     {"verbose",     'v', 0,       0, "produce verbose output",       0 },
@@ -146,7 +151,7 @@ static struct argp_option options[] = {
     {"field-global", 'F', "n0xn1xn2", 0, "field global extents",  0 },
     {0, 0, 0, 0,
      "Controlling parallel decomposition per MPI_Dims_create semantics", 0 },
-    {"dims",       'P', "pAxpB",    0, "plane parallel decomposition",   0 },
+    {"dims",       'P', "pAxpB",    0, "process grid for decomposition",   0 },
     { 0, 0, 0, 0,  0, 0 }
 };
 
@@ -166,11 +171,16 @@ parse_opt(int key, char *arg, struct argp_state *state)
 
     switch (key) {
         case ARGP_KEY_ARG:
-            argp_usage(state);
+            if (state->arg_num > 0) {
+                argp_usage(state);
+            } else {
+                d->wisdom_file = strdup(arg);
+                assert(d->wisdom_file);
+            }
             break;
 
         case ARGP_KEY_END:
-            if (state->arg_num > 0) {
+            if (state->arg_num > 1) {
                 argp_usage(state);
             }
             break;
@@ -282,7 +292,7 @@ parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 static struct argp argp = {
-    options, parse_opt, "", doc,
+    options, parse_opt, args_doc, doc,
     0 /*children*/, 0 /*help_filter*/, 0 /*argp_domain*/
 };
 
@@ -337,6 +347,20 @@ int main(int argc, char *argv[])
     }
     fprintf(rankout, "\n");
 
+    // If available, load wisdom from disk on rank 0 and broadcast it
+    if (d.wisdom_file && d.world_rank == 0) {
+        FILE *w = fopen(d.wisdom_file, "r");
+        if (w) {
+            fprintf(rankout, "Loading wisdom from file %s\n", d.wisdom_file);
+            fftw_import_wisdom_from_file(w);
+            fclose(w);
+        } else {
+            fprintf(rankout, "WARNING: Unable to open file %s: %s\n",
+                    d.wisdom_file, strerror(errno));
+        }
+    }
+    fftw_mpi_broadcast_wisdom(MPI_COMM_WORLD);
+
     // If necessary, compute global grid size from per-rank memory constraint
     if (d.bytes) {
         const double nvectors = (d.bytes * d.world_size)
@@ -368,11 +392,11 @@ int main(int argc, char *argv[])
     fprintf(rankout,
         "\n"
         "Global pencil decomposition details (for transposed_flags == 0)\n"
-        "---------------------------------------------------------------\n"
-        "Long in n2:                                       (%1$6d/%5$6d x %2$6d/%4$6d) x %3$6d\n"
-        "Long in n1: %3$6d/%4$6d x (%1$6d/%5$6d x %2$6d) = (%3$6d/%4$6d x %1$6d/%5$6d) x %2$6d\n"
-        "Long in n0: %2$6d/%5$6d x (%3$6d/%4$6d x %1$6d) = (%2$6d/%5$6d x %3$6d/%4$6d) x %1$6d\n"
-        "---------------------------------------------------------------\n"
+        "------------------------------------------------------------------------------\n"
+        "Long n2:                                     (%1$5d/%5$4d x %2$5d/%4$4d) x %3$5d\n"
+        "Long n1: %3$5d/%4$4d x (%1$5d/%5$4d x %2$5d) = (%3$5d/%4$4d x %1$5d/%5$4d) x %2$5d\n"
+        "Long n0: %2$5d/%5$4d x (%3$5d/%4$4d x %1$5d) = (%2$5d/%5$4d x %3$5d/%4$4d) x %1$5d\n"
+        "------------------------------------------------------------------------------\n"
         "\n", d.n0, d.n1, d.n2, d.pA, d.pB);
 
     // Initialize underling_problem and find per-field memory requirements
@@ -386,25 +410,25 @@ int main(int argc, char *argv[])
         double coeff;
         const char *units;
 
-        to_human_readable_byte_count(
-                underling_global_memory_optimum(grid, problem), 0, &coeff, &units);
+        to_human_readable_byte_count(underling_global_memory_optimum(
+                    grid, problem) * sizeof(underling_real), 0, &coeff, &units);
         fprintf(rankout, "Optimum global, per-field memory is %.4f %s\n",
                 coeff, units);
-        to_human_readable_byte_count(
-                underling_global_memory(grid, problem), 0, &coeff, &units);
-        fprintf(rankout, "Actual global, per-field memory is %.4f %s\n",
+        to_human_readable_byte_count(underling_global_memory(grid, problem)
+                * sizeof(underling_real), 0, &coeff, &units);
+        fprintf(rankout, "Actual global,  per-field memory is %.4f %s\n",
                 coeff, units);
 
-        to_human_readable_byte_count(
-                underling_local_memory_optimum(problem), 0, &coeff, &units);
+        to_human_readable_byte_count(underling_local_memory_optimum(problem)
+                * sizeof(underling_real), 0, &coeff, &units);
         fprintf(rankout, "Optimum per-rank, per-field memory is %.4f %s\n",
                 coeff, units);
-        to_human_readable_byte_count(
-                underling_local_memory_minimum(grid, problem), 0, &coeff, &units);
+        to_human_readable_byte_count(underling_local_memory_minimum(
+                grid, problem) * sizeof(underling_real), 0, &coeff, &units);
         fprintf(rankout, "Minimum per-rank, per-field memory is %.4f %s\n",
                 coeff, units);
-        to_human_readable_byte_count(
-                underling_local_memory_maximum(grid, problem), 0, &coeff, &units);
+        to_human_readable_byte_count(underling_local_memory_maximum(
+                grid, problem) * sizeof(underling_real), 0, &coeff, &units);
         fprintf(rankout, "Maximum per-rank, per-field memory is %.4f %s\n",
                 coeff, units);
     }
@@ -412,7 +436,8 @@ int main(int argc, char *argv[])
     // Allocate memory for each field plus one additional scratch buffer
     underling_real *f[d.nfields + 1]; // C99
     for (int i = 0; i < d.nfields + 1; ++i) {
-        f[i] = (underling_real *) malloc_and_fill(&d, local_memory, i);
+        f[i] = (underling_real *) malloc_and_fill(
+                &d, local_memory * sizeof(underling_real), i);
         assert(f[i]);
     }
 
@@ -425,7 +450,9 @@ int main(int argc, char *argv[])
     underling_plan plan = underling_plan_create(
             problem, f[0], f[1], d.transform_flags, d.fftw_rigor_flags);
     GRVY_TIMER_END("underling_plan_create");
-    fprintf(rankout, "...underling_plan_create returned.\n");
+    fprintf(rankout, "...underling_plan_create returned (on rank 0):\n");
+    underling_fprint_plan(plan, rankout);
+    fprintf(rankout, "\n");
 
     fprintf(rankout, "Beginning benchmark main loop...\n");
     const double start = MPI_Wtime();
@@ -472,7 +499,7 @@ int main(int argc, char *argv[])
 
     const double elapsed = end - start;
     const double mean = elapsed / d.repeat;
-    fprintf(rankout, "Mean time across %d iteration(s) was %8.6f seconds\n",
+    fprintf(rankout, "Mean time across %d iteration(s) was %8.6g seconds\n",
             d.repeat, mean);
 
     // TODO Get timing information back from multiple ranks
@@ -488,6 +515,20 @@ int main(int argc, char *argv[])
     underling_plan_destroy(plan);
     underling_problem_destroy(problem);
     underling_grid_destroy(grid);
+
+    // If available, gather wisdom and then write to disk on rank 0
+    fftw_mpi_gather_wisdom(MPI_COMM_WORLD);
+    if (d.wisdom_file && d.world_rank == 0) {
+        FILE *w = fopen(d.wisdom_file, "w+");
+        if (w) {
+            fprintf(rankout, "Saving wisdom to file %s\n", d.wisdom_file);
+            fftw_export_wisdom_to_file(w);
+            fclose(w);
+        } else {
+            fprintf(rankout, "WARNING: Unable to open file %s: %s\n",
+                    d.wisdom_file, strerror(errno));
+        }
+    }
 
     // Finalizing of MPI, FFTW, underling handled by atexit()
 

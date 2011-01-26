@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CFLAGS       =
+AM_CFLAGS       = $(GRVY_CFLAGS) $(FFTW3_THREADS_CFLAGS)
 AM_CPPFLAGS     = -I$(top_builddir)/gnulib -I$(top_srcdir)/gnulib
 AM_CPPFLAGS    += -I$(top_builddir)        -I$(top_srcdir)
 AM_LDFLAGS      = # Append below
@@ -15,13 +15,9 @@ EXTRA_DIST      = # Append below
 # Use MPI compiler wrappers
 CC=@MPICC@
 
-## Pick up GRVY library includes
-AM_CFLAGS  += $(GRVY_CFLAGS)
-
 ## C-based benchmarking tool
 bin_PROGRAMS             += underling_bench
 underling_bench_SOURCES   = underling_bench.c mpi_argp.c
-underling_bench_CPPFLAGS  = $(AM_CPPFLAGS) $(FFTW_THREADS_CFLAGS)
 underling_bench_LDADD     = ../underling/libunderling.la
 underling_bench_LDADD    += ../gnulib/libgnu.la $(LTLIBINTL)
 underling_bench_LDADD    += $(FFTW3_MPI_THREADS_LIBS)
