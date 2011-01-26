@@ -62,7 +62,6 @@
 #define GRVY_TIMER_SUMMARIZE()
 #endif
 
-// TODO Allow in-place transpose profiling
 // TODO Allow UNDERLING_TRANSPOSED_LONG_{N2,N0}
 // TODO Allow FFTs in particular directions
 // TODO Allow different transform_flags
@@ -90,6 +89,7 @@ struct details {
     unsigned transform_flags;
     unsigned fftw_rigor_flags;
     char *wisdom_file;
+    int inplace;
 };
 
 //*************************************************************
@@ -152,6 +152,7 @@ static struct argp_option options[] = {
     {"nthreads",    't', "count", 0, "number of concurrent threads", 0 },
     {"nfields",     'n', "count", 0, "number of independent fields", 0 },
     {"howmany",     'h', "count", 0, "howmany components per field", 0 },
+    {"in-place",    'i', 0,       0, "perform in-place transposes",  0 },
     {0, 0, 0, 0,
      "Controlling global problem size (specify at most one)",     0 },
     {"field-memory", 'f', "bytes",    0, "per-rank field memory", 0 },
@@ -212,6 +213,10 @@ parse_opt(int key, char *arg, struct argp_state *state)
 
         case KEY_EXHAUSTIVE:
             d->fftw_rigor_flags = FFTW_EXHAUSTIVE;
+            break;
+
+        case 'i':
+            d->inplace = 1;
             break;
 
         case 'v':
@@ -461,9 +466,19 @@ int main(int argc, char *argv[])
                 coeff, units);
     }
 
-    // Allocate memory for each field plus one additional scratch buffer
-    underling_real *f[d.nfields + 1]; // C99
-    for (int i = 0; i < d.nfields + 1; ++i) {
+    // Adjust for in-place operation
+    int off;
+    if (d.inplace) {
+        fprintf(rankout, "Performing operations in-place\n");
+        off = 0;
+    } else {
+        fprintf(rankout, "Performing operations out-of-place\n");
+        off = 1;
+    }
+
+    // Allocate memory for each field plus one optional scratch buffer
+    underling_real *f[d.nfields + off]; // C99
+    for (int i = 0; i < d.nfields + off; ++i) {
         f[i] = (underling_real *) malloc_and_fill(
                 &d, local_memory * sizeof(underling_real), i);
         assert(f[i]);
@@ -476,7 +491,7 @@ int main(int argc, char *argv[])
     fprintf(rankout, "Invoking underling_plan_create...\n");
     GRVY_TIMER_BEGIN("underling_plan_create");
     underling_plan plan = underling_plan_create(
-            problem, f[0], f[1], d.transform_flags, d.fftw_rigor_flags);
+            problem, f[0], f[off], d.transform_flags, d.fftw_rigor_flags);
     GRVY_TIMER_END("underling_plan_create");
     fprintf(rankout, "...underling_plan_create returned (on rank 0):\n");
     underling_fprint_plan(plan, rankout);
@@ -491,34 +506,38 @@ int main(int argc, char *argv[])
 
         for (int j = d.nfields-1; j >= 0; --j) {
             GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
-            underling_execute_long_n2_to_long_n1(plan, f[j], f[j+1]);
+            underling_execute_long_n2_to_long_n1(plan, f[j], f[j+off]);
             GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
         }
 
+        // For out-of-place,
         // Fields pointed to by f[1..(d.nfields)] are now long n1
 
         for (int j = 0; j < d.nfields; ++j) {
             GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
-            underling_execute_long_n1_to_long_n0(plan, f[j+1], f[j]);
+            underling_execute_long_n1_to_long_n0(plan, f[j+off], f[j]);
             GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
         }
 
+        // For out-of-place,
         // Fields pointed to by f[0..(d.nfields-1)] are now long n0
 
         for (int j = d.nfields-1; j >= 0; --j) {
             GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
-            underling_execute_long_n0_to_long_n1(plan, f[j], f[j+1]);
+            underling_execute_long_n0_to_long_n1(plan, f[j], f[j+off]);
             GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
         }
 
+        // For out-of-place,
         // Fields pointed to by f[1..(d.nfields)] are now long n1
 
         for (int j = 0; j < d.nfields; ++j) {
             GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
-            underling_execute_long_n1_to_long_n2(plan, f[j+1], f[j]);
+            underling_execute_long_n1_to_long_n2(plan, f[j+off], f[j]);
             GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
         }
 
+        // For out-of-place,
         // Fields pointed to by f[0..(d.nfields-1)] are now long n2
     }
     const double end = MPI_Wtime();
@@ -533,8 +552,8 @@ int main(int argc, char *argv[])
     // TODO Get timing information back from multiple ranks
     if (d.world_rank == 0) GRVY_TIMER_SUMMARIZE();
 
-    // Deallocate memory for each field plus one additional scratch buffer
-    for (int i = 0; i < d.nfields + 1; ++i) {
+    // Deallocate memory for each field plus one possible scratch buffer
+    for (int i = 0; i < d.nfields + off; ++i) {
         fftw_free(f[i]);
         f[i] = NULL;
     }
