@@ -452,7 +452,7 @@ underling_grid_create(
     assert(pA_ndigits > 0);
     assert(pB_ndigits > 0);
     snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
-            "uGComm%0*dx%0*d", pA_ndigits, g->pA, pB_ndigits, g->pB);
+            "uGComm%0*dx%0*d", pA_ndigits, pA_rank, pB_ndigits, pB_rank);
     if ((error = MPI_Comm_set_name(g->g_comm, buffer))) {
         underling_grid_destroy(g);
         UNDERLING_MPICHKN(error);
