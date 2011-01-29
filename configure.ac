@@ -85,9 +85,16 @@ if test "x$ax_fftw3_found_mpi" != "xyes"; then
 fi
 AC_LANG_POP([C])
 AC_CACHE_SAVE
+dnl Boost is only required to build test cases
 AC_LANG_PUSH([C++])
-BOOST_REQUIRE([1.39])
-BOOST_TEST
+have_boost="yes"
+BOOST_REQUIRE([1.39],[have_boost="no"])
+if test "$have_boost" = "yes"; then
+    BOOST_TEST
+else
+    AC_MSG_WARN([Boost.Test not usable so unit tests will not be built])
+fi
+AM_CONDITIONAL([BUILD_TESTS], [test "$have_boost" = yes])
 AC_LANG_POP([C++])
 AC_CACHE_SAVE
 

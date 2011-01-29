@@ -4,7 +4,10 @@ ACLOCAL_AMFLAGS = -I m4
 AUTOMAKE_OPTIONS = foreign
 
 # Build in these directories:
-SUBDIRS = gnulib underling examples apps tests doxygen
+if BUILD_TESTS
+    MAYBE_TESTS = tests
+endif
+SUBDIRS = gnulib underling examples apps $(MAYBE_TESTS) doxygen
 
 # Distribute these items:
 DIST_SUBDIRS = gnulib underling examples tests apps doxygen
