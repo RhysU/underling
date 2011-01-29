@@ -48,4 +48,12 @@ Provides hint to the compiler to optimize for the expression being false.
  */
 #define UNDERLING_UNUSED(variable) do {(void)(variable);} while (0)
 
+/* The MPI standard uses MPI_MAX_OBJECT_NAME for MPI_Comm_get_name, etc.  */
+#ifndef MPI_MAX_OBJECT_NAME
+/* mpvapich only provides MPI_MAX_NAME_STRING */
+#ifdef MPI_MAX_NAME_STRING
+#define MPI_MAX_OBJECT_NAME MPI_MAX_NAME_STRING
+#endif /* MPI_MAX_NAME_STRING */
+#endif /* MPI_MAX_OBJECT_NAME */
+
 #endif // __UNDERLING_COMMON_H
