@@ -33,7 +33,7 @@ AC_CACHE_SAVE
 dnl ------------------------------------------------------
 dnl Check for MPI-ready C/C++ compiler toolchain
 dnl ------------------------------------------------------
-AX_CHECK_ENABLE_DEBUG
+AX_CHECK_ENABLE_DEBUG([info])
 AC_LANG_PUSH([C])
 AC_PROG_CC
 gl_EARLY
