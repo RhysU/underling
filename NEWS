@@ -1,4 +1,26 @@
-What's new in underling 0.0.1
-------------------------
+What's new in underling 0.2.0
+-----------------------------
 
-Release contents TBD
+Updates to support and take advantage of FFTW 3.3-beta1:
+
+    * FFTW_DESTROY_INPUT now used on out-of-place transposes which allows
+      greater plan search space and potentially faster execution.  Was
+      not used in 0.1.0 due to FFTW 3.3alpha1 deadlock problems.
+
+    * Use MPI new array execute interface appearing in 3.3-beta1.
+
+Added new UNDERLING_TRANSPOSE_NONE flag when parallel decomposition is of
+interest but one does not want to plan any transposes.
+
+Static libraries built by default (when possible).
+
+Libtool libraries now contain FFTW prerequisites and utilities are installed
+with appropriate RPATH information.
+
+Pulled in newest gnulib updates.
+
+
+What's new in underling 0.1.0
+-----------------------------
+
+Initial internal release atop FFTW 3.3alpha1
