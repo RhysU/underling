@@ -46,11 +46,13 @@
 // Quasi-hidden flag used for debugging deadlock conditions
 static TLS MPI_Comm debug_comm = MPI_COMM_NULL;
 
-// Employing FFTW_DESTROY_INPUT during transpose planning and/or execution
-// seems to cause deadlock.  See Redmine ticket #1297 for full details.
-// Certainly a functional error but I have been unable to isolate the root
-// cause in underling or to reproduce it directly with FFTW.
-static const int destroy_flags = 0; // Should be FFTW_DESTROY_INPUT!
+// Employing FFTW_DESTROY_INPUT for transpose planning and/or execution can
+// deadlock prior to 3.3-beta1.  See Redmine ticket #1297 for full details.
+#ifdef HAVE_FFTW33_BETA1_OR_LATER
+static const int destroy_flags = FFTW_DESTROY_INPUT;
+#else
+static const int destroy_flags = 0;
+#endif
 
 // TODO Document internal structures
 
@@ -1327,7 +1329,11 @@ underling_execute_long_n2_to_long_n1(
         UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
     }
 
+#ifdef HAVE_FFTW33_BETA1_OR_LATER
+    fftw_mpi_execute_r2r(plan->plan_backwardA, in, out);
+#else
     fftw_execute_r2r(plan->plan_backwardA, in, out);
+#endif
 
     return UNDERLING_SUCCESS;
 }
@@ -1360,7 +1366,11 @@ underling_execute_long_n1_to_long_n0(
         UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
     }
 
+#ifdef HAVE_FFTW33_BETA1_OR_LATER
+    fftw_mpi_execute_r2r(plan->plan_backwardB, in, out);
+#else
     fftw_execute_r2r(plan->plan_backwardB, in, out);
+#endif
 
     return UNDERLING_SUCCESS;
 }
@@ -1393,7 +1403,11 @@ underling_execute_long_n0_to_long_n1(
         UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
     }
 
+#ifdef HAVE_FFTW33_BETA1_OR_LATER
+    fftw_mpi_execute_r2r(plan->plan_forwardB, in, out);
+#else
     fftw_execute_r2r(plan->plan_forwardB, in, out);
+#endif
 
     return UNDERLING_SUCCESS;
 }
@@ -1426,7 +1440,11 @@ underling_execute_long_n1_to_long_n2(
         UNDERLING_ERROR("out-of-place plan but in == out", UNDERLING_EINVAL);
     }
 
+#ifdef HAVE_FFTW33_BETA1_OR_LATER
+    fftw_mpi_execute_r2r(plan->plan_forwardA, in, out);
+#else
     fftw_execute_r2r(plan->plan_forwardA, in, out);
+#endif
 
     return UNDERLING_SUCCESS;
 }
