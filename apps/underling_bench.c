@@ -126,7 +126,7 @@ const char *argp_program_bug_address  = PACKAGE_BUGREPORT;
 static const char doc[]               =
 "Simulate and benchmark underling-based application transformation operations."
 "\v"
-"Transform parallel, 3D pencil decompositions using underling's data"
+"Transform parallel, 3D pencil decompositions using underling's data "
 "movement capabilities.  Timing information is collected "
 "over one or more iterations.  If provided, FFTW wisdom is imported from "
 "and accumulated within WISDOM_FILE.\n"
