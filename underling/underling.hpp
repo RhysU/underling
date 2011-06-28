@@ -62,7 +62,10 @@ namespace transpose {
         long_n1_to_long_n2 = UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2,
 
         /** @see UNDERLING_TRANSPOSE_ALL */
-        all                =  UNDERLING_TRANSPOSE_ALL
+        all                =  UNDERLING_TRANSPOSE_ALL,
+
+        /** @see UNDERLING_TRANSPOSE_NONE */
+        none               =  UNDERLING_TRANSPOSE_NONE
 
     };
 

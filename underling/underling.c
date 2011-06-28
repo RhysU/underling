@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// underling 0.1.1: underling library for parallel, 3D pencil decompositions
+// underling 0.2.0: underling library for parallel, 3D pencil decompositions
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
@@ -1176,7 +1176,8 @@ underling_plan_create(
     if (UNDERLING_UNLIKELY(out == NULL)) {
         UNDERLING_ERROR_NULL("out == NULL", UNDERLING_EINVAL);
     }
-    if (UNDERLING_UNLIKELY(transform_flags & ~UNDERLING_TRANSPOSE_ALL)) {
+    if (UNDERLING_UNLIKELY(transform_flags
+                & ~(UNDERLING_TRANSPOSE_ALL | UNDERLING_TRANSPOSE_NONE))) {
         UNDERLING_ERROR_NULL(
             "transform_flags contains non-direction bit", UNDERLING_EINVAL);
     }
@@ -1193,6 +1194,10 @@ underling_plan_create(
     // Be ready to execute all transforms if trivial flag provided
     if (transform_flags == 0) {
         transform_flags = UNDERLING_TRANSPOSE_ALL;
+    }
+    // Disable all transpose directions whenever transpose none is set
+    if (transform_flags & UNDERLING_TRANSPOSE_NONE) {
+        transform_flags &= ~UNDERLING_TRANSPOSE_ALL;
     }
 
     // Create and initialize the plan workspace

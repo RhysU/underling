@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// underling 0.1.1: underling library for parallel, 3D pencil decompositions
+// underling 0.2.0: underling library for parallel, 3D pencil decompositions
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010 The PECOS Development Team
@@ -240,6 +240,21 @@ underling_extents_cmp(const underling_extents * const e1,
  *      details on the associated storage order.
  */
 #define UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 (1U << 3)
+
+/**
+ * Flag indicating that no transposes will be performed.  Useful when pencil
+ * decomposition details are of interest but one does not need to execute any
+ * transposes.  Parallel decomposition and stride order details will be
+ * available though memory requirements will not be.
+ *
+ * When present, this flag \em overrides and \em disables all of
+ * UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1,
+ * UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0,
+ * UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1, and
+ * UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2.
+ *
+ */
+#define UNDERLING_TRANSPOSE_NONE (1U << 4)
 
 /** Convenience flag indicating all transform directions */
 #define UNDERLING_TRANSPOSE_ALL \
@@ -568,9 +583,12 @@ underling_global_memory_optimum(
  *  - UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1
  *  - UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2
  *  - UNDERLING_TRANSPOSE_ALL
+ *  - UNDERLING_TRANSPOSE_NONE
  *
  * It is an error to execute a transpose when the corresponding flag was
- * not provided to this method.
+ * not provided to this method.  It is an error to execute any transpose
+ * when UNDERLING_TRANSPOSE_NONE is provided to this method (though
+ * decomposition information can still be obtained in this case).
  *
  * Planning cost may be modified using \c fftw_rigor_flags.  It must
  * be one of the following:
