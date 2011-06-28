@@ -1,7 +1,7 @@
 dnl ----------------------------------------------------
 dnl Package name, release number, description, and URL
 dnl ----------------------------------------------------
-AC_INIT([underling], [0.2.0], [rhys@ices.utexas.edu])
+AC_INIT([underling], [0.2.1], [rhys@ices.utexas.edu])
 AC_REVISION([$Id$])
 PACKAGE_DESCRIPTION="underling library for parallel, 3D pencil decompositions"
 AC_SUBST([PACKAGE_DESCRIPTION])
