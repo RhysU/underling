@@ -486,10 +486,10 @@ int main(int argc, char *argv[])
 
     // Create the transpose plan, timing only if no wisdom was available
     fprintf(rankout, "Invoking underling_plan_create...\n");
-    if (d.wisdom_file) GRVY_TIMER_BEGIN("underling_plan_create");
+    if (d.wisdom_file) { GRVY_TIMER_BEGIN("underling_plan_create"); }
     underling_plan plan = underling_plan_create(
             problem, f[0], f[off], d.transform_flags, d.fftw_rigor_flags);
-    if (d.wisdom_file) GRVY_TIMER_END("underling_plan_create");
+    if (d.wisdom_file) { GRVY_TIMER_END("underling_plan_create"); }
     fprintf(rankout, "...underling_plan_create returned (on rank 0):\n");
     underling_fprint_plan(plan, rankout);
     fprintf(rankout, "\n");
@@ -547,7 +547,7 @@ int main(int argc, char *argv[])
             d.repeat, mean);
 
     // TODO Get timing information back from multiple ranks
-    if (d.world_rank == 0) GRVY_TIMER_SUMMARIZE();
+    if (d.world_rank == 0) { GRVY_TIMER_SUMMARIZE(); }
 
     // Deallocate memory for each field plus one possible scratch buffer
     for (int i = 0; i < d.nfields + off; ++i) {
