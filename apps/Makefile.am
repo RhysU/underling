@@ -20,7 +20,6 @@ bin_PROGRAMS             += underling_bench
 underling_bench_SOURCES   = underling_bench.c mpi_argp.c
 underling_bench_LDADD     = ../underling/libunderling.la
 underling_bench_LDADD    += ../gnulib/libgnu.la $(LTLIBINTL)
-underling_bench_LDADD    += $(FFTW3_MPI_THREADS_LIBS)
 underling_bench_LDADD    += $(GRVY_LIBS)
 
 # Additional files to clean
