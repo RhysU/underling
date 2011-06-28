@@ -713,7 +713,7 @@ static void* malloc_and_fill(struct details *d,
         double coeff;
         const char *units;
         to_human_readable_byte_count(bytes, 0, &coeff, &units);
-        fprintf(stderr, "Unable to malloc %.2f %s bytes on rank %d\n",
+        fprintf(stderr, "Unable to malloc %.2f %s on rank %d\n",
                 coeff, units, d->world_rank);
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
