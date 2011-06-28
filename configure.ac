@@ -83,12 +83,15 @@ AX_FFTW3()
 if test "x$ax_fftw3_found_mpi" != "xyes"; then
     AC_MSG_ERROR([FFTW3 installation with MPI support not detected.])
 fi
-AC_CHECK_LIB([],[fftw_mpi_execute_dft],[
+saved_CC=$CC
+CC=$MPICC
+AC_CHECK_LIB([fftw3_mpi],[fftw_mpi_execute_dft],[
         AC_DEFINE([HAVE_FFTW33_BETA1_OR_LATER],
                   [1], [Are we building against 3.3-beta1 or later?])
     ],[
        AC_MSG_WARN([FFTW 3.3-beta1 or later was not detected and is strongly recommended!])
     ],[$FFTW3_MPI_THREADS_LIBS])
+CC=$saved_CC
 AC_LANG_POP([C])
 AC_CACHE_SAVE
 dnl Boost is only required to build test cases
