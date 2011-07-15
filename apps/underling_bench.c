@@ -144,7 +144,8 @@ enum {
     KEY_ESTIMATE = 1024, // !isascii
     KEY_MEASURE,
     KEY_PATIENT,
-    KEY_EXHAUSTIVE
+    KEY_EXHAUSTIVE,
+    KEY_WISDOM_ONLY
 };
 
 static struct argp_option options[] = {
@@ -162,13 +163,14 @@ static struct argp_option options[] = {
      "Controlling parallel decomposition per MPI_Dims_create semantics", 0 },
     {"dims",       'P', "pAxpB",    0, "process grid for decomposition", 0 },
     {0, 0, 0, 0,
-     "Controlling FFTW planning rigor",                                      0},
-    {"estimate",   KEY_ESTIMATE,   0, 0, "plan with FFTW_ESTIMATE",          0},
-    {"measure",    KEY_MEASURE,    0, 0, "plan with FFTW_MEASURE (default)", 0},
-    {"patient",    KEY_PATIENT,    0, 0, "plan with FFTW_PATIENT",           0},
-    {"exhaustive", KEY_EXHAUSTIVE, 0, 0, "plan with FFTW_EXHAUSTIVE",        0},
-    {"timeout",    'T',    "seconds", 0, "use fftw_set_timelimit(seconds)",  0},
-    { 0, 0, 0, 0,  0, 0 }
+     "Controlling FFTW planning rigor", 0},
+    {"estimate",    KEY_ESTIMATE,    0, 0, "plan with FFTW_ESTIMATE", 0},
+    {"measure",     KEY_MEASURE,     0, 0, "plan with FFTW_MEASURE (default)", 0},
+    {"patient",     KEY_PATIENT,     0, 0, "plan with FFTW_PATIENT", 0},
+    {"exhaustive",  KEY_EXHAUSTIVE,  0, 0, "plan with FFTW_EXHAUSTIVE", 0},
+    {"wisdom-only", KEY_WISDOM_ONLY, 0, 0, "plan with FFTW_WISDOM_ONLY", 0},
+    {"timeout",    'T', "seconds", 0, "use fftw_set_timelimit(seconds)", 0},
+    { 0, 0, 0, 0, 0, 0 }
 };
 
 // Parse a single option following Argp semantics
@@ -215,6 +217,10 @@ parse_opt(int key, char *arg, struct argp_state *state)
 
         case KEY_EXHAUSTIVE:
             d->fftw_rigor_flags = FFTW_EXHAUSTIVE;
+            break;
+
+        case KEY_WISDOM_ONLY:
+            d->fftw_rigor_flags = FFTW_WISDOM_ONLY;
             break;
 
         case 'T':
