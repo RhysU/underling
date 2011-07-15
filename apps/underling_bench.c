@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
+#include <sys/file.h>
 #include <unistd.h>
 
 #include "argp.h"
@@ -381,11 +382,20 @@ int main(int argc, char *argv[])
     fprintf(rankout, "\n");
 
     // If available, load wisdom from disk on rank 0 and broadcast it
+    // Attempt advisory locking to reduce processes stepping on each other
     if (d.wisdom_file && d.world_rank == 0) {
         FILE *w = fopen(d.wisdom_file, "r");
         if (w) {
             fprintf(rankout, "Loading wisdom from file %s\n", d.wisdom_file);
+            if (flock(fileno(w), LOCK_SH)) {
+                fprintf(rankout, "WARNING: LOCK_SH failed on wisdom file: %s\n",
+                        strerror(errno));
+            }
             fftw_import_wisdom_from_file(w);
+            if (flock(fileno(w), LOCK_UN)) {
+                fprintf(rankout, "WARNING: LOCK_UN failed on wisdom file: %s\n",
+                        strerror(errno));
+            }
             fclose(w);
         } else {
             fprintf(rankout, "WARNING: Unable to open file %s: %s\n",
@@ -561,12 +571,21 @@ int main(int argc, char *argv[])
     underling_grid_destroy(grid);
 
     // If available, gather wisdom and then write to disk on rank 0
+    // Attempt advisory locking to reduce processes stepping on each other
     fftw_mpi_gather_wisdom(MPI_COMM_WORLD);
     if (d.wisdom_file && d.world_rank == 0) {
         FILE *w = fopen(d.wisdom_file, "w+");
         if (w) {
             fprintf(rankout, "Saving wisdom to file %s\n", d.wisdom_file);
+            if (flock(fileno(w), LOCK_EX)) {
+                fprintf(rankout, "WARNING: LOCK_EX failed on wisdom file: %s\n",
+                        strerror(errno));
+            }
             fftw_export_wisdom_to_file(w);
+            if (flock(fileno(w), LOCK_UN)) {
+                fprintf(rankout, "WARNING: LOCK_UN failed on wisdom file: %s\n",
+                        strerror(errno));
+            }
             fclose(w);
         } else {
             fprintf(rankout, "WARNING: Unable to open file %s: %s\n",
