@@ -28,9 +28,7 @@ AC_DEFUN([gl_EARLY],
   AC_REQUIRE([AC_PROG_RANLIB])
   # Code from module alloca:
   # Code from module alloca-opt:
-  # Code from module arg-nonnull:
   # Code from module argp:
-  # Code from module c++defs:
   # Code from module dirname-lgpl:
   # Code from module dosname:
   # Code from module double-slash-root:
@@ -51,6 +49,10 @@ AC_DEFUN([gl_EARLY],
   # Code from module rawmemchr:
   # Code from module size_max:
   # Code from module sleep:
+  # Code from module snippet/_Noreturn:
+  # Code from module snippet/arg-nonnull:
+  # Code from module snippet/c++defs:
+  # Code from module snippet/warn-on-use:
   # Code from module stdbool:
   # Code from module stddef:
   # Code from module stdint:
@@ -67,7 +69,6 @@ AC_DEFUN([gl_EARLY],
   # Code from module vasnprintf:
   # Code from module verify:
   # Code from module vsnprintf:
-  # Code from module warn-on-use:
   # Code from module wchar:
   # Code from module xsize:
 ])
@@ -330,9 +331,10 @@ AC_DEFUN([gltests_LIBSOURCES], [
 # This macro records the list of files which have been installed by
 # gnulib-tool and may be removed by future gnulib-tool invocations.
 AC_DEFUN([gl_FILE_LIST], [
-  build-aux/arg-nonnull.h
-  build-aux/c++defs.h
-  build-aux/warn-on-use.h
+  build-aux/snippet/_Noreturn.h
+  build-aux/snippet/arg-nonnull.h
+  build-aux/snippet/c++defs.h
+  build-aux/snippet/warn-on-use.h
   lib/alloca.c
   lib/alloca.in.h
   lib/argp-ba.c
