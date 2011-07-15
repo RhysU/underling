@@ -36,6 +36,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module extensions:
   AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
   # Code from module float:
+  # Code from module flock:
   # Code from module getopt-gnu:
   # Code from module getopt-posix:
   # Code from module gettext-h:
@@ -64,6 +65,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module string:
   # Code from module strndup:
   # Code from module strnlen:
+  # Code from module sys_file:
   # Code from module sysexits:
   # Code from module unistd:
   # Code from module vasnprintf:
@@ -103,6 +105,12 @@ gl_FLOAT_H
 if test $REPLACE_FLOAT_LDBL = 1; then
   AC_LIBOBJ([float])
 fi
+gl_FUNC_FLOCK
+if test $HAVE_FLOCK = 0; then
+  AC_LIBOBJ([flock])
+  gl_PREREQ_FLOCK
+fi
+gl_HEADER_SYS_FILE_MODULE_INDICATOR([flock])
 gl_FUNC_GETOPT_GNU
 if test $REPLACE_GETOPT = 1; then
   AC_LIBOBJ([getopt])
@@ -188,6 +196,8 @@ if test $HAVE_DECL_STRNLEN = 0 || test $REPLACE_STRNLEN = 1; then
   gl_PREREQ_STRNLEN
 fi
 gl_STRING_MODULE_INDICATOR([strnlen])
+gl_HEADER_SYS_FILE_H
+AC_PROG_MKDIR_P
 gl_SYSEXITS
 gl_UNISTD_H
 gl_FUNC_VASNPRINTF
@@ -359,6 +369,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/float+.h
   lib/float.c
   lib/float.in.h
+  lib/flock.c
   lib/getopt.c
   lib/getopt.in.h
   lib/getopt1.c
@@ -391,6 +402,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/stripslash.c
   lib/strndup.c
   lib/strnlen.c
+  lib/sys_file.in.h
   lib/sysexits.in.h
   lib/unistd.in.h
   lib/vasnprintf.c
@@ -407,6 +419,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/errno_h.m4
   m4/extensions.m4
   m4/float_h.m4
+  m4/flock.m4
   m4/getopt.m4
   m4/gnulib-common.m4
   m4/include_next.m4
@@ -433,6 +446,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/string_h.m4
   m4/strndup.m4
   m4/strnlen.m4
+  m4/sys_file_h.m4
   m4/sys_socket_h.m4
   m4/sysexits.m4
   m4/unistd_h.m4
