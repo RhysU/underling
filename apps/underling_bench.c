@@ -169,7 +169,7 @@ static struct argp_option options[] = {
     {"patient",     KEY_PATIENT,     0, 0, "plan with FFTW_PATIENT", 0},
     {"exhaustive",  KEY_EXHAUSTIVE,  0, 0, "plan with FFTW_EXHAUSTIVE", 0},
     {"wisdom-only", KEY_WISDOM_ONLY, 0, 0, "plan with FFTW_WISDOM_ONLY", 0},
-    {"timeout",    'T', "seconds", 0, "use fftw_set_timelimit(seconds)", 0},
+    {"timelimit",   'T', "seconds", 0, "use fftw_set_timelimit(seconds)", 0},
     { 0, 0, 0, 0, 0, 0 }
 };
 
@@ -229,11 +229,11 @@ parse_opt(int key, char *arg, struct argp_state *state)
                 double seconds;
                 if (1 != sscanf(arg ? arg : "", "%lf %c", &seconds, &ignore)) {
                     argp_failure(state, EX_USAGE, errno,
-                            "timeout option is malformed: '%s'", arg);
+                            "timelimit option is malformed: '%s'", arg);
                 }
                 if (seconds < 0) {
                     argp_failure(state, EX_USAGE, 0,
-                            "timeout value %lf must be nonnegative",
+                            "timelimit value %lf must be nonnegative",
                             seconds);
                 }
                 fftw_set_timelimit(seconds);
