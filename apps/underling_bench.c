@@ -221,13 +221,13 @@ parse_opt(int key, char *arg, struct argp_state *state)
             errno = 0;
             {
                 double seconds;
-                if (1 != sscanf(arg ? arg : "", "%d %c", &seconds, &ignore)) {
+                if (1 != sscanf(arg ? arg : "", "%lf %c", &seconds, &ignore)) {
                     argp_failure(state, EX_USAGE, errno,
                             "timeout option is malformed: '%s'", arg);
                 }
                 if (seconds < 0) {
                     argp_failure(state, EX_USAGE, 0,
-                            "timeout value %d must be nonnegative",
+                            "timeout value %lf must be nonnegative",
                             seconds);
                 }
                 fftw_set_timelimit(seconds);
@@ -354,8 +354,6 @@ static FILE *rankout, *rankerr;
 
 int main(int argc, char *argv[])
 {
-    GRVY_TIMER_INIT(argp_program_version);
-
     // Initialize default argument storage and default values
     struct details d;
     memset(&d, 0, sizeof(struct details));
@@ -512,17 +510,19 @@ int main(int argc, char *argv[])
         assert(f[i]);
     }
 
-    // Create the transpose plan, timing only if no wisdom was available
+    // Create the transpose plan
     fprintf(rankout, "Invoking underling_plan_create...\n");
-    if (d.wisdom_file) { GRVY_TIMER_BEGIN("underling_plan_create"); }
+    const double plan_start = MPI_Wtime();
     underling_plan plan = underling_plan_create(
             problem, f[0], f[off], d.transform_flags, d.fftw_rigor_flags);
-    if (d.wisdom_file) { GRVY_TIMER_END("underling_plan_create"); }
-    fprintf(rankout, "...underling_plan_create returned (on rank 0):\n");
+    const double plan_end = MPI_Wtime();
+    fprintf(rankout, "...underling_plan_create took %lf seconds"
+                     " and returned (on rank 0):\n", plan_end - plan_start);
     underling_fprint_plan(plan, rankout);
     fprintf(rankout, "\n");
 
     fprintf(rankout, "Beginning benchmark main loop...\n");
+    GRVY_TIMER_INIT(argp_program_version);
     const double start = MPI_Wtime();
     for (int i = 0; i < d.repeat; ++i) {
         fprintf(rankout, "\tIteration %d\n", i);
