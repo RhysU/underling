@@ -160,13 +160,14 @@ static struct argp_option options[] = {
     {"field-global", 'F', "n0xn1xn2", 0, "field global extents",  0 },
     {0, 0, 0, 0,
      "Controlling parallel decomposition per MPI_Dims_create semantics", 0 },
-    {"dims",       'P', "pAxpB",    0, "process grid for decomposition",   0 },
+    {"dims",       'P', "pAxpB",    0, "process grid for decomposition", 0 },
     {0, 0, 0, 0,
-     "Controlling FFTW planning rigor",     0 },
-    {"estimate",   KEY_ESTIMATE,   0, 0, "plan with FFTW_ESTIMATE", 0},
+     "Controlling FFTW planning rigor",                                      0},
+    {"estimate",   KEY_ESTIMATE,   0, 0, "plan with FFTW_ESTIMATE",          0},
     {"measure",    KEY_MEASURE,    0, 0, "plan with FFTW_MEASURE (default)", 0},
-    {"patient",    KEY_PATIENT,    0, 0, "plan with FFTW_PATIENT", 0},
-    {"exhaustive", KEY_EXHAUSTIVE, 0, 0, "plan with FFTW_EXHAUSTIVE", 0},
+    {"patient",    KEY_PATIENT,    0, 0, "plan with FFTW_PATIENT",           0},
+    {"exhaustive", KEY_EXHAUSTIVE, 0, 0, "plan with FFTW_EXHAUSTIVE",        0},
+    {"timeout",    'T',    "seconds", 0, "use fftw_set_timelimit(seconds)",  0},
     { 0, 0, 0, 0,  0, 0 }
 };
 
@@ -214,6 +215,23 @@ parse_opt(int key, char *arg, struct argp_state *state)
 
         case KEY_EXHAUSTIVE:
             d->fftw_rigor_flags = FFTW_EXHAUSTIVE;
+            break;
+
+        case 'T':
+            errno = 0;
+            {
+                double seconds;
+                if (1 != sscanf(arg ? arg : "", "%d %c", &seconds, &ignore)) {
+                    argp_failure(state, EX_USAGE, errno,
+                            "timeout option is malformed: '%s'", arg);
+                }
+                if (seconds < 0) {
+                    argp_failure(state, EX_USAGE, 0,
+                            "timeout value %d must be nonnegative",
+                            seconds);
+                }
+                fftw_set_timelimit(seconds);
+            }
             break;
 
         case 'i':
