@@ -1,17 +1,17 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CPPFLAGS       = -I$(top_srcdir) -I$(top_builddir)
-AM_CPPFLAGS      += -I$(top_builddir)/lib -I$(top_srcdir)/lib
-AM_CPPFLAGS      += $(BOOST_CPPFLAGS)
-AM_LDFLAGS        = # Append below
-bin_PROGRAMS      = # Append below
-check_PROGRAMS    = # Append below
-noinst_HEADERS    = # Append below
-BUILT_SOURCES     = # Append below
-CLEANFILES        = # Append below
-EXTRA_DIST        = # Append below
-TESTS             = # Append below
-TESTS_ENVIRONMENT = # Append below
+AM_CPPFLAGS        = -I$(top_srcdir) -I$(top_builddir)
+AM_CPPFLAGS       += -I$(top_builddir)/lib -I$(top_srcdir)/lib
+AM_CPPFLAGS       += $(BOOST_CPPFLAGS)
+AM_LDFLAGS         = # Append below
+bin_PROGRAMS       = # Append below
+check_PROGRAMS     = # Append below
+dist_check_SCRIPTS = # Append below
+noinst_HEADERS     = # Append below
+BUILT_SOURCES      = # Append below
+CLEANFILES         = # Append below
+TESTS              = # Append below
+TESTS_ENVIRONMENT  = # Append below
 
 noinst_HEADERS += test_tools.hpp
 noinst_HEADERS += fixtures.hpp
@@ -35,8 +35,8 @@ test_fftw_1D_LDADD    = ../underling/libunderling.la $(FFTW3_MPI_THREADS_LIBS)
 test_fftw_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_fftw_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
-TESTS                  += test_underling.sh          # NB Wrapper script
-EXTRA_DIST             += test_underling.sh          # NB Wrapper script
+TESTS                  += test_underling.sh
+dist_check_SCRIPTS     += test_underling.sh
 check_PROGRAMS         += test_underling
 test_underling_SOURCES  = test_underling.cpp
 test_underling_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_THREADS_CFLAGS)
@@ -45,8 +45,8 @@ test_underling_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
-TESTS                      += test_underling_fftw.sh  # NB Wrapper script
-EXTRA_DIST                 += test_underling_fftw.sh  # NB Wrapper script
+TESTS                      += test_underling_fftw.sh
+dist_check_SCRIPTS         += test_underling_fftw.sh
 check_PROGRAMS             += test_underling_fftw
 test_underling_fftw_SOURCES  = test_underling_fftw.cpp
 test_underling_fftw_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_THREADS_CFLAGS)
