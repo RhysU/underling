@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CFLAGS       = $(GRVY_CFLAGS) $(FFTW3_THREADS_CFLAGS)
+AM_CFLAGS       = $(GRVY_CFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
 AM_CPPFLAGS     = -I$(top_builddir)/gnulib -I$(top_srcdir)/gnulib
 AM_CPPFLAGS    += -I$(top_builddir)        -I$(top_srcdir)
 AM_LDFLAGS      = # Append below

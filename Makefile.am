@@ -29,8 +29,15 @@ AUX_DIST += build-aux/mkinstalldirs
 AUX_DIST += build-aux/missing
 
 # Support for pkgconfig
-pkgconfigdir   = $(libdir)/pkgconfig
-pkgconfig_DATA = underling.pc underling-fftw.pc
+# Installs both threading-agnostic and threading-specific pkgconfig variants
+pkgconfigdir    = $(libdir)/pkgconfig
+pkgconfig_DATA  = underling.pc underling-fftw.pc
+if HAVE_FFTW3_PTHREADS
+pkgconfig_DATA += underling-fftw-pthreads.pc
+endif
+if HAVE_FFTW3_OPENMP
+pkgconfig_DATA += underling-fftw-openmp.pc
+endif
 
 ## FIXME Manual page installation
 ### Install selected manual pages when Doxygen man output is enabled

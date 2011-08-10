@@ -14,4 +14,4 @@ URL: @PACKAGE_URL@
 Requires:
 Version: @VERSION@
 Libs: -L${libdir} -l@PACKAGE_NAME@ @FFTW3_MPI_THREADS_LIBS@
-Cflags: @FFTW3_THREADS_CFLAGS@ -I${includedir}
+Cflags: @FFTW3_MPI_THREADS_CFLAGS@ -I${includedir}

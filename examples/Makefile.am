@@ -21,6 +21,7 @@ CC=@MPICC@
 ## Sample progams
 #noinst_PROGRAMS        += concepts1
 #concepts1_SOURCES       = concepts1.c
+#concepts1_CFLAGS        = ../underling/libunderling.la $(FFTW3_MPI_THREADS_CFLAGS)
 #concepts1_LDADD         = ../underling/libunderling.la $(FFTW3_MPI_THREADS_LIBS)
 
 # Additional files to clean

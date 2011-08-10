@@ -134,6 +134,8 @@ AC_CONFIG_FILES([
     Makefile
     underling.pc
     underling-fftw.pc
+    underling-fftw-pthreads.pc
+    underling-fftw-openmp.pc
     apps/Makefile
     doxygen/Makefile
     underling/Makefile
