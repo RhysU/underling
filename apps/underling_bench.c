@@ -499,30 +499,41 @@ int main(int argc, char *argv[])
 
     // Display some information about the problem's memory requirements
     {
-        double coeff;
-        const char *units;
-
-        to_human_readable_byte_count(underling_global_memory_optimum(
-                    grid, problem) * sizeof(underling_real), 0, &coeff, &units);
-        fprintf(rankout, "Optimum global, per-field memory is %.4f %s\n",
-                coeff, units);
-        to_human_readable_byte_count(underling_global_memory(grid, problem)
-                * sizeof(underling_real), 0, &coeff, &units);
-        fprintf(rankout, "Actual global,  per-field memory is %.4f %s\n",
-                coeff, units);
+        double coeff1, coeff2, coeff3;
+        const char *units1, *units2, *units3;
 
         to_human_readable_byte_count(underling_local_memory_optimum(problem)
-                * sizeof(underling_real), 0, &coeff, &units);
-        fprintf(rankout, "Optimum per-rank, per-field memory is %.4f %s\n",
-                coeff, units);
-        to_human_readable_byte_count(underling_local_memory_minimum(
-                grid, problem) * sizeof(underling_real), 0, &coeff, &units);
-        fprintf(rankout, "Minimum per-rank, per-field memory is %.4f %s\n",
-                coeff, units);
-        to_human_readable_byte_count(underling_local_memory_maximum(
-                grid, problem) * sizeof(underling_real), 0, &coeff, &units);
-        fprintf(rankout, "Maximum per-rank, per-field memory is %.4f %s\n",
-                coeff, units);
+                * sizeof(underling_real), 0, &coeff1, &units1);
+        to_human_readable_byte_count(underling_local_memory_minimum(grid, problem)
+                * sizeof(underling_real), 0, &coeff2, &units2);
+        to_human_readable_byte_count(underling_local_memory_maximum(grid, problem)
+                * sizeof(underling_real), 0, &coeff3, &units3);
+        fprintf(rankout, "Optimum per-rank, per-field memory is %.4f %s vs actual %.4f %s -- %.4f %s\n",
+                coeff1, units1, coeff2, units2, coeff3, units3);
+
+        to_human_readable_byte_count(d.nfields
+                    * underling_local_memory_optimum(problem)
+                    * sizeof(underling_real),
+                    0, &coeff1, &units1);
+        to_human_readable_byte_count(d.nfields
+                    * underling_local_memory_maximum(grid, problem)
+                    * sizeof(underling_real),
+                    0, &coeff2, &units2);
+        fprintf(rankout, "Optimum per-rank, total memory is %.4f %s vs worst case %.4f %s\n",
+                coeff1, units1, coeff2, units2);
+
+        to_human_readable_byte_count(d.nfields
+                    * underling_global_memory_optimum(grid, problem)
+                    * sizeof(underling_real),
+                    0, &coeff1, &units1);
+        to_human_readable_byte_count(d.nfields
+                    * underling_global_memory(grid, problem)
+                    * sizeof(underling_real),
+                    0, &coeff2, &units2);
+        fprintf(rankout, "Optimum global, total memory is %.4f %s vs actual %.4f %s\n",
+                coeff1, units1, coeff2, units2);
+
+        fprintf(rankout, "\n");
     }
 
     // Adjust for in-place operation
