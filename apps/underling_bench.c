@@ -91,6 +91,8 @@ struct details {
     unsigned fftw_rigor_flags;
     char *wisdom_file;
     int inplace;
+    int forward;
+    int backward;
 };
 
 //*************************************************************
@@ -145,7 +147,10 @@ enum {
     KEY_MEASURE,
     KEY_PATIENT,
     KEY_EXHAUSTIVE,
-    KEY_WISDOM_ONLY
+    KEY_WISDOM_ONLY,
+    KEY_FORWARD,
+    KEY_BACKWARD,
+    KEY_BOTH
 };
 
 static struct argp_option options[] = {
@@ -162,6 +167,11 @@ static struct argp_option options[] = {
     {0, 0, 0, 0,
      "Controlling parallel decomposition per MPI_Dims_create semantics", 0 },
     {"dims",       'P', "pAxpB",    0, "process grid for decomposition", 0 },
+    {0, 0, 0, 0,
+     "Controlling field transform direction(s)", 0},
+    {"forward",    KEY_FORWARD,  0, 0, "Transform from long_n2 to long_n0", 0},
+    {"backward",   KEY_BACKWARD, 0, 0, "Transform from long_n0 to long_n2", 0},
+    {"both",       KEY_BOTH,     0, 0, "Transform forward then backward (default)", 0},
     {0, 0, 0, 0,
      "Controlling FFTW planning rigor", 0},
     {"estimate",    KEY_ESTIMATE,    0, 0, "plan with FFTW_ESTIMATE", 0},
@@ -221,6 +231,21 @@ parse_opt(int key, char *arg, struct argp_state *state)
 
         case KEY_WISDOM_ONLY:
             d->fftw_rigor_flags = FFTW_WISDOM_ONLY;
+            break;
+
+        case KEY_FORWARD:
+            d->forward  = 1;
+            d->backward = 0;
+            break;
+
+        case KEY_BACKWARD:
+            d->forward  = 0;
+            d->backward = 1;
+            break;
+
+        case KEY_BOTH:
+            d->forward  = 1;
+            d->backward = 1;
             break;
 
         case 'T':
@@ -363,10 +388,12 @@ int main(int argc, char *argv[])
     // Initialize default argument storage and default values
     struct details d;
     memset(&d, 0, sizeof(struct details));
-    d.repeat           = 1;
-    d.nthreads         = 0;
-    d.nfields          = 1;
-    d.howmany          = 2;
+    d.repeat   = 1;
+    d.nthreads = 0;
+    d.nfields  = 1;
+    d.howmany  = 2;
+    d.forward  = 1;
+    d.backward = 1;
 
     // Initialize/finalize MPI with profiling initially disabled
     MPI_Init(&argc, &argv);
@@ -519,8 +546,13 @@ int main(int argc, char *argv[])
     // Create the transpose plan
     fprintf(rankout, "Invoking underling_plan_create...\n");
     const double plan_start = MPI_Wtime();
-    underling_plan plan = underling_plan_create(
-            problem, f[0], f[off], d.transform_flags, d.fftw_rigor_flags);
+    underling_plan plan = underling_plan_create(problem, f[0], f[off],
+            d.transform_flags
+                | (d.forward   ? UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1
+                               | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0 : 0)
+                | (d.backward  ? UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1
+                               | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 : 0),
+            d.fftw_rigor_flags);
     const double plan_end = MPI_Wtime();
     fprintf(rankout, "...underling_plan_create took %lf seconds"
                      " and returned (on rank 0):\n", plan_end - plan_start);
@@ -533,43 +565,52 @@ int main(int argc, char *argv[])
     for (int i = 0; i < d.repeat; ++i) {
         fprintf(rankout, "\tIteration %d\n", i);
 
-        // Fields pointed to by f[0..(d.nfields-1)] are, say, long n2 to start
+        if (d.forward) {
 
-        for (int j = d.nfields-1; j >= 0; --j) {
-            GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
-            underling_execute_long_n2_to_long_n1(plan, f[j], f[j+off]);
-            GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
+            // Fields pointed to by f[0..(d.nfields-1)] are long n2 to start
+
+            for (int j = d.nfields-1; j >= 0; --j) {
+                GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
+                underling_execute_long_n2_to_long_n1(plan, f[j], f[j+off]);
+                GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
+            }
+
+            // For out-of-place,
+            // Fields pointed to by f[1..(d.nfields)] are now long n1
+
+            for (int j = 0; j < d.nfields; ++j) {
+                GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
+                underling_execute_long_n1_to_long_n0(plan, f[j+off], f[j]);
+                GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
+            }
+
+            // For out-of-place,
+            // Fields pointed to by f[1..(d.nfields)] are now long n0
         }
 
-        // For out-of-place,
-        // Fields pointed to by f[1..(d.nfields)] are now long n1
+        if (d.backward) {
 
-        for (int j = 0; j < d.nfields; ++j) {
-            GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
-            underling_execute_long_n1_to_long_n0(plan, f[j+off], f[j]);
-            GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
+            // For out-of-place,
+            // Fields pointed to by f[0..(d.nfields-1)] are long n0 to start
+
+            for (int j = d.nfields-1; j >= 0; --j) {
+                GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
+                underling_execute_long_n0_to_long_n1(plan, f[j], f[j+off]);
+                GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
+            }
+
+            // For out-of-place,
+            // Fields pointed to by f[1..(d.nfields)] are now long n1
+
+            for (int j = 0; j < d.nfields; ++j) {
+                GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
+                underling_execute_long_n1_to_long_n2(plan, f[j+off], f[j]);
+                GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
+            }
+
+            // For out-of-place,
+            // Fields pointed to by f[0..(d.nfields-1)] are now long n2
         }
-
-        // For out-of-place,
-        // Fields pointed to by f[0..(d.nfields-1)] are now long n0
-
-        for (int j = d.nfields-1; j >= 0; --j) {
-            GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
-            underling_execute_long_n0_to_long_n1(plan, f[j], f[j+off]);
-            GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
-        }
-
-        // For out-of-place,
-        // Fields pointed to by f[1..(d.nfields)] are now long n1
-
-        for (int j = 0; j < d.nfields; ++j) {
-            GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
-            underling_execute_long_n1_to_long_n2(plan, f[j+off], f[j]);
-            GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
-        }
-
-        // For out-of-place,
-        // Fields pointed to by f[0..(d.nfields-1)] are now long n2
     }
     const double end = MPI_Wtime();
     GRVY_TIMER_FINALIZE();
