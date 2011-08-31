@@ -556,8 +556,7 @@ int main(int argc, char *argv[])
         "\n", d.n0, d.n1, d.n2, d.pA, d.pB);
 
     fprintf(rankout,
-        "\n"
-        "Transform and transpose operation data movement details\n"
+        "Transform and transpose operation details\n"
         "------------------------------------------------------------------------------\n"
         );
     if (d.forward) {
@@ -644,8 +643,6 @@ int main(int argc, char *argv[])
                     0, &coeff2, &units2);
         fprintf(rankout, "Optimum global, total memory is %.4f %s vs actual %.4f %s\n",
                 coeff1, units1, coeff2, units2);
-
-        fprintf(rankout, "\n");
     }
 
     // Adjust for in- versus out-of-place operation for MPI and FFT substeps.
@@ -685,7 +682,7 @@ int main(int argc, char *argv[])
     }
 
     // Create the transpose plan
-    fprintf(rankout, "Invoking underling_plan_create...\n");
+    fprintf(rankout, "\nInvoking underling_plan_create...\n");
     tstart = MPI_Wtime();
     underling_plan t_plan = underling_plan_create(
             problem, f[0], f[!d.mpi_inplace],
@@ -723,7 +720,7 @@ int main(int argc, char *argv[])
                 break;
         }
         if (planner) {
-            fprintf(rankout, "Invoking %s for long_n%d...\n", planner_name, i);
+            fprintf(rankout, "\nInvoking %s for long_n%d...\n", planner_name, i);
             tstart = MPI_Wtime();
             forward_plan[i] = planner(problem, i, f[0], f[!d.fft_inplace],
                     d.forward ? d.fftw_rigor_flags : FFTW_ESTIMATE);
@@ -735,7 +732,7 @@ int main(int argc, char *argv[])
             fprintf(rankout, "\n");
         }
         if (d.backward && forward_plan[i]) {
-            fprintf(rankout, "Invoking underling_fftw_plan_create_inverse for long_n%d...\n", i);
+            fprintf(rankout, "\nInvoking underling_fftw_plan_create_inverse for long_n%d...\n", i);
             tstart = MPI_Wtime();
             backward_plan[i] = underling_fftw_plan_create_inverse(
                     forward_plan[i], f[0], f[!d.fft_inplace],
@@ -752,7 +749,7 @@ int main(int argc, char *argv[])
     // Important as m < 0 and m > 0 must run different directions through memory.
     int o[d.nfields]; // C99
 
-    fprintf(rankout, "Beginning benchmark main loop...\n");
+    fprintf(rankout, "\nBeginning benchmark main loop...\n");
     GRVY_TIMER_INIT(argp_program_version);
     tstart = MPI_Wtime();
     for (int i = 0; i < d.repeat; ++i) {
@@ -768,10 +765,10 @@ int main(int argc, char *argv[])
             if (forward_plan[2]) {
                 for (int j = 0; j < d.nfields; ++j) {
                     const int k = (m[0] >= 0 ? j : d.nfields - 1 - j);
-                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n2 forward");
+                    GRVY_TIMER_BEGIN("underling_fftw long_n2 forward");
                     underling_fftw_plan_execute(
                             forward_plan[2], f[o[k]], f[o[k] + m[0]]);
-                    GRVY_TIMER_END("underling_fftw_plan_execute long_n2 forward");
+                    GRVY_TIMER_END("underling_fftw long_n2 forward");
                 }
                 for (int j = 0; j < d.nfields; ++j) o[j] += m[0];
             }
@@ -779,10 +776,10 @@ int main(int argc, char *argv[])
             // MPI transpose long_n2 -> long_n1
             for (int j = 0; j < d.nfields; ++j) {
                 const int k = (m[1] >= 0 ? j : d.nfields - 1 - j);
-                GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
+                GRVY_TIMER_BEGIN("underling long_n2_to_long_n1");
                 underling_execute_long_n2_to_long_n1(
                         t_plan, f[o[k]], f[o[k] + m[1]]);
-                GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
+                GRVY_TIMER_END("underling long_n2_to_long_n1");
             }
             for (int j = 0; j < d.nfields; ++j) o[j] += m[1];
 
@@ -790,10 +787,10 @@ int main(int argc, char *argv[])
             if (forward_plan[1]) {
                 for (int j = 0; j < d.nfields; ++j) {
                     const int k = (m[2] >= 0 ? j : d.nfields - 1 - j);
-                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n1 forward");
+                    GRVY_TIMER_BEGIN("underling_fftw long_n1 forward");
                     underling_fftw_plan_execute(
                             forward_plan[1], f[o[k]], f[o[k] + m[2]]);
-                    GRVY_TIMER_END("underling_fftw_plan_execute long_n1 forward");
+                    GRVY_TIMER_END("underling_fftw long_n1 forward");
                 }
             }
             for (int j = 0; j < d.nfields; ++j) o[j] += m[2];
@@ -801,10 +798,10 @@ int main(int argc, char *argv[])
             // MPI transpose long_n1 -> long_n0
             for (int j = 0; j < d.nfields; ++j) {
                 const int k = (m[3] >= 0 ? j : d.nfields - 1 - j);
-                GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
+                GRVY_TIMER_BEGIN("underling long_n1_to_long_n0");
                 underling_execute_long_n1_to_long_n0(
                         t_plan, f[o[k]], f[o[k] + m[3]]);
-                GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
+                GRVY_TIMER_END("underling long_n1_to_long_n0");
             }
             for (int j = 0; j < d.nfields; ++j) o[j] += m[3];
 
@@ -812,10 +809,10 @@ int main(int argc, char *argv[])
             if (forward_plan[0]) {
                 for (int j = 0; j < d.nfields; ++j) {
                     const int k = (m[4] >= 0 ? j : d.nfields - 1 - j);
-                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n0 forward");
+                    GRVY_TIMER_BEGIN("underling_fftw long_n0 forward");
                     underling_fftw_plan_execute(
                             forward_plan[0], f[o[k]], f[o[k] + m[4]]);
-                    GRVY_TIMER_END("underling_fftw_plan_execute long_n0 forward");
+                    GRVY_TIMER_END("underling_fftw long_n0 forward");
                 }
                 for (int j = 0; j < d.nfields; ++j) o[j] += m[4];
             }
@@ -831,10 +828,10 @@ int main(int argc, char *argv[])
             if (backward_plan[0]) {
                 for (int j = 0; j < d.nfields; ++j) {
                     const int k = (m[5] >= 0 ? j : d.nfields - 1 - j);
-                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n0 backward");
+                    GRVY_TIMER_BEGIN("underling_fftw long_n0 backward");
                     underling_fftw_plan_execute(
                             backward_plan[0], f[o[k]], f[o[k] + m[5]]);
-                    GRVY_TIMER_END("underling_fftw_plan_execute long_n0 backward");
+                    GRVY_TIMER_END("underling_fftw long_n0 backward");
                 }
                 for (int j = 0; j < d.nfields; ++j) o[j] += m[5];
             }
@@ -842,10 +839,10 @@ int main(int argc, char *argv[])
             // MPI transpose long_n0 -> long_n1
             for (int j = 0; j < d.nfields; ++j) {
                 const int k = (m[6] >= 0 ? j : d.nfields - 1 - j);
-                GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
+                GRVY_TIMER_BEGIN("underling long_n0_to_long_n1");
                 underling_execute_long_n0_to_long_n1(
                         t_plan, f[o[k]], f[o[k] + m[6]]);
-                GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
+                GRVY_TIMER_END("underling long_n0_to_long_n1");
             }
             for (int j = 0; j < d.nfields; ++j) o[j] += m[6];
 
@@ -853,10 +850,10 @@ int main(int argc, char *argv[])
             if (backward_plan[1]) {
                 for (int j = 0; j < d.nfields; ++j) {
                     const int k = (m[7] >= 0 ? j : d.nfields - 1 - j);
-                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n1 backward");
+                    GRVY_TIMER_BEGIN("underling_fftw long_n1 backward");
                     underling_fftw_plan_execute(
                             backward_plan[1], f[o[k]], f[o[k] + m[7]]);
-                    GRVY_TIMER_END("underling_fftw_plan_execute long_n1 backward");
+                    GRVY_TIMER_END("underling_fftw long_n1 backward");
                 }
                 for (int j = 0; j < d.nfields; ++j) o[j] += m[7];
             }
@@ -864,10 +861,10 @@ int main(int argc, char *argv[])
             // MPI transpose long_n1 -> long_n2
             for (int j = 0; j < d.nfields; ++j) {
                 const int k = (m[8] >= 0 ? j : d.nfields - 1 - j);
-                GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
+                GRVY_TIMER_BEGIN("underling long_n1_to_long_n2");
                 underling_execute_long_n1_to_long_n2(
                         t_plan, f[o[k]], f[o[k] + m[8]]);
-                GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
+                GRVY_TIMER_END("underling long_n1_to_long_n2");
             }
             for (int j = 0; j < d.nfields; ++j) o[j] += m[8];
 
@@ -875,10 +872,10 @@ int main(int argc, char *argv[])
             if (backward_plan[2]) {
                 for (int j = 0; j < d.nfields; ++j) {
                     const int k = (m[9] >= 0 ? j : d.nfields - 1 - j);
-                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n2 backward");
+                    GRVY_TIMER_BEGIN("underling_fftw long_n2 backward");
                     underling_fftw_plan_execute(
                             backward_plan[2], f[o[k]], f[o[k] + m[9]]);
-                    GRVY_TIMER_END("underling_fftw_plan_execute long_n2 backward");
+                    GRVY_TIMER_END("underling_fftw long_n2 backward");
                 }
                 for (int j = 0; j < d.nfields; ++j) o[j] += m[9];
             }
