@@ -45,6 +45,7 @@
 #include <fftw3-mpi.h>
 #include <underling/error.h>
 #include <underling/underling.h>
+#include <underling/underling_fftw.h>
 
 #ifdef HAVE_GRVY
 #include <grvy.h>
@@ -90,7 +91,9 @@ struct details {
     unsigned transform_flags;
     unsigned fftw_rigor_flags;
     char *wisdom_file;
-    int inplace;
+    char fft_n[3];
+    int mpi_inplace;
+    int fft_inplace;
     int forward;
     int backward;
 };
@@ -150,16 +153,23 @@ enum {
     KEY_WISDOM_ONLY,
     KEY_FORWARD,
     KEY_BACKWARD,
-    KEY_BOTH
+    KEY_BOTH,
+    KEY_FFT_CII,
+    KEY_FFT_RII,
+    KEY_FFT_CCI,
+    KEY_FFT_RCI,
+    KEY_FFT_CCC,
+    KEY_FFT_RCC
 };
 
 static struct argp_option options[] = {
-    {"verbose",     'v', 0,       0, "produce verbose output",       0 },
-    {"repeat",      'r', "count", 0, "number of repetitions",        0 },
-    {"nthreads",    't', "count", 0, "number of concurrent threads", 0 },
-    {"nfields",     'n', "count", 0, "number of independent fields", 0 },
-    {"howmany",     'h', "count", 0, "howmany components per field", 0 },
-    {"in-place",    'i', 0,       0, "perform in-place transposes",  0 },
+    {"verbose",      'v', 0,       0, "produce verbose output",           0 },
+    {"repeat",       'r', "count", 0, "number of repetitions",            0 },
+    {"nthreads",     't', "count", 0, "number of concurrent threads",     0 },
+    {"nfields",      'n', "count", 0, "number of independent fields",     0 },
+    {"howmany",      'h', "count", 0, "howmany components per field",     0 },
+    {"mpi-in-place", 'i', 0,       0, "perform in-place MPI transposes",  0 },
+    {"fft-in-place", 'I', 0,       0, "perform in-place FFTs",            0 },
     {0, 0, 0, 0,
      "Controlling global problem size (specify at most one)",     0 },
     {"field-memory", 'f', "bytes",    0, "per-rank field memory", 0 },
@@ -168,10 +178,18 @@ static struct argp_option options[] = {
      "Controlling parallel decomposition per MPI_Dims_create semantics", 0 },
     {"dims",       'P', "pAxpB",    0, "process grid for decomposition", 0 },
     {0, 0, 0, 0,
-     "Controlling field transform direction(s)", 0},
-    {"forward",    KEY_FORWARD,  0, 0, "Transform from long_n2 to long_n0", 0},
-    {"backward",   KEY_BACKWARD, 0, 0, "Transform from long_n0 to long_n2", 0},
-    {"both",       KEY_BOTH,     0, 0, "Transform forward then backward (default)", 0},
+     "Controlling field transpose directionality", 0},
+    {"forward",    KEY_FORWARD,  0, 0, "transform from long_n2 to long_n0", 0},
+    {"backward",   KEY_BACKWARD, 0, 0, "transform from long_n0 to long_n2", 0},
+    {"both",       KEY_BOTH,     0, 0, "transform forward then backward (default)", 0},
+    {0, 0, 0, 0,
+     "Enabling Fourier transformed directions (none enabled by default)", 0},
+    {"cii", KEY_FFT_CII, 0, 0, "complex-to-complex (c2c) transform long_n2",  0},
+    {"rii", KEY_FFT_RII, 0, 0, "real-to-complex (r2c) transform long_n2",     0},
+    {"cci", KEY_FFT_CCI, 0, 0, "c2c transform long_n2, c2c long_n1",          0},
+    {"rci", KEY_FFT_RCI, 0, 0, "r2c transform long_n2, c2c long_n1",          0},
+    {"ccc", KEY_FFT_CCC, 0, 0, "c2c transform long_n2, long_n1, and long_n0", 0},
+    {"rcc", KEY_FFT_RCC, 0, 0, "r2c long_n2, c2c long_n1 and long_n0",        0},
     {0, 0, 0, 0,
      "Controlling FFTW planning rigor", 0},
     {"estimate",    KEY_ESTIMATE,    0, 0, "plan with FFTW_ESTIMATE", 0},
@@ -248,6 +266,42 @@ parse_opt(int key, char *arg, struct argp_state *state)
             d->backward = 1;
             break;
 
+        case KEY_FFT_CII:
+            d->fft_n[2] = 'c';
+            d->fft_n[1] = 'i';
+            d->fft_n[0] = 'i';
+            break;
+
+        case KEY_FFT_RII:
+            d->fft_n[2] = 'r';
+            d->fft_n[1] = 'i';
+            d->fft_n[0] = 'i';
+            break;
+
+        case KEY_FFT_CCI:
+            d->fft_n[2] = 'c';
+            d->fft_n[1] = 'c';
+            d->fft_n[0] = 'i';
+            break;
+
+        case KEY_FFT_RCI:
+            d->fft_n[2] = 'r';
+            d->fft_n[1] = 'c';
+            d->fft_n[0] = 'i';
+            break;
+
+        case KEY_FFT_CCC:
+            d->fft_n[2] = 'c';
+            d->fft_n[1] = 'c';
+            d->fft_n[0] = 'c';
+            break;
+
+        case KEY_FFT_RCC:
+            d->fft_n[2] = 'r';
+            d->fft_n[1] = 'c';
+            d->fft_n[0] = 'c';
+            break;
+
         case 'T':
             errno = 0;
             {
@@ -266,7 +320,11 @@ parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'i':
-            d->inplace = 1;
+            d->mpi_inplace = 1;
+            break;
+
+        case 'I':
+            d->fft_inplace = 1;
             break;
 
         case 'v':
@@ -385,6 +443,9 @@ static FILE *rankout, *rankerr;
 
 int main(int argc, char *argv[])
 {
+    // For miscellanous timing usage
+    double tstart, tend;
+
     // Initialize default argument storage and default values
     struct details d;
     memset(&d, 0, sizeof(struct details));
@@ -394,6 +455,9 @@ int main(int argc, char *argv[])
     d.howmany  = 2;
     d.forward  = 1;
     d.backward = 1;
+    d.fft_n[2] = 'i';
+    d.fft_n[1] = 'i';
+    d.fft_n[0] = 'i';
 
     // Initialize/finalize MPI with profiling initially disabled
     MPI_Init(&argc, &argv);
@@ -403,7 +467,7 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &d.world_rank);
 
     // Establish rank-dependent output streams
-    errno   = 0;
+    errno = 0;
     if (d.world_rank == 0) {
         rankout = stdout;
         rankerr = stderr;
@@ -475,7 +539,7 @@ int main(int argc, char *argv[])
         MPI_Abort(MPI_COMM_WORLD, EX_USAGE);
     }
 
-    // Initialize underling_grid and print decomposition banner
+    // Initialize underling_grid and print decomposition and substep banner
     underling_grid grid = underling_grid_create(
             MPI_COMM_WORLD, d.n0, d.n1, d.n2, d.pA, d.pB);
     assert(grid);
@@ -490,6 +554,53 @@ int main(int argc, char *argv[])
         "Long n0: %2$5d/%5$4d x (%3$5d/%4$4d x %1$5d) = (%2$5d/%5$4d x %3$5d/%4$4d) x %1$5d\n"
         "------------------------------------------------------------------------------\n"
         "\n", d.n0, d.n1, d.n2, d.pA, d.pB);
+
+    fprintf(rankout,
+        "\n"
+        "Transform and transpose operation data movement details\n"
+        "------------------------------------------------------------------------------\n"
+        );
+    if (d.forward) {
+        fprintf(rankout,
+            "Forward : FFT n2  | n2->n1 | FFT n1  | n1->n0 | FFT n0\n"
+            "          %-4s%-3s |   %-3s  | %-4s%-3s |   %-3s  | %-4s%3s\n",
+            d.fft_n[2] == 'i' ? "none" :
+            d.fft_n[2] == 'r' ? "r2c"  :
+            d.fft_n[2] == 'c' ? "c2c"  : "ERR",
+            d.fft_n[2] == 'i' ? "" : d.fft_inplace ? "in" : "out",
+            d.mpi_inplace ? "in" : "out",
+            d.fft_n[1] == 'i' ? "none" :
+            d.fft_n[1] == 'r' ? "r2c"  :
+            d.fft_n[1] == 'c' ? "c2c"  : "ERR",
+            d.fft_n[1] == 'i' ? "" : d.fft_inplace ? "in" : "out",
+            d.mpi_inplace ? "in" : "out",
+            d.fft_n[0] == 'i' ? "none" :
+            d.fft_n[0] == 'r' ? "r2c"  :
+            d.fft_n[0] == 'c' ? "c2c"  : "ERR",
+            d.fft_n[0] == 'i' ? "" : d.fft_inplace ? "in" : "out");
+    }
+    if (d.backward) {
+        fprintf(rankout,
+            "Backward: FFT n2  | n2->n1 | FFT n1  | n1->n0 | FFT n0\n"
+            "          %-4s%-3s |   %-3s  | %-4s%-3s |   %-3s  | %-4s%3s\n",
+            d.fft_n[2] == 'i' ? "none" :
+            d.fft_n[2] == 'r' ? "c2r"  :
+            d.fft_n[2] == 'c' ? "c2c"  : "ERR",
+            d.fft_n[2] == 'i' ? "" : d.fft_inplace ? "in" : "out",
+            d.mpi_inplace ? "in" : "out",
+            d.fft_n[1] == 'i' ? "none" :
+            d.fft_n[1] == 'r' ? "c2r"  :
+            d.fft_n[1] == 'c' ? "c2c"  : "ERR",
+            d.fft_n[1] == 'i' ? "" : d.fft_inplace ? "in" : "out",
+            d.mpi_inplace ? "in" : "out",
+            d.fft_n[0] == 'i' ? "none" :
+            d.fft_n[0] == 'r' ? "c2r"  :
+            d.fft_n[0] == 'c' ? "c2c"  : "ERR",
+            d.fft_n[0] == 'i' ? "" : d.fft_inplace ? "in" : "out");
+    }
+    fprintf(rankout,
+        "------------------------------------------------------------------------------\n"
+        "\n");
 
     // Initialize underling_problem and find per-field memory requirements
     underling_problem problem = underling_problem_create(
@@ -536,19 +647,37 @@ int main(int argc, char *argv[])
         fprintf(rankout, "\n");
     }
 
-    // Adjust for in-place operation
-    int off;
-    if (d.inplace) {
-        fprintf(rankout, "Performing operations in-place\n");
-        off = 0;
-    } else {
-        fprintf(rankout, "Performing operations out-of-place\n");
-        off = 1;
+    // Adjust for in- versus out-of-place operation for MPI and FFT substeps.
+    // Forward:  FFT n2, n2->n1, FFT n1, n1->n0, FFT n0
+    // m[i] is -1 for out-of-place to a lower-indexed buffer, 0 for in-place,
+    // and 1 for out-of-place to a higher-indexed buffer.
+    int m[10];
+    {
+        // s tracks the aggregate out-of-place movement that we want to stay in
+        // {0, 1}.  To do so, out-of-place operations (!inplace) are negated
+        // via a ConditionalNegate bithack before being summed.
+        int s;
+        s  = (m[0] =  !(d.fft_n[2] == 'i' || d.fft_inplace));
+        s += (m[1] = (!d.mpi_inplace ^ -s) + s);
+        s += (m[2] = (!(d.fft_n[1] == 'i' || d.fft_inplace) ^ -s) + s);
+        s += (m[3] = (!d.mpi_inplace ^ -s) + s);
+        s += (m[4] = (!(d.fft_n[0] == 'i' || d.fft_inplace) ^ -s) + s);
+
+        // Backward: FFT n0, n0->n1, FFT n1, n1->n2, FFT n2
+        // Backward operations are the inverse of forward operations
+        m[5] = -m[4];
+        m[6] = -m[3];
+        m[7] = -m[2];
+        m[8] = -m[1];
+        m[9] = -m[0];
     }
 
+    // Do we need an additional field worth of storage for out-of-place ops?
+    const int extra = m[0] || m[1] || m[2] || m[3] || m[4] || m[5];
+
     // Allocate memory for each field plus one optional scratch buffer
-    underling_real *f[d.nfields + off]; // C99
-    for (int i = 0; i < d.nfields + off; ++i) {
+    underling_real *f[d.nfields + extra]; // C99
+    for (int i = 0; i < d.nfields + extra; ++i) {
         f[i] = (underling_real *) malloc_and_fill(
                 &d, local_memory * sizeof(underling_real), i);
         assert(f[i]);
@@ -556,23 +685,71 @@ int main(int argc, char *argv[])
 
     // Create the transpose plan
     fprintf(rankout, "Invoking underling_plan_create...\n");
-    const double plan_start = MPI_Wtime();
-    underling_plan plan = underling_plan_create(problem, f[0], f[off],
+    tstart = MPI_Wtime();
+    underling_plan t_plan = underling_plan_create(
+            problem, f[0], f[!d.mpi_inplace],
             d.transform_flags
                 | (d.forward   ? UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1
                                | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0 : 0)
                 | (d.backward  ? UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1
                                | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 : 0),
             d.fftw_rigor_flags);
-    const double plan_end = MPI_Wtime();
+    tend = MPI_Wtime();
     fprintf(rankout, "...underling_plan_create took %lf seconds"
-                     " and returned (on rank 0):\n", plan_end - plan_start);
-    underling_fprint_plan(plan, rankout);
+                     " and returned (on rank 0):\n", tend - tstart);
+    underling_fprint_plan(t_plan, rankout);
     fprintf(rankout, "\n");
+
+    // Create any necessary transform plans.
+    // Note forward plans are preferred to create corresponding backward plans
+    // but we use only FFTW_ESTIMATE if a forward plan is superfluous.
+    underling_fftw_plan forward_plan[3]  = { NULL, NULL, NULL };
+    underling_fftw_plan backward_plan[3] = { NULL, NULL, NULL };
+    for (int i = 3; i --> 0 ;) {
+        underling_fftw_plan (*planner)(const underling_problem problem,
+                                       int long_ni,
+                                       underling_real *in, underling_real *out,
+                                       unsigned fftw_rigor_flags) = NULL;
+        const char * planner_name = NULL;
+        switch (d.fft_n[i]) {
+            case 'c':
+                planner = &underling_fftw_plan_create_c2c_forward;
+                planner_name = "underling_fftw_plan_create_c2c_forward";
+                break;
+            case 'r':
+                planner = &underling_fftw_plan_create_r2c_forward;
+                planner_name = "underling_fftw_plan_create_r2c_forward";
+                break;
+        }
+        if (planner) {
+            fprintf(rankout, "Invoking %s for long_n%d...\n", planner_name, i);
+            tstart = MPI_Wtime();
+            forward_plan[i] = planner(problem, i, f[0], f[!d.fft_inplace],
+                    d.forward ? d.fftw_rigor_flags : FFTW_ESTIMATE);
+            tend = MPI_Wtime();
+            fprintf(rankout, "...%s took %lf seconds"
+                            " and returned (on rank 0):\n",
+                            planner_name, tend - tstart);
+            underling_fftw_fprint_plan(forward_plan[i], rankout);
+            fprintf(rankout, "\n");
+        }
+        if (d.backward && forward_plan[i]) {
+            fprintf(rankout, "Invoking underling_fftw_plan_create_inverse for long_n%d...\n", i);
+            tstart = MPI_Wtime();
+            backward_plan[i] = underling_fftw_plan_create_inverse(
+                    forward_plan[i], f[0], f[!d.fft_inplace],
+                    d.backward ? d.fftw_rigor_flags : FFTW_ESTIMATE);
+            tend = MPI_Wtime();
+            fprintf(rankout, "...underling_fftw_plan_create_inverse took %lf seconds"
+                            " and returned (on rank 0):\n", tend - tstart);
+            underling_fftw_fprint_plan(forward_plan[i], rankout);
+            fprintf(rankout, "\n");
+        }
+    }
 
     fprintf(rankout, "Beginning benchmark main loop...\n");
     GRVY_TIMER_INIT(argp_program_version);
-    const double start = MPI_Wtime();
+    tstart = MPI_Wtime();
     for (int i = 0; i < d.repeat; ++i) {
         fprintf(rankout, "\tIteration %d\n", i);
 
@@ -582,7 +759,7 @@ int main(int argc, char *argv[])
 
             for (int j = d.nfields-1; j >= 0; --j) {
                 GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
-                underling_execute_long_n2_to_long_n1(plan, f[j], f[j+off]);
+                underling_execute_long_n2_to_long_n1(t_plan, f[j], f[j+extra]);
                 GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
             }
 
@@ -591,7 +768,7 @@ int main(int argc, char *argv[])
 
             for (int j = 0; j < d.nfields; ++j) {
                 GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
-                underling_execute_long_n1_to_long_n0(plan, f[j+off], f[j]);
+                underling_execute_long_n1_to_long_n0(t_plan, f[j+extra], f[j]);
                 GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
             }
 
@@ -606,7 +783,7 @@ int main(int argc, char *argv[])
 
             for (int j = d.nfields-1; j >= 0; --j) {
                 GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
-                underling_execute_long_n0_to_long_n1(plan, f[j], f[j+off]);
+                underling_execute_long_n0_to_long_n1(t_plan, f[j], f[j+extra]);
                 GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
             }
 
@@ -615,7 +792,7 @@ int main(int argc, char *argv[])
 
             for (int j = 0; j < d.nfields; ++j) {
                 GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
-                underling_execute_long_n1_to_long_n2(plan, f[j+off], f[j]);
+                underling_execute_long_n1_to_long_n2(t_plan, f[j+extra], f[j]);
                 GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
             }
 
@@ -623,11 +800,11 @@ int main(int argc, char *argv[])
             // Fields pointed to by f[0..(d.nfields-1)] are now long n2
         }
     }
-    const double end = MPI_Wtime();
+    tend = MPI_Wtime();
     GRVY_TIMER_FINALIZE();
     fprintf(rankout, "...ended benchmark main loop\n");
 
-    const double elapsed = end - start;
+    const double elapsed = tend - tstart;
     const double mean = elapsed / d.repeat;
     fprintf(rankout, "Mean time across %d iteration(s) was %8.6g seconds\n",
             d.repeat, mean);
@@ -636,13 +813,19 @@ int main(int argc, char *argv[])
     if (d.world_rank == 0) { GRVY_TIMER_SUMMARIZE(); }
 
     // Deallocate memory for each field plus one possible scratch buffer
-    for (int i = 0; i < d.nfields + off; ++i) {
+    for (int i = 0; i < d.nfields + extra; ++i) {
         fftw_free(f[i]);
         f[i] = NULL;
     }
 
     // Tear down underling_plan, underling_problem, underling_grid
-    underling_plan_destroy(plan);
+    for (int i = 0; i < 3; ++i) {
+        if (backward_plan[i]) underling_fftw_plan_destroy(backward_plan[i]);
+    }
+    for (int i = 0; i < 3; ++i) {
+        if (forward_plan[i]) underling_fftw_plan_destroy(forward_plan[i]);
+    }
+    underling_plan_destroy(t_plan);
     underling_problem_destroy(problem);
     underling_grid_destroy(grid);
 
