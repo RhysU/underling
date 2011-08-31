@@ -748,7 +748,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    // During execution field N is pointed to by f[o[N]] for {0, ..., nfields}
+    // During execution field N is pointed to by f[o[N]] for {0, ..., nfields}.
+    // Important as m < 0 and m > 0 must run different directions through memory.
     int o[d.nfields]; // C99
 
     fprintf(rankout, "Beginning benchmark main loop...\n");
@@ -759,217 +760,127 @@ int main(int argc, char *argv[])
 
         if (d.forward) {
 
-            // Ensure start from long_n2 (required for forward-only benchmark)
+            // Ensure we start from long_n2 (required for forward-only benchmark)
             for (int i = 0; i < d.nfields; ++i)
                 o[i] = i;
 
             // FFT forward transform long_n2
-            if (d.fft_n[2] != 'i') {
-                if (m[0] <= 0) {
-                    for (int j = 0; j < d.nfields; ++j) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n2 forward");
-                        underling_fftw_plan_execute(
-                                forward_plan[2], f[o[j]], f[o[j] + m[0]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n2 forward");
-                        o[j] += m[0];
-                    }
-                } else {
-                    for (int j = d.nfields; j --> 0;) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n2 forward");
-                        underling_fftw_plan_execute(
-                                forward_plan[2], f[o[j]], f[o[j] + m[0]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n2 forward");
-                        o[j] += m[0];
-                    }
+            if (forward_plan[2]) {
+                for (int j = 0; j < d.nfields; ++j) {
+                    const int k = (m[0] >= 0 ? j : d.nfields - 1 - j);
+                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n2 forward");
+                    underling_fftw_plan_execute(
+                            forward_plan[2], f[o[k]], f[o[k] + m[0]]);
+                    GRVY_TIMER_END("underling_fftw_plan_execute long_n2 forward");
                 }
+                for (int j = 0; j < d.nfields; ++j) o[j] += m[0];
             }
 
             // MPI transpose long_n2 -> long_n1
-            if (m[1] <= 0) {
-                for (int j = 0; j < d.nfields; ++j) {
-                    GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
-                    underling_execute_long_n2_to_long_n1(
-                            t_plan, f[o[j]], f[o[j] + m[1]]);
-                    GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
-                    o[j] += m[1];
-                }
-            } else {
-                for (int j = d.nfields; j --> 0;) {
-                    GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
-                    underling_execute_long_n2_to_long_n1(
-                            t_plan, f[o[j]], f[o[j] + m[1]]);
-                    GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
-                    o[j] += m[1];
-                }
+            for (int j = 0; j < d.nfields; ++j) {
+                const int k = (m[1] >= 0 ? j : d.nfields - 1 - j);
+                GRVY_TIMER_BEGIN("underling_execute_long_n2_to_long_n1");
+                underling_execute_long_n2_to_long_n1(
+                        t_plan, f[o[k]], f[o[k] + m[1]]);
+                GRVY_TIMER_END("underling_execute_long_n2_to_long_n1");
             }
+            for (int j = 0; j < d.nfields; ++j) o[j] += m[1];
 
             // FFT forward transform long_n1
-            if (d.fft_n[1] != 'i') {
-                if (m[2] <= 0) {
-                    for (int j = 0; j < d.nfields; ++j) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n1 forward");
-                        underling_fftw_plan_execute(
-                                forward_plan[1], f[o[j]], f[o[j] + m[2]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n1 forward");
-                        o[j] += m[2];
-                    }
-                } else {
-                    for (int j = d.nfields; j --> 0;) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n1 forward");
-                        underling_fftw_plan_execute(
-                                forward_plan[1], f[o[j]], f[o[j] + m[2]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n1 forward");
-                        o[j] += m[2];
-                    }
+            if (forward_plan[1]) {
+                for (int j = 0; j < d.nfields; ++j) {
+                    const int k = (m[2] >= 0 ? j : d.nfields - 1 - j);
+                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n1 forward");
+                    underling_fftw_plan_execute(
+                            forward_plan[1], f[o[k]], f[o[k] + m[2]]);
+                    GRVY_TIMER_END("underling_fftw_plan_execute long_n1 forward");
                 }
             }
+            for (int j = 0; j < d.nfields; ++j) o[j] += m[2];
 
             // MPI transpose long_n1 -> long_n0
-            if (m[3] <= 0) {
-                for (int j = 0; j < d.nfields; ++j) {
-                    GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
-                    underling_execute_long_n1_to_long_n0(
-                            t_plan, f[o[j]], f[o[j] + m[3]]);
-                    GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
-                    o[j] += m[3];
-                }
-            } else {
-                for (int j = d.nfields; j --> 0;) {
-                    GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
-                    underling_execute_long_n1_to_long_n0(
-                            t_plan, f[o[j]], f[o[j] + m[3]]);
-                    GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
-                    o[j] += m[3];
-                }
+            for (int j = 0; j < d.nfields; ++j) {
+                const int k = (m[3] >= 0 ? j : d.nfields - 1 - j);
+                GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n0");
+                underling_execute_long_n1_to_long_n0(
+                        t_plan, f[o[k]], f[o[k] + m[3]]);
+                GRVY_TIMER_END("underling_execute_long_n1_to_long_n0");
             }
+            for (int j = 0; j < d.nfields; ++j) o[j] += m[3];
 
             // FFT forward transform long_n0
-            if (d.fft_n[0] != 'i') {
-                if (m[4] <= 0) {
-                    for (int j = 0; j < d.nfields; ++j) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n0 forward");
-                        underling_fftw_plan_execute(
-                                forward_plan[0], f[o[j]], f[o[j] + m[4]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n0 forward");
-                        o[j] += m[4];
-                    }
-                } else {
-                    for (int j = d.nfields; j --> 0;) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n0 forward");
-                        underling_fftw_plan_execute(
-                                forward_plan[0], f[o[j]], f[o[j] + m[4]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n0 forward");
-                        o[j] += m[4];
-                    }
+            if (forward_plan[0]) {
+                for (int j = 0; j < d.nfields; ++j) {
+                    const int k = (m[4] >= 0 ? j : d.nfields - 1 - j);
+                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n0 forward");
+                    underling_fftw_plan_execute(
+                            forward_plan[0], f[o[k]], f[o[k] + m[4]]);
+                    GRVY_TIMER_END("underling_fftw_plan_execute long_n0 forward");
                 }
+                for (int j = 0; j < d.nfields; ++j) o[j] += m[4];
             }
         }
 
         if (d.backward) {
 
-            // Ensure start from long_n0 (required for backward-only benchmark)
+            // Ensure we start from long_n0 (required for backward-only benchmark)
             for (int i = 0; i < d.nfields; ++i)
                 o[i] = m[0] + m[1] + m[2] + m[3] + m[4];
 
             // FFT backward transform long_n0
-            if (d.fft_n[0] != 'i') {
-                if (m[5] <= 0) {
-                    for (int j = 0; j < d.nfields; ++j) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n0 backward");
-                        underling_fftw_plan_execute(
-                                backward_plan[0], f[o[j]], f[o[j] + m[5]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n0 backward");
-                        o[j] += m[5];
-                    }
-                } else {
-                    for (int j = d.nfields; j --> 0;) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n0 backward");
-                        underling_fftw_plan_execute(
-                                backward_plan[0], f[o[j]], f[o[j] + m[5]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n0 backward");
-                        o[j] += m[5];
-                    }
+            if (backward_plan[0]) {
+                for (int j = 0; j < d.nfields; ++j) {
+                    const int k = (m[5] >= 0 ? j : d.nfields - 1 - j);
+                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n0 backward");
+                    underling_fftw_plan_execute(
+                            backward_plan[0], f[o[k]], f[o[k] + m[5]]);
+                    GRVY_TIMER_END("underling_fftw_plan_execute long_n0 backward");
                 }
+                for (int j = 0; j < d.nfields; ++j) o[j] += m[5];
             }
 
             // MPI transpose long_n0 -> long_n1
-            if (m[6] <= 0) {
-                for (int j = 0; j < d.nfields; ++j) {
-                    GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
-                    underling_execute_long_n0_to_long_n1(
-                            t_plan, f[o[j]], f[o[j] + m[6]]);
-                    GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
-                    o[j] += m[6];
-                }
-            } else {
-                for (int j = d.nfields; j --> 0;) {
-                    GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
-                    underling_execute_long_n0_to_long_n1(
-                            t_plan, f[o[j]], f[o[j] + m[6]]);
-                    GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
-                    o[j] += m[6];
-                }
+            for (int j = 0; j < d.nfields; ++j) {
+                const int k = (m[6] >= 0 ? j : d.nfields - 1 - j);
+                GRVY_TIMER_BEGIN("underling_execute_long_n0_to_long_n1");
+                underling_execute_long_n0_to_long_n1(
+                        t_plan, f[o[k]], f[o[k] + m[6]]);
+                GRVY_TIMER_END("underling_execute_long_n0_to_long_n1");
             }
+            for (int j = 0; j < d.nfields; ++j) o[j] += m[6];
 
             // FFT backward transform long_n1
-            if (d.fft_n[1] != 'i') {
-                if (m[7] <= 0) {
-                    for (int j = 0; j < d.nfields; ++j) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n1 backward");
-                        underling_fftw_plan_execute(
-                                backward_plan[1], f[o[j]], f[o[j] + m[7]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n1 backward");
-                        o[j] += m[7];
-                    }
-                } else {
-                    for (int j = d.nfields; j --> 0;) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n1 backward");
-                        underling_fftw_plan_execute(
-                                backward_plan[1], f[o[j]], f[o[j] + m[7]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n1 backward");
-                        o[j] += m[7];
-                    }
+            if (backward_plan[1]) {
+                for (int j = 0; j < d.nfields; ++j) {
+                    const int k = (m[7] >= 0 ? j : d.nfields - 1 - j);
+                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n1 backward");
+                    underling_fftw_plan_execute(
+                            backward_plan[1], f[o[k]], f[o[k] + m[7]]);
+                    GRVY_TIMER_END("underling_fftw_plan_execute long_n1 backward");
                 }
+                for (int j = 0; j < d.nfields; ++j) o[j] += m[7];
             }
 
             // MPI transpose long_n1 -> long_n2
-            if (m[8] <= 0) {
-                for (int j = 0; j < d.nfields; ++j) {
-                    GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
-                    underling_execute_long_n1_to_long_n2(
-                            t_plan, f[o[j]], f[o[j] + m[8]]);
-                    GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
-                    o[j] += m[8];
-                }
-            } else {
-                for (int j = d.nfields; j --> 0;) {
-                    GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
-                    underling_execute_long_n1_to_long_n2(
-                            t_plan, f[o[j]], f[o[j] + m[8]]);
-                    GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
-                    o[j] += m[8];
-                }
+            for (int j = 0; j < d.nfields; ++j) {
+                const int k = (m[8] >= 0 ? j : d.nfields - 1 - j);
+                GRVY_TIMER_BEGIN("underling_execute_long_n1_to_long_n2");
+                underling_execute_long_n1_to_long_n2(
+                        t_plan, f[o[k]], f[o[k] + m[8]]);
+                GRVY_TIMER_END("underling_execute_long_n1_to_long_n2");
             }
+            for (int j = 0; j < d.nfields; ++j) o[j] += m[8];
 
             // FFT backward transform long_n2
-            if (d.fft_n[2] != 'i') {
-                if (m[9] <= 0) {
-                    for (int j = 0; j < d.nfields; ++j) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n2 backward");
-                        underling_fftw_plan_execute(
-                                backward_plan[2], f[o[j]], f[o[j] + m[9]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n2 backward");
-                        o[j] += m[9];
-                    }
-                } else {
-                    for (int j = d.nfields; j --> 0;) {
-                        GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n2 backward");
-                        underling_fftw_plan_execute(
-                                backward_plan[2], f[o[j]], f[o[j] + m[9]]);
-                        GRVY_TIMER_END("underling_fftw_plan_execute long_n2 backward");
-                        o[j] += m[9];
-                    }
+            if (backward_plan[2]) {
+                for (int j = 0; j < d.nfields; ++j) {
+                    const int k = (m[9] >= 0 ? j : d.nfields - 1 - j);
+                    GRVY_TIMER_BEGIN("underling_fftw_plan_execute long_n2 backward");
+                    underling_fftw_plan_execute(
+                            backward_plan[2], f[o[k]], f[o[k] + m[9]]);
+                    GRVY_TIMER_END("underling_fftw_plan_execute long_n2 backward");
                 }
+                for (int j = 0; j < d.nfields; ++j) o[j] += m[9];
             }
         }
     }
