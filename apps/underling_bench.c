@@ -154,12 +154,12 @@ enum {
     KEY_FORWARD,
     KEY_BACKWARD,
     KEY_BOTH,
-    KEY_FFT_CII,
-    KEY_FFT_RII,
-    KEY_FFT_CCI,
-    KEY_FFT_RCI,
+    KEY_FFT_IIC,
+    KEY_FFT_IIR,
+    KEY_FFT_ICC,
+    KEY_FFT_ICR,
     KEY_FFT_CCC,
-    KEY_FFT_RCC
+    KEY_FFT_CCR
 };
 
 static struct argp_option options[] = {
@@ -178,20 +178,20 @@ static struct argp_option options[] = {
      "Controlling parallel decomposition per MPI_Dims_create semantics", 0 },
     {"dims",       'P', "pAxpB",    0, "process grid for decomposition", 0 },
     {0, 0, 0, 0,
-     "Controlling field transpose directionality", 0},
-    {"forward",    KEY_FORWARD,  0, 0, "transform from long_n2 to long_n0", 0},
-    {"backward",   KEY_BACKWARD, 0, 0, "transform from long_n0 to long_n2", 0},
-    {"both",       KEY_BOTH,     0, 0, "transform forward then backward (default)", 0},
+     "Controlling field transpose and transform directionality", 0},
+    {"forward",    KEY_FORWARD,  0, 0, "go from long_n2 to long_n0", 0},
+    {"backward",   KEY_BACKWARD, 0, 0, "go from long_n0 to long_n2", 0},
+    {"both",       KEY_BOTH,     0, 0, "perform forward then backward (default)", 0},
     {0, 0, 0, 0,
-     "Enabling Fourier transformed directions (none enabled by default)", 0},
-    {"cii", KEY_FFT_CII, 0, 0, "complex-to-complex (c2c) transform long_n2",  0},
-    {"rii", KEY_FFT_RII, 0, 0, "real-to-complex (r2c) transform long_n2",     0},
-    {"cci", KEY_FFT_CCI, 0, 0, "c2c transform long_n2, c2c long_n1",          0},
-    {"rci", KEY_FFT_RCI, 0, 0, "r2c transform long_n2, c2c long_n1",          0},
-    {"ccc", KEY_FFT_CCC, 0, 0, "c2c transform long_n2, long_n1, and long_n0", 0},
-    {"rcc", KEY_FFT_RCC, 0, 0, "r2c long_n2, c2c long_n1 and long_n0",        0},
+     "Adding Fourier transformations (--forward shown, --backward inverts)", 0},
+    {"ccc", KEY_FFT_CCC, 0, 0, "c2c long_n0, c2c long_n1, c2c long_n2", 0},
+    {"ccr", KEY_FFT_CCR, 0, 0, "c2c long_n0, c2c long_n1, r2c long_n2", 0},
+    {"icc", KEY_FFT_ICC, 0, 0, "             c2c long_n1, c2c long_n2", 0},
+    {"icr", KEY_FFT_ICR, 0, 0, "             c2c long_n1, r2c long_n2", 0},
+    {"iic", KEY_FFT_IIC, 0, 0, "                          c2c long_n2", 0},
+    {"iir", KEY_FFT_IIR, 0, 0, "                          r2c long_n2", 0},
     {0, 0, 0, 0,
-     "Controlling FFTW planning rigor", 0},
+     "Changning FFTW planning rigor", 0},
     {"estimate",    KEY_ESTIMATE,    0, 0, "plan with FFTW_ESTIMATE", 0},
     {"measure",     KEY_MEASURE,     0, 0, "plan with FFTW_MEASURE (default)", 0},
     {"patient",     KEY_PATIENT,     0, 0, "plan with FFTW_PATIENT", 0},
@@ -266,40 +266,40 @@ parse_opt(int key, char *arg, struct argp_state *state)
             d->backward = 1;
             break;
 
-        case KEY_FFT_CII:
-            d->fft_n[2] = 'c';
+        case KEY_FFT_IIC:
+            d->fft_n[0] = 'i';
             d->fft_n[1] = 'i';
-            d->fft_n[0] = 'i';
-            break;
-
-        case KEY_FFT_RII:
-            d->fft_n[2] = 'r';
-            d->fft_n[1] = 'i';
-            d->fft_n[0] = 'i';
-            break;
-
-        case KEY_FFT_CCI:
             d->fft_n[2] = 'c';
-            d->fft_n[1] = 'c';
-            d->fft_n[0] = 'i';
             break;
 
-        case KEY_FFT_RCI:
-            d->fft_n[2] = 'r';
-            d->fft_n[1] = 'c';
+        case KEY_FFT_IIR:
             d->fft_n[0] = 'i';
+            d->fft_n[1] = 'i';
+            d->fft_n[2] = 'r';
+            break;
+
+        case KEY_FFT_ICC:
+            d->fft_n[0] = 'i';
+            d->fft_n[1] = 'c';
+            d->fft_n[2] = 'c';
+            break;
+
+        case KEY_FFT_ICR:
+            d->fft_n[0] = 'i';
+            d->fft_n[1] = 'c';
+            d->fft_n[2] = 'r';
             break;
 
         case KEY_FFT_CCC:
-            d->fft_n[2] = 'c';
-            d->fft_n[1] = 'c';
             d->fft_n[0] = 'c';
+            d->fft_n[1] = 'c';
+            d->fft_n[2] = 'c';
             break;
 
-        case KEY_FFT_RCC:
-            d->fft_n[2] = 'r';
-            d->fft_n[1] = 'c';
+        case KEY_FFT_CCR:
             d->fft_n[0] = 'c';
+            d->fft_n[1] = 'c';
+            d->fft_n[2] = 'r';
             break;
 
         case 'T':
@@ -539,24 +539,10 @@ int main(int argc, char *argv[])
         MPI_Abort(MPI_COMM_WORLD, EX_USAGE);
     }
 
-    // Initialize underling_grid and print decomposition and substep banner
-    underling_grid grid = underling_grid_create(
-            MPI_COMM_WORLD, d.n0, d.n1, d.n2, d.pA, d.pB);
-    assert(grid);
-    d.pA = underling_grid_pA_size(grid); // Obtain any automagic pA value
-    d.pB = underling_grid_pB_size(grid); // Obtain any automagic pB value
+    // Initialize underling_grid and print decomposition banner
     fprintf(rankout,
         "\n"
-        "Global pencil decomposition details (for transposed_flags == 0)\n"
-        "------------------------------------------------------------------------------\n"
-        "Long n2:                                     (%1$5d/%5$4d x %2$5d/%4$4d) x %3$5d\n"
-        "Long n1: %3$5d/%4$4d x (%1$5d/%5$4d x %2$5d) = (%3$5d/%4$4d x %1$5d/%5$4d) x %2$5d\n"
-        "Long n0: %2$5d/%5$4d x (%3$5d/%4$4d x %1$5d) = (%2$5d/%5$4d x %3$5d/%4$4d) x %1$5d\n"
-        "------------------------------------------------------------------------------\n"
-        "\n", d.n0, d.n1, d.n2, d.pA, d.pB);
-
-    fprintf(rankout,
-        "Transform and transpose operation details\n"
+        "Transform and transpose operation to be benchmarked:\n"
         "------------------------------------------------------------------------------\n"
         );
     if (d.forward) {
@@ -598,9 +584,33 @@ int main(int argc, char *argv[])
             d.fft_n[2] == 'c' ? "c2c"  : "ERR",
             d.fft_n[2] == 'i' ? "" : d.fft_inplace ? "in" : "out");
     }
+    if (d.fft_n[0] == 'r' || d.fft_n[1] == 'r' || d.fft_n[2] == 'r') {
+        fprintf(rankout,
+            "\n"
+            "Real-to-complex FFTs imply real-valued grid is %d x %d x %d\n",
+            d.fft_n[0] == 'r' ? 2*(d.n0 - 1) + (d.n0 % 2) : d.n0,
+            d.fft_n[1] == 'r' ? 2*(d.n1 - 1) + (d.n1 % 2) : d.n1,
+            d.fft_n[2] == 'r' ? 2*(d.n2 - 1) + (d.n2 % 2) : d.n2);
+    }
     fprintf(rankout,
         "------------------------------------------------------------------------------\n"
         "\n");
+
+    // Initialize underling_grid and print decomposition banner
+    underling_grid grid = underling_grid_create(
+            MPI_COMM_WORLD, d.n0, d.n1, d.n2, d.pA, d.pB);
+    assert(grid);
+    d.pA = underling_grid_pA_size(grid); // Obtain any automagic pA value
+    d.pB = underling_grid_pB_size(grid); // Obtain any automagic pB value
+    fprintf(rankout,
+        "Global pencil decomposition details (for transposed_flags == 0)\n"
+        "------------------------------------------------------------------------------\n"
+        "Long n2:                                     (%1$5d/%5$4d x %2$5d/%4$4d) x %3$5d\n"
+        "Long n1: %3$5d/%4$4d x (%1$5d/%5$4d x %2$5d) = (%3$5d/%4$4d x %1$5d/%5$4d) x %2$5d\n"
+        "Long n0: %2$5d/%5$4d x (%3$5d/%4$4d x %1$5d) = (%2$5d/%5$4d x %3$5d/%4$4d) x %1$5d\n"
+        "------------------------------------------------------------------------------\n"
+        "\n", d.n0, d.n1, d.n2, d.pA, d.pB);
+
 
     // Initialize underling_problem and find per-field memory requirements
     underling_problem problem = underling_problem_create(
