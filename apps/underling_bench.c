@@ -191,7 +191,7 @@ static struct argp_option options[] = {
     {"iic", KEY_FFT_IIC, 0, 0, "                          c2c long_n2", 0},
     {"iir", KEY_FFT_IIR, 0, 0, "                          r2c long_n2", 0},
     {0, 0, 0, 0,
-     "Changning FFTW planning rigor", 0},
+     "Changing FFTW planning rigor", 0},
     {"estimate",    KEY_ESTIMATE,    0, 0, "plan with FFTW_ESTIMATE", 0},
     {"measure",     KEY_MEASURE,     0, 0, "plan with FFTW_MEASURE (default)", 0},
     {"patient",     KEY_PATIENT,     0, 0, "plan with FFTW_PATIENT", 0},
