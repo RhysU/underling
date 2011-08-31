@@ -562,7 +562,7 @@ int main(int argc, char *argv[])
         );
     if (d.forward) {
         fprintf(rankout,
-            "Forward : FFT n2  | n2->n1 | FFT n1  | n1->n0 | FFT n0\n"
+            "Forward:  FFT n2  | n2->n1 | FFT n1  | n1->n0 | FFT n0\n"
             "          %-4s%-3s |   %-3s  | %-4s%-3s |   %-3s  | %-4s%3s\n",
             d.fft_n[2] == 'i' ? "none" :
             d.fft_n[2] == 'r' ? "r2c"  :
@@ -579,24 +579,25 @@ int main(int argc, char *argv[])
             d.fft_n[0] == 'c' ? "c2c"  : "ERR",
             d.fft_n[0] == 'i' ? "" : d.fft_inplace ? "in" : "out");
     }
+    if (d.forward && d.backward) fprintf(rankout, "\n");
     if (d.backward) {
         fprintf(rankout,
-            "Backward: FFT n2  | n2->n1 | FFT n1  | n1->n0 | FFT n0\n"
+            "Backward: FFT n0  | n0->n1 | FFT n1  | n1->n2 | FFT n2\n"
             "          %-4s%-3s |   %-3s  | %-4s%-3s |   %-3s  | %-4s%3s\n",
-            d.fft_n[2] == 'i' ? "none" :
-            d.fft_n[2] == 'r' ? "c2r"  :
-            d.fft_n[2] == 'c' ? "c2c"  : "ERR",
-            d.fft_n[2] == 'i' ? "" : d.fft_inplace ? "in" : "out",
+            d.fft_n[0] == 'i' ? "none" :
+            d.fft_n[0] == 'r' ? "c2r"  :
+            d.fft_n[0] == 'c' ? "c2c"  : "ERR",
+            d.fft_n[0] == 'i' ? "" : d.fft_inplace ? "in" : "out",
             d.mpi_inplace ? "in" : "out",
             d.fft_n[1] == 'i' ? "none" :
             d.fft_n[1] == 'r' ? "c2r"  :
             d.fft_n[1] == 'c' ? "c2c"  : "ERR",
             d.fft_n[1] == 'i' ? "" : d.fft_inplace ? "in" : "out",
             d.mpi_inplace ? "in" : "out",
-            d.fft_n[0] == 'i' ? "none" :
-            d.fft_n[0] == 'r' ? "c2r"  :
-            d.fft_n[0] == 'c' ? "c2c"  : "ERR",
-            d.fft_n[0] == 'i' ? "" : d.fft_inplace ? "in" : "out");
+            d.fft_n[2] == 'i' ? "none" :
+            d.fft_n[2] == 'r' ? "c2r"  :
+            d.fft_n[2] == 'c' ? "c2c"  : "ERR",
+            d.fft_n[2] == 'i' ? "" : d.fft_inplace ? "in" : "out");
     }
     fprintf(rankout,
         "------------------------------------------------------------------------------\n"
