@@ -588,9 +588,9 @@ int main(int argc, char *argv[])
         fprintf(rankout,
             "\n"
             "Real-to-complex FFTs imply real-valued grid is %d x %d x %d\n",
-            d.fft_n[0] == 'r' ? 2*(d.n0 - 1) + (d.n0 % 2) : d.n0,
-            d.fft_n[1] == 'r' ? 2*(d.n1 - 1) + (d.n1 % 2) : d.n1,
-            d.fft_n[2] == 'r' ? 2*(d.n2 - 1) + (d.n2 % 2) : d.n2);
+            d.fft_n[0] == 'r' ? 2*(d.n0 - 1) : d.n0,
+            d.fft_n[1] == 'r' ? 2*(d.n1 - 1) : d.n1,
+            d.fft_n[2] == 'r' ? 2*(d.n2 - 1) : d.n2);
     }
     fprintf(rankout,
         "------------------------------------------------------------------------------\n"
