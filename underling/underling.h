@@ -134,7 +134,7 @@ extern const underling_extents UNDERLING_EXTENTS_INVALID;
  * @param argv     <tt>&argv</tt> from <tt>main(argv,argv)</tt>.
  *                 May be \c NULL if the caller cannot obtain <tt>&argv</tt>.
  *
- * @return UNDERLING_SUCCESS (zero) on success.  On failure, On failure, calls
+ * @return UNDERLING_SUCCESS (zero) on success.  On failure, calls
  *         underling_error and returns one of ::underling_status.
  *
  * @see The method \c underling_init() initializes underling's entire
@@ -161,7 +161,7 @@ int underling_only_init(int *argc, char **argv[]) UNDERLING_API;
  *                 environment variable \c OMP_NUM_THREADS is used
  *                 (for both OpenMP- and pthread-based FFTW installations).
  *
- * @return UNDERLING_SUCCESS (zero) on success.  On failure, On failure, calls
+ * @return UNDERLING_SUCCESS (zero) on success.  On failure, calls
  *         underling_error and returns one of ::underling_status.
  *
  * @see The method \c underling_only_init() initializes only underling
