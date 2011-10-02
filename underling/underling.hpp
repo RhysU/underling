@@ -295,6 +295,7 @@ std::basic_ostream<charT,traits>& operator<<(
 }
 
 /** @see underling_extents_cmp */
+inline
 bool operator==(const underling::extents &e1,
                 const underling::extents &e2) {
     return !underling_extents_cmp(&e1, &e2);

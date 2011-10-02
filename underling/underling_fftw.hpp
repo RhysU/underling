@@ -193,6 +193,7 @@ std::basic_ostream<charT,traits>& operator<<(
 }
 
 /** @see underling_fftw_extents_cmp */
+inline
 bool operator==(const underling::fftw::extents &e1,
                 const underling::fftw::extents &e2) {
     return !underling_fftw_extents_cmp(&e1, &e2);
