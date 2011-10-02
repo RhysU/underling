@@ -74,7 +74,7 @@ static inline void swap(int *a, int *b)
 
 static
 fftw_plan
-underling_fftww_plan_reorder_complex(
+underling_fftw_plan_reorder_complex(
         underling_real * const data_in,
         underling_real * const data_out,
         const underling_fftw_extents * const input,
@@ -180,7 +180,7 @@ underling_fftw_extents_cmp(const underling_fftw_extents * const e1,
 
 static
 fftw_plan
-underling_fftww_plan_reorder_complex(
+underling_fftw_plan_reorder_complex(
         underling_real * const data_in,
         underling_real * const data_out,
         const underling_fftw_extents * const input,
@@ -460,7 +460,7 @@ underling_fftw_plan_create_c2c_internal(
         // In-place requires reordering either before or after the FFT
         if (input_is_long) {
             transform_in = transform_out = &input;
-            f->plan_postorder = underling_fftww_plan_reorder_complex(
+            f->plan_postorder = underling_fftw_plan_reorder_complex(
                     in, out, &input, &output,
                     fftw_rigor_flags | FFTW_DESTROY_INPUT);
             if (UNDERLING_UNLIKELY(!f->plan_postorder)) {
@@ -468,7 +468,7 @@ underling_fftw_plan_create_c2c_internal(
                 UNDERLING_ERROR_NULL("!f->plan_postorder", UNDERLING_ESANITY);
             }
         } else if (output_is_long) {
-            f->plan_preorder = underling_fftww_plan_reorder_complex(
+            f->plan_preorder = underling_fftw_plan_reorder_complex(
                     in, out, &input, &output,
                     fftw_rigor_flags | FFTW_DESTROY_INPUT);
             if (UNDERLING_UNLIKELY(!f->plan_preorder)) {
