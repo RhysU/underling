@@ -26,6 +26,7 @@
 #define __UNDERLING_H
 
 #include <mpi.h>
+#include <underling/visibility.h>
 
 #ifdef __cplusplus
 extern "C" {
