@@ -1,3 +1,30 @@
+What's new in underling 0.2.1
+-----------------------------
+
+Updates to support FFTW 3.3's new side-by-side pthread and OpenMP builds:
+
+     * Feature #1924: Allow parallel pthread/openmp build
+
+New underling_bench features for benchmarking transposes plus FFT use cases:
+
+     * Feature #1866: Add forward and backward transpose counts to underling_bench
+     * Feature #1867: Add FFTs to underling_bench
+     * Feature #1869: Ensure underling_bench not overly-linked
+     * Feature #1870: Add lock to wisdom file for underling_bench
+     * Feature #1901: Have a planning timeout for underling_bench
+     * Feature #1902: Start underling_bench from long_n0
+
+Miscellaneous items:
+
+    * Feature #2055: Roll underling 0.2.1 release
+    * Bug #1871: underling_bench -f help message misleading
+    * Bug #1872: Typo in underling_bench: "Unable to malloc 1.91 GB bytes on rank 1"
+    * underling.h did not include visibility.h causing broken builds
+    * underling.hpp and underling_fftw.hpp
+
+Pulled in newest gnulib updates.
+
+
 What's new in underling 0.2.0
 -----------------------------
 
