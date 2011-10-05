@@ -833,6 +833,9 @@ init_unit_test_suite( int argc, char* argv[] )
 
     // Size of global extents
     const int extents[][3] = { { 2, 3, 5 },
+ //                            { 8, 1, 1 }, // Reproduce bug #2059
+ //                            { 1, 8, 1 }, // Reproduce bug #2059
+ //                            { 1, 1, 8 }, // Reproduce bug #2059
                                { 7, 5, 3 },
                                { 8, 6, 4 },
                                { 4, 6, 8 },
