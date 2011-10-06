@@ -383,7 +383,7 @@ underling_grid_create(
 
     // Sanity check decomposition against processor count
     if (UNDERLING_UNLIKELY(g->pA * g->pB != nproc)) {
-        snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+        snprintf(buffer, sizeof(buffer),
                 "Invalid processor grid: pA {%d} * pB {%d} != nproc {%d}",
                 g->pA, g->pB, nproc);
         underling_grid_destroy(g);
@@ -394,21 +394,21 @@ underling_grid_create(
     // ticket #1297 for a discussion about handling degenerate transposes.
     // Eliminating this requirement will require updating the Doxygen.
     if (UNDERLING_UNLIKELY(g->n[0] < g->pB)) {
-        snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+        snprintf(buffer, sizeof(buffer),
                 "Decomposition requires n0 {%d} >= pB {%d}",
                 g->n[0], g->pB);
         underling_grid_destroy(g);
         UNDERLING_ERROR_NULL(buffer, UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(g->n[1] < g->pA || g->n[1] < g->pB)) {
-        snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+        snprintf(buffer, sizeof(buffer),
                 "Decomposition requires n1 {%d} >= pA {%d}, pB {%d}",
                 g->n[1], g->pA, g->pB);
         underling_grid_destroy(g);
         UNDERLING_ERROR_NULL(buffer, UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(g->n[0] < g->pB)) {
-        snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+        snprintf(buffer, sizeof(buffer),
                 "Decomposition requires n2 {%d} >= pA {%d}",
                 g->n[2], g->pA);
         underling_grid_destroy(g);
@@ -460,19 +460,19 @@ underling_grid_create(
     const int pB_ndigits = snprintf(NULL, 0, "%d", g->pB);
     assert(pA_ndigits > 0);
     assert(pB_ndigits > 0);
-    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+    snprintf(buffer, sizeof(buffer),
             "uGComm%0*dx%0*d", pA_ndigits, pA_rank, pB_ndigits, pB_rank);
     if ((error = MPI_Comm_set_name(g->g_comm, buffer))) {
         underling_grid_destroy(g);
         UNDERLING_MPICHKN(error);
     }
-    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+    snprintf(buffer, sizeof(buffer),
             "uPACommXx%0*d", pB_ndigits, pB_rank);
     if ((error = MPI_Comm_set_name(g->pA_comm, buffer))) {
         underling_grid_destroy(g);
         UNDERLING_MPICHKN(error);
     }
-    snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
+    snprintf(buffer, sizeof(buffer),
             "uPBComm%0*dxX", pA_ndigits, pA_rank);
     if ((error = MPI_Comm_set_name(g->pB_comm, buffer))) {
         underling_grid_destroy(g);
