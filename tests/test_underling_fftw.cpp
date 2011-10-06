@@ -856,9 +856,9 @@ init_unit_test_suite( int argc, char* argv[] )
                                ,{ 8, 6, 4 }
                                ,{ 4, 6, 8 }
                                ,{ 6, 6, 6 }
-//                             ,{ 8, 1, 1 }  // Reproduce bug #2059
-//                             ,{ 1, 8, 1 }  // Reproduce bug #2059
-//                             ,{ 1, 1, 8 }  // Reproduce bug #2059
+                               ,{ 8, 1, 1 }  // Reproduce bug #2059
+                               ,{ 1, 8, 1 }  // Reproduce bug #2059
+                               ,{ 1, 1, 8 }  // Reproduce bug #2059
     };
 
     // Number of real-valued scalars to transpose

@@ -336,7 +336,9 @@ create_underling_fftw_extents_for_real(
     // padding.  Index 4 reflects that a real scalar value has a single
     // real-valued component.  Definitely a bit goofy, but consistent with
     // complex extents.
-    retval.size[long_ni]    = 2*(retval.size[long_ni]-1);
+    retval.size[long_ni]    = retval.size[long_ni] == 1
+                            ? /* degenerate complex size == real size == */ 1
+                            : 2*(retval.size[long_ni]-1);
     retval.stride[long_ni] /= 2;
     retval.size[3]         /= 2;
     retval.stride[3]        = 1;
