@@ -306,7 +306,8 @@ underling_grid_create(
 {
     // Sanity check incoming arguments
     if (UNDERLING_UNLIKELY(comm == MPI_COMM_NULL)) {
-        UNDERLING_ERROR_NULL("comm != MPI_COMM_NULL required", UNDERLING_EINVAL);
+        UNDERLING_ERROR_NULL("comm != MPI_COMM_NULL required",
+                             UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(n0 < 1)) {
         UNDERLING_ERROR_NULL("n0 >= 1 required", UNDERLING_EINVAL);
@@ -386,7 +387,7 @@ underling_grid_create(
                 "Invalid processor grid: pA {%d} * pB {%d} != nproc {%d}",
                 g->pA, g->pB, nproc);
         underling_grid_destroy(g);
-        UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
+        UNDERLING_ERROR_NULL(buffer, UNDERLING_EINVAL);
     }
 
     // Sanity check decomposition against grid size requirements. See Redmine
@@ -397,21 +398,21 @@ underling_grid_create(
                 "Decomposition requires n0 {%d} >= pB {%d}",
                 g->n[0], g->pB);
         underling_grid_destroy(g);
-        UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
+        UNDERLING_ERROR_NULL(buffer, UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(g->n[1] < g->pA || g->n[1] < g->pB)) {
         snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
                 "Decomposition requires n1 {%d} >= pA {%d}, pB {%d}",
                 g->n[1], g->pA, g->pB);
         underling_grid_destroy(g);
-        UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
+        UNDERLING_ERROR_NULL(buffer, UNDERLING_EINVAL);
     }
     if (UNDERLING_UNLIKELY(g->n[0] < g->pB)) {
         snprintf(buffer, sizeof(buffer)/sizeof(buffer[0]),
                 "Decomposition requires n2 {%d} >= pA {%d}",
                 g->n[2], g->pA);
         underling_grid_destroy(g);
-        UNDERLING_ERROR_NULL(buffer, UNDERLING_EFAILED);
+        UNDERLING_ERROR_NULL(buffer, UNDERLING_EINVAL);
     }
 
     // Clone the communicator and create the 2D Cartesian topology
