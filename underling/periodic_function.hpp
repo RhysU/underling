@@ -70,6 +70,7 @@ public:
           length(length),
           constant(constant)
         {
+            assert(N > 0);
             assert(max_mode_exclusive <= (N/2+1));
         }
 
