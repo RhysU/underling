@@ -121,7 +121,7 @@ static void test_c2c_forward(tc t)
     }
 
     const underling_real close
-        = std::numeric_limits<underling_real>::epsilon()*100*n0*n1*n2;
+        = std::numeric_limits<underling_real>::epsilon()*150*n0*n1*n2;
 
     UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
     underling::fftw::plan forward(underling::fftw::plan::c2c_forward(),
@@ -306,7 +306,7 @@ static void test_c2c_backward(tc t)
     }
 
     const underling_real close
-        = std::numeric_limits<underling_real>::epsilon()*100*n0*n1*n2;
+        = std::numeric_limits<underling_real>::epsilon()*150*n0*n1*n2;
 
     UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
     underling::fftw::plan backward(underling::fftw::plan::c2c_backward(),
@@ -833,9 +833,9 @@ init_unit_test_suite( int argc, char* argv[] )
 
     // Size of global extents
     const int extents[][3] = { { 2, 3, 5 },
- //                            { 8, 1, 1 }, // Reproduce bug #2059
- //                            { 1, 8, 1 }, // Reproduce bug #2059
- //                            { 1, 1, 8 }, // Reproduce bug #2059
+//                             { 8, 1, 1 }, // Reproduce bug #2059
+//                             { 1, 8, 1 }, // Reproduce bug #2059
+//                             { 1, 1, 8 }, // Reproduce bug #2059
                                { 7, 5, 3 },
                                { 8, 6, 4 },
                                { 4, 6, 8 },
