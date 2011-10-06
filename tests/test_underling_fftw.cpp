@@ -539,7 +539,8 @@ static void test_c2r(tc t)
             for (int j = 0; j < e.size[dir_j]; ++j) {
                 for (int k = 0; k < e.size[dir_k]; ++k) {
 
-                    const periodic_function<double> pf(2*(e.size[long_ni]-1),
+                    const periodic_function<double> pf(
+                            e.size[long_ni] == 1 ? 1 : 2*(e.size[long_ni]-1),
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
                     underling_real * const pencil = &f.in[
@@ -610,7 +611,8 @@ static void test_c2r(tc t)
             for (int j = 0; j < e.size[dir_j]; ++j) {
                 for (int k = 0; k < e.size[dir_k]; ++k) {
 
-                    const periodic_function<double> pf(2*(e.size[long_ni]-1),
+                    const periodic_function<double> pf(
+                            e.size[long_ni] == 1 ? 1 : 2*(e.size[long_ni]-1),
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
                     const underling_real * const pencil = &f.in[
@@ -756,7 +758,8 @@ static void test_r2c(tc t)
             for (int j = 0; j < e.size[dir_j]; ++j) {
                 for (int k = 0; k < e.size[dir_k]; ++k) {
 
-                    const periodic_function<double> pf(2*(e.size[long_ni]-1),
+                    const periodic_function<double> pf(
+                            e.size[long_ni] == 1 ? 1 : 2*(e.size[long_ni]-1),
                             -1, M_PI/3.0, 2.0*M_PI, (i+1)*(j+1)*(k+1));
 
                     const underling_real * const pencil = &f.out[
