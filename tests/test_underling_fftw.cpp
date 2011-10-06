@@ -119,6 +119,10 @@ static void test_c2c_forward(tc t)
                            << " when long in " << long_ni
                            << " with flags " << flags);
     }
+    if (nproc > 1 && (n0 == 1 || n1 == 1 || n2 == 1)) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        return;
+    }
 
     const underling_real close
         = std::numeric_limits<underling_real>::epsilon()*150*n0*n1*n2;
@@ -303,6 +307,10 @@ static void test_c2c_backward(tc t)
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
                            << " with flags " << flags);
+    }
+    if (nproc > 1 && (n0 == 1 || n1 == 1 || n2 == 1)) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        return;
     }
 
     const underling_real close
@@ -496,6 +504,10 @@ static void test_c2r(tc t)
         if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
         return;
     }
+    if (nproc > 1 && (n0 == 1 || n1 == 1 || n2 == 1)) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        return;
+    }
 
     UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
 
@@ -682,6 +694,10 @@ static void test_r2c(tc t)
         if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
         return;
     }
+    if (nproc > 1 && (n0 == 1 || n1 == 1 || n2 == 1)) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        return;
+    }
 
     UnderlingFixture f(comm, n0, n1, n2, howmany, flags, in_place);
 
@@ -835,14 +851,15 @@ init_unit_test_suite( int argc, char* argv[] )
     boost::unit_test::framework::master_test_suite().p_name.value = __FILE__;
 
     // Size of global extents
-    const int extents[][3] = { { 2, 3, 5 },
-//                             { 8, 1, 1 }, // Reproduce bug #2059
-//                             { 1, 8, 1 }, // Reproduce bug #2059
-//                             { 1, 1, 8 }, // Reproduce bug #2059
-                               { 7, 5, 3 },
-                               { 8, 6, 4 },
-                               { 4, 6, 8 },
-                               { 6, 6, 6 } };
+    const int extents[][3] = {  { 2, 3, 5 }
+                               ,{ 7, 5, 3 }
+                               ,{ 8, 6, 4 }
+                               ,{ 4, 6, 8 }
+                               ,{ 6, 6, 6 }
+//                             ,{ 8, 1, 1 }  // Reproduce bug #2059
+//                             ,{ 1, 8, 1 }  // Reproduce bug #2059
+//                             ,{ 1, 1, 8 }  // Reproduce bug #2059
+    };
 
     // Number of real-valued scalars to transpose
     const int howmanys[] = { 2, 4, 6 };
