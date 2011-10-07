@@ -51,7 +51,8 @@ public:
      *
      * @param N Number of points in the physical domain
      * @param max_mode_exclusive Exclusive upper bound on the signal's
-     *        frequency content.  Negative one indicates that the maximum
+     *        frequency content expressed as a wavenumber index.  Setting
+     *        <tt>max_mode_exclusive <= 0</tt> indicates that the maximum
      *        supportable frequency given \c N should be used.
      * @param shift Phase shift in the signal
      * @param length Domain size over which the signal is periodic
@@ -59,13 +60,13 @@ public:
      *                 factor used to scale all modes.
      */
      explicit periodic_function(const Integer N,
-                                const Integer max_mode_exclusive = -1,
+                                const Integer max_mode_exclusive = 0,
                                 const FPT shift = M_PI/3,
                                 const FPT length = 2*M_PI,
                                 const FPT constant = 17)
         : N(N),
           max_mode_exclusive(
-                    max_mode_exclusive >= 0 ? max_mode_exclusive : N/2+1),
+                    max_mode_exclusive > 0 ? max_mode_exclusive : N/2+1),
           shift(shift),
           length(length),
           constant(constant)
