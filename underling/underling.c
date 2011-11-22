@@ -655,9 +655,9 @@ underling_transpose_create_inverse(
                             UNDERLING_ESANITY);
     }
 
-    if (UNDERLING_UNLIKELY(    backward->howmany == 0
-                           || backward->d[0] == 0
-                           || backward->d[1] == 0)) {
+    if (UNDERLING_UNLIKELY(   backward->howmany == 0
+                           || backward->d[0]    == 0
+                           || backward->d[1]    == 0)) {
         // Trivial transpose required;
         // fftw_mpi_local_size_many_transposed divides-by-zero on zero size
         backward->local[0]       = 0;
@@ -710,8 +710,8 @@ underling_transpose_fftw_plan(
     }
 
     if (UNDERLING_UNLIKELY(   transpose->howmany == 0
-                           || transpose->d[0] == 0
-                           || transpose->d[1] == 0)) {
+                           || transpose->d[0]    == 0
+                           || transpose->d[1]    == 0)) {
         // fftw_mpi_plan_many_transpose returns NULL on some trivial input.
         // Create a NOP fftw_plan and return it to sidestep the issue.
         return fftw_plan_guru_r2r(0, NULL, 0, NULL, NULL, NULL, NULL, 0);
