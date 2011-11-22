@@ -35,9 +35,10 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <underling/error.h>
+
 #include <stdlib.h>
 #include <mpi.h>
-#include <underling/error.h>
 
 underling_error_handler_t * underling_error_handler = NULL;
 

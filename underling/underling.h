@@ -25,6 +25,8 @@
 #ifndef __UNDERLING_H
 #define __UNDERLING_H
 
+#include <stddef.h>
+#include <stdio.h>
 #include <mpi.h>
 #include <underling/visibility.h>
 

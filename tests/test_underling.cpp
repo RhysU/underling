@@ -26,13 +26,14 @@
 #ifdef HAVE_CONFIG_H
 #include <underling/config.h>
 #endif
+#include <underling/underling.hpp>
+
 #include <cstdio>
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/parameterized_test.hpp>
 #include <underling/error.h>
 #include <mpi.h>
-#include <underling/underling.hpp>
 #include <fftw3-mpi.h>
 #include "test_tools.hpp"
 #include "fixtures.hpp"

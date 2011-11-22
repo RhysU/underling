@@ -26,10 +26,11 @@
 #ifdef HAVE_CONFIG_H
 #include <underling/config.h>
 #endif
+#include <underling/periodic_function.hpp>
+
 #define BOOST_TEST_MODULE $Id$
 #include <fftw3.h>
 #include <boost/test/included/unit_test.hpp>
-#include <underling/periodic_function.hpp>
 #include "test_tools.hpp"
 
 using underling::periodic_function;

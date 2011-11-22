@@ -26,6 +26,8 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <underling/underling.h>
+
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -33,7 +35,6 @@
 #include <mpi.h>
 #include <fftw3-mpi.h>
 #include <underling/error.h>
-#include <underling/underling.h>
 #include "common.h"
 
 // TODO Ensure grid/problem compatibility when both provided to methods!

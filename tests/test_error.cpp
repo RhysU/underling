@@ -20,8 +20,9 @@
 #ifdef HAVE_CONFIG_H
 #include <underling/config.h>
 #endif
-#define BOOST_TEST_MODULE $Id$
 #include <underling/error.h>
+
+#define BOOST_TEST_MODULE $Id$
 #include <boost/test/included/unit_test.hpp>
 
 #define CHECK(x) errors[n].number = x ; errors[n].name = #x ; n++ ;
