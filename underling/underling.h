@@ -258,7 +258,7 @@ underling_extents_cmp(const underling_extents * const e1,
 #define UNDERLING_TRANSPOSE_NONE (1U << 4)
 
 /** Convenience flag indicating all transform directions */
-#define UNDERLING_TRANSPOSE_ALL \
+#define UNDERLING_TRANSPOSE_ALL                       \
          (   UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1   \
            | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0   \
            | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1   \
