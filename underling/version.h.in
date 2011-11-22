@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// underling 0.2.2: underling library for parallel, 3D pencil decompositions
+// underling 0.3.0: underling library for parallel, 3D pencil decompositions
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010, 2011 The PECOS Development Team
