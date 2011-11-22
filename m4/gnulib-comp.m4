@@ -70,6 +70,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module snippet/c++defs:
   # Code from module snippet/warn-on-use:
   # Code from module ssize_t:
+  # Code from module stdalign:
   # Code from module stdbool:
   # Code from module stddef:
   # Code from module stdint:
@@ -192,6 +193,7 @@ if test $HAVE_SLEEP = 0 || test $REPLACE_SLEEP = 1; then
 fi
 gl_UNISTD_MODULE_INDICATOR([sleep])
 gt_TYPE_SSIZE_T
+gl_STDALIGN_H
 AM_STDBOOL_H
 gl_STDDEF_H
 gl_STDINT_H
@@ -436,6 +438,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/rawmemchr.valgrind
   lib/size_max.h
   lib/sleep.c
+  lib/stdalign.in.h
   lib/stdbool.in.h
   lib/stddef.in.h
   lib/stdint.in.h
@@ -469,6 +472,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/dirname.m4
   m4/double-slash-root.m4
   m4/errno_h.m4
+  m4/exponentd.m4
   m4/extensions.m4
   m4/float_h.m4
   m4/flock.m4
@@ -479,6 +483,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/inttypes_h.m4
   m4/longlong.m4
   m4/malloc.m4
+  m4/math_h.m4
   m4/memchr.m4
   m4/mempcpy.m4
   m4/mmap-anon.m4
@@ -491,6 +496,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/size_max.m4
   m4/sleep.m4
   m4/ssize_t.m4
+  m4/stdalign.m4
   m4/stdbool.m4
   m4/stddef_h.m4
   m4/stdint.m4
