@@ -26,12 +26,13 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <underling/underling_fftw.h>
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fftw3.h>
 #include <underling/error.h>
-#include <underling/underling_fftw.h>
 #include "common.h"
 
 // ********************************************************************
@@ -360,8 +361,12 @@ underling_fftw_plan_create_c2c_forward(
         int long_ni,
         underling_real * in,
         underling_real * out,
-        unsigned fftw_rigor_flags)
+        unsigned fftw_rigor_flags,
+        unsigned packed_flags)
 {
+    if (!packed_flags) packed_flags = UNDERLING_FFTW_PACKED_NONE; // Default
+    assert(packed_flags == UNDERLING_FFTW_PACKED_NONE);           // FIXME
+
     underling_extents e = underling_local_extents(problem, long_ni);
 
     const underling_fftw_extents input
@@ -383,8 +388,12 @@ underling_fftw_plan_create_c2c_backward(
         int long_ni,
         underling_real * in,
         underling_real * out,
-        unsigned fftw_rigor_flags)
+        unsigned fftw_rigor_flags,
+        unsigned packed_flags)
 {
+    if (!packed_flags) packed_flags = UNDERLING_FFTW_PACKED_NONE; // Default
+    assert(packed_flags == UNDERLING_FFTW_PACKED_NONE);           // FIXME
+
     underling_extents e = underling_local_extents(problem, long_ni);
 
     const underling_fftw_extents input
@@ -555,8 +564,12 @@ underling_fftw_plan_create_c2r_backward(
         int long_ni,
         underling_real * in,
         underling_real * out,
-        unsigned fftw_rigor_flags)
+        unsigned fftw_rigor_flags,
+        unsigned packed_flags)
 {
+    if (!packed_flags) packed_flags = UNDERLING_FFTW_PACKED_NONE; // Default
+    assert(packed_flags == UNDERLING_FFTW_PACKED_NONE);           // FIXME
+
     underling_extents e = underling_local_extents(problem, long_ni);
 
     const underling_fftw_extents input
@@ -748,8 +761,12 @@ underling_fftw_plan_create_r2c_forward(
         int long_ni,
         underling_real * in,
         underling_real * out,
-        unsigned fftw_rigor_flags)
+        unsigned fftw_rigor_flags,
+        unsigned packed_flags)
 {
+    if (!packed_flags) packed_flags = UNDERLING_FFTW_PACKED_NONE; // Default
+    assert(packed_flags == UNDERLING_FFTW_PACKED_NONE);           // FIXME
+
     underling_extents e = underling_local_extents(problem, long_ni);
 
     const underling_fftw_extents input

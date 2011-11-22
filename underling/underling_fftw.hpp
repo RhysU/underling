@@ -41,11 +41,32 @@ namespace fftw {
 /** @see underling_fftw_extents */
 typedef underling_fftw_extents extents;
 
+/** Wraps packed storage flags */
+namespace packed {
+
+    enum { // Anonymous to avoid introducing an unnecessary type
+
+        /** @see UNDERLING_FFTW_PACKED_LONG_N2 */
+        long_n2 = UNDERLING_FFTW_PACKED_LONG_N2,
+
+        /** @see UNDERLING_FFTW_PACKED_LONG_N0 */
+        long_n0 = UNDERLING_FFTW_PACKED_LONG_N0,
+
+        /** @see UNDERLING_FFTW_PACKED_ALL */
+        all     =  UNDERLING_FFTW_PACKED_ALL,
+
+        /** @see UNDERLING_FFTW_PACKED_NONE */
+        none    =  UNDERLING_FFTW_PACKED_NONE
+
+    };
+
+}
+
 /**
  * Provides a thin RAII wrapper for underling_fftw_plan.
  * @see underling_fftw_plan.
  */
-class plan : public boost::noncopyable {
+class plan : public noncopyable {
 public:
 
     /** A tag type used to indicate a complex-to-complex forward transform */
@@ -66,9 +87,11 @@ public:
          int long_ni,
          underling_real *in,
          underling_real *out,
-         unsigned fftw_rigor_flags)
+         unsigned fftw_rigor_flags = 0,
+         unsigned packed_flags     = 0)
         : plan_(underling_fftw_plan_create_c2c_forward(
-                    p.get(), long_ni, in, out, fftw_rigor_flags)) {
+                    p.get(), long_ni, in, out, fftw_rigor_flags, packed_flags))
+    {
         (void) tag; // unused
     }
 
@@ -78,9 +101,11 @@ public:
          int long_ni,
          underling_real *in,
          underling_real *out,
-         unsigned fftw_rigor_flags)
+         unsigned fftw_rigor_flags = 0,
+         unsigned packed_flags     = 0)
         : plan_(underling_fftw_plan_create_c2c_backward(
-                    p.get(), long_ni, in, out, fftw_rigor_flags)) {
+                    p.get(), long_ni, in, out, fftw_rigor_flags, packed_flags))
+    {
         (void) tag; // unused
     }
 
@@ -90,9 +115,11 @@ public:
          int long_ni,
          underling_real *in,
          underling_real *out,
-         unsigned fftw_rigor_flags)
+         unsigned fftw_rigor_flags = 0,
+         unsigned packed_flags     = 0)
         : plan_(underling_fftw_plan_create_r2c_forward(
-                    p.get(), long_ni, in, out, fftw_rigor_flags)) {
+                    p.get(), long_ni, in, out, fftw_rigor_flags, packed_flags))
+    {
         (void) tag; // unused
     }
 
@@ -102,9 +129,11 @@ public:
          int long_ni,
          underling_real *in,
          underling_real *out,
-         unsigned fftw_rigor_flags)
+         unsigned fftw_rigor_flags = 0,
+         unsigned packed_flags     = 0)
         : plan_(underling_fftw_plan_create_c2r_backward(
-                    p.get(), long_ni, in, out, fftw_rigor_flags)) {
+                    p.get(), long_ni, in, out, fftw_rigor_flags, packed_flags))
+    {
         (void) tag; // unused
     }
 
@@ -112,9 +141,10 @@ public:
     plan(const plan& plan_to_invert,
          underling_real * in,
          underling_real * out,
-         unsigned fftw_rigor_flags)
+         unsigned fftw_rigor_flags = 0)
         : plan_(underling_fftw_plan_create_inverse(
-                    plan_to_invert.get(), in, out, fftw_rigor_flags)) {};
+                    plan_to_invert.get(), in, out, fftw_rigor_flags))
+    {};
 
     /** @see underling_fftw_plan_destroy */
     ~plan() { underling_fftw_plan_destroy(plan_); }
@@ -123,12 +153,14 @@ public:
     underling_fftw_plan get() const { return plan_; }
 
     /** @see underling_fftw_local_extents_input */
-    underling_fftw_extents local_extents_input() const {
+    underling_fftw_extents local_extents_input() const
+    {
         return underling_fftw_local_extents_input(plan_);
     }
 
     /** @see underling_fftw_local_extents_output */
-    underling_fftw_extents local_extents_output() const {
+    underling_fftw_extents local_extents_output() const
+    {
         return underling_fftw_local_extents_output(plan_);
     }
 
@@ -136,7 +168,8 @@ public:
     int local_input(int *start  = NULL,
                     int *size   = NULL,
                     int *stride = NULL,
-                    int *order  = NULL) const {
+                    int *order  = NULL) const
+    {
         return underling_fftw_local_input(plan_, start, size, stride, order);
     }
 
@@ -153,7 +186,8 @@ public:
 
     /** @see underling_fftw_plan_execute */
     int execute(underling_real *in,
-                underling_real *out) const {
+                underling_real *out) const
+    {
         return underling_fftw_plan_execute(plan_, in, out);
     }
 

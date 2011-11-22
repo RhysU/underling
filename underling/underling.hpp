@@ -86,16 +86,29 @@ namespace transposed {
 
 }
 
+/** A mixin for making a subclass non-copyable via private inheritance. */
+class noncopyable
+{
+protected:
+    noncopyable () {}
+    ~noncopyable () {}
+
+private:
+    noncopyable (const noncopyable &);
+    noncopyable & operator = (const noncopyable &);
+};
+
 /**
  * Provides a thin RAII wrapper for underling_grid.
  * @see underling_grid.
  */
-class grid : public boost::noncopyable {
+class grid : private noncopyable {
 public:
 
     /** @see underling_grid_create */
     grid(MPI_Comm comm, int n0, int n1, int n2, int pA = 0, int pB = 0)
-        : grid_(underling_grid_create(comm, n0, n1, n2, pA, pB)) {};
+        : grid_(underling_grid_create(comm, n0, n1, n2, pA, pB))
+    {};
 
     /** @see underling_grid_create */
     template< class InputIterator1, class InputIterator2 >
@@ -141,14 +154,14 @@ private:
  * Provides a thin RAII wrapper for underling_problem.
  * @see underling_problem.
  */
-class problem : public boost::noncopyable {
+class problem : private noncopyable {
 public:
 
     /** @see underling_problem_create */
     problem(const grid &g, int howmany, unsigned transposed_flags = 0)
-        : problem_(underling_problem_create(g.get(),
-                                            howmany,
-                                            transposed_flags)) {};
+        : problem_(underling_problem_create(
+                g.get(), howmany, transposed_flags))
+    {};
 
     /** @see underling_problem_destroy */
     ~problem() { underling_problem_destroy(problem_); }
@@ -157,7 +170,8 @@ public:
     underling_problem get() const { return problem_; }
 
     /** @see underling_local_extents */
-    underling_extents local_extents(int i) const {
+    underling_extents local_extents(int i) const
+    {
         return underling_local_extents(problem_, i);
     }
 
@@ -166,17 +180,20 @@ public:
                  int *start  = NULL,
                  int *size   = NULL,
                  int *stride = NULL,
-                 int *order  = NULL) const {
+                 int *order  = NULL) const
+    {
         return underling_local(problem_, i, start, size, stride, order);
     }
 
     /** @see underling_local_memory */
-    size_t local_memory() const {
+    size_t local_memory() const
+    {
         return underling_local_memory(problem_);
     }
 
     /** @see underling_local_memory_optimum */
-    size_t local_memory_optimum() const {
+    size_t local_memory_optimum() const
+    {
         return underling_local_memory_optimum(problem_);
     }
 
@@ -189,25 +206,29 @@ private:
 
 /** @see underling_local_memory_maximum */
 inline
-size_t local_memory_maximum(const grid &g, const problem &p) {
+size_t local_memory_maximum(const grid &g, const problem &p)
+{
     return underling_local_memory_maximum(g.get(), p.get());
 }
 
 /** @see underling_local_memory_minimum */
 inline
-size_t local_memory_minimum(const grid &g, const problem &p) {
+size_t local_memory_minimum(const grid &g, const problem &p)
+{
     return underling_local_memory_minimum(g.get(), p.get());
 }
 
 /** @see underling_global_memory */
 inline
-size_t global_memory(const grid &g, const problem &p) {
+size_t global_memory(const grid &g, const problem &p)
+{
     return underling_global_memory(g.get(), p.get());
 }
 
 /** @see underling_global_memory_optimum */
 inline
-size_t global_memory_optimum(const grid &g, const problem &p) {
+size_t global_memory_optimum(const grid &g, const problem &p)
+{
     return underling_global_memory_optimum(g.get(), p.get());
 }
 
@@ -215,7 +236,7 @@ size_t global_memory_optimum(const grid &g, const problem &p) {
  * Provides a thin RAII wrapper for underling_plan.
  * @see underling_plan.
  */
-class plan : public boost::noncopyable {
+class plan : private noncopyable {
 public:
 
     /** @see underling_plan_create */
@@ -228,7 +249,8 @@ public:
                                       in,
                                       out,
                                       transform_flags,
-                                      fftw_rigor_flags)) {}
+                                      fftw_rigor_flags))
+    {}
 
     /** @see underling_plan_destroy */
     ~plan() { underling_plan_destroy(plan_); }
@@ -238,25 +260,29 @@ public:
 
     /** @see underling_execute_long_n2_to_long_n1 */
     int execute_long_n2_to_long_n1(underling_real * in,
-                                   underling_real * out) const {
+                                   underling_real * out) const
+    {
         return underling_execute_long_n2_to_long_n1(plan_, in, out);
     }
 
     /** @see underling_execute_long_n1_to_long_n0 */
     int execute_long_n1_to_long_n0(underling_real * in,
-                                   underling_real * out) const {
+                                   underling_real * out) const
+    {
         return underling_execute_long_n1_to_long_n0(plan_, in, out);
     }
 
     /** @see underling_execute_long_n0_to_long_n1 */
     int execute_long_n0_to_long_n1(underling_real * in,
-                                   underling_real * out) const {
+                                   underling_real * out) const
+    {
         return underling_execute_long_n0_to_long_n1(plan_, in, out);
     }
 
     /** @see underling_execute_long_n1_to_long_n2 */
     int execute_long_n1_to_long_n2(underling_real * in,
-                                   underling_real * out) const {
+                                   underling_real * out) const
+    {
         return underling_execute_long_n1_to_long_n2(plan_, in, out);
     }
 

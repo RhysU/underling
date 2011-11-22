@@ -38,6 +38,63 @@ extern "C" {
  */
 
 /**
+ * Flag indicating the FFT transform output and input for the "long in n2"
+ * direction is packed contiguously in memory.  Transform input must likewise
+ * be packed.  This flag may only be used for out-of-place transforms and
+ * likely will incur additional memory access cost with each transform.  The
+ * flag is provided for situations where other compute kernels benefit greatly
+ * from having packed, contiguous storage and/or for compatibility with third
+ * party libraries.
+ *
+ * When combined with UNDERLING_TRANSPOSED_LONG_N2, the FFT transform output
+ * and input <em>is not</em> stored row-major <tt>n2 x (n0/pB x n1/pA)</tt> but
+ * rather is stored packed contiguously as <tt>(n0/pB x n1/pA) x n2</tt>.
+ * In-memory reshuffling is minimized in this circumstance.
+ *
+ * @see The documentation for underling_fftw_plan_create_c2c_forward,
+ * underling_fftw_plan_create_c2c_backward,
+ * underling_fftw_plan_create_r2c_forward, or
+ * underling_fftw_plan_create_c2r_backward for more details on creating plans.
+ */
+#define UNDERLING_FFTW_PACKED_LONG_N2 (1U << 6)
+
+/**
+ * Flag indicating the FFT transform output and input for the "long in n0"
+ * direction is packed contiguously in memory.  Transform input must likewise
+ * be packed.  This flag may only be used for out-of-place transforms and
+ * likely will incur additional memory access cost with each transform.  The
+ * flag is provided for situations where other compute kernels benefit greatly
+ * from having packed, contiguous storage and/or for compatibility with third
+ * party libraries.
+ *
+ * When combined with UNDERLING_TRANSPOSED_LONG_N0, the FFT transform output
+ * and input <em>is not</em> stored row-major <tt>n0 x (n1/pB x * n2/pA)</tt>
+ * but rather is stored packed contiguously as <tt>(n1/pB x n2/pA) x n0</tt>.
+ * In-memory reshuffling is minimized in this circumstance.
+ *
+ * @see The documentation for underling_fftw_plan_create_c2c_forward,
+ * underling_fftw_plan_create_c2c_backward,
+ * underling_fftw_plan_create_r2c_forward, or
+ * underling_fftw_plan_create_c2r_backward for more details on creating plans.
+ */
+#define UNDERLING_FFTW_PACKED_LONG_N0 (1U << 7)
+
+/** Convenience flag indicating packed transform output whenever possible. */
+#define UNDERLING_FFTW_PACKED_ALL                                       \
+        (UNDERLING_FFTW_PACKED_LONG_N2 | UNDERLING_FFTW_PACKED_LONG_N0)
+
+/**
+ * Flag indicating the FFT transform output for no direction is necessarily
+ * packed contiguously in memory.  Under some circumstances, transform output
+ * and input may be packed inadvertently (e.g. complex-to-complex transforms on
+ * regular grids).
+ *
+ * @see UNDERLING_FFTW_PACKED_LONG_N2, UNDERLING_FFTW_PACKED_LONG_N0,
+ *      and UNDERLING_FFTW_PACKED_ALL for alternatives.
+ */
+#define UNDERLING_FFTW_PACKED_NONE (1U << 8)
+
+/**
  * A transparent type storing the local sizes, strides, and storage when the
  * data is long in a particular direction \c n0, \c n1, or \c n2.
  *
@@ -122,7 +179,7 @@ typedef struct underling_fftw_plan_s *underling_fftw_plan;
  * that <tt>in != out</tt>.  Executing an out-of-place plan will always
  * destroy the contents of the input buffer \c in.  In-place plans can be
  * created by specifying <tt>in == out</tt>.  In-place plans always use less
- * memory but will often run more slowly than out-of-place plans.
+ * memory but may run more slowly than out-of-place plans.
  *
  * @param problem Problem to use for layout and stride information.
  * @param long_ni Direction across which to perform the FFT, which is assumed
@@ -130,13 +187,17 @@ typedef struct underling_fftw_plan_s *underling_fftw_plan;
  * @param in  Input buffer containing the source data to be transformed.
  * @param out Output buffer to contain the data after transformation.
  * @param fftw_rigor_flags One of FFTW's rigor planning flags, e.g.
- *                         FFTW_ESTIMATE.  Specifying zero is equivalent to
- *                         providing FFTW_MEASURE.  Note that the buffers
- *                         \c in and \c out are overwritten during the planning
- *                         process for any value other than FFTW_ESTIMATE.
+ *        FFTW_ESTIMATE.  Specifying zero is equivalent to providing
+ *        FFTW_MEASURE.  Note that the buffers \c in and \c out are overwritten
+ *        during the planning process for any value other than FFTW_ESTIMATE.
+ * @param packed_flags One of UNDERLING_FFTW_PACKED_LONG_N2,
+ *        UNDERLING_FFTW_PACKED_LONG_N0, UNDERLING_FFTW_PACKED_ALL, or
+ *        UNDERLING_FFTW_PACKED_NONE.  Specifying zero is equivalent to
+ *        providing UNDERLING_FFTW_PACKED_NONE.  Note only
+ *        UNDERLING_FFTW_PACKED_NONE is valid when creating an in-place plan.
  *
- * @return On success, return a valid \c underling_fftw_plan.  On failure, calls
- *         underling_error and returns NULL.
+ * @return On success, return a valid \c underling_fftw_plan.  On failure,
+ *         calls underling_error and returns NULL.
  * @see The method underling_fftw_plan_destroy for how to destroy an instance.
  * @see The method underling_fftw_plan_create_inverse for how to create
  *      the corresponding inverse FFT.  It is <em>incorrect</em> to use
@@ -148,7 +209,8 @@ underling_fftw_plan_create_c2c_forward(
         int long_ni,
         underling_real * in,
         underling_real * out,
-        unsigned fftw_rigor_flags) UNDERLING_API;
+        unsigned fftw_rigor_flags,
+        unsigned packed_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a backward complex-to-complex FFT on the given data
@@ -161,7 +223,8 @@ underling_fftw_plan_create_c2c_backward(
         int long_ni,
         underling_real * in,
         underling_real * out,
-        unsigned fftw_rigor_flags) UNDERLING_API;
+        unsigned fftw_rigor_flags,
+        unsigned packed_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a forward real-to-complex FFT on the given data
@@ -174,7 +237,8 @@ underling_fftw_plan_create_r2c_forward(
         int long_ni,
         underling_real * in,
         underling_real * out,
-        unsigned fftw_rigor_flags) UNDERLING_API;
+        unsigned fftw_rigor_flags,
+        unsigned packed_flags) UNDERLING_API;
 
 /**
  * Create a plan to perform a backward complex-to-real FFT on the given data
@@ -187,14 +251,16 @@ underling_fftw_plan_create_c2r_backward(
         int long_ni,
         underling_real * in,
         underling_real * out,
-        unsigned fftw_rigor_flags) UNDERLING_API;
+        unsigned fftw_rigor_flags,
+        unsigned packed_flags) UNDERLING_API;
 
 /**
  * Create a plan to invert another underling_fftw_plan.  Inverse plans
  * appropriately account for all input ordering issues stemming from use of
- * flags like UNDERLING_TRANSPOSED_LONG_N2 or UNDERLING_TRANSPOSED_LONG_N0.
- * Note that the inverse transform is not normalized.  Plan pairs created using
- * this method will have compatible input and output underling_fftw_extents
+ * flags like UNDERLING_TRANSPOSED_LONG_N2, UNDERLING_TRANSPOSED_LONG_N0,
+ * UNDERLING_FFTW_PACKED_LONG_N2, or UNDERLING_FFTW_PACKED_LONG_N0.  Note that
+ * the inverse transform is not normalized.  Plan pairs created using this
+ * method will have compatible input and output underling_fftw_extents
  * information.
  *
  * Out-of-place plans are created by specifying input and output buffers such
@@ -207,10 +273,9 @@ underling_fftw_plan_create_c2r_backward(
  * @param in  Input buffer containing the source data to be transformed.
  * @param out Output buffer to contain the data after transformation.
  * @param fftw_rigor_flags One of FFTW's rigor planning flags, e.g.
- *                         FFTW_ESTIMATE.  Specifying zero is equivalent to
- *                         providing FFTW_MEASURE.  Note that the buffers
- *                         \c in and \c out are overwritten during the planning
- *                         process for any value other than FFTW_ESTIMATE.
+ *        FFTW_ESTIMATE.  Specifying zero is equivalent to providing
+ *        FFTW_MEASURE.  Note that the buffers \c in and \c out are overwritten
+ *        during the planning process for any value other than FFTW_ESTIMATE.
  *
  * @return On success, return a valid \c underling_fftw_plan which inverts
  *         plan_to_invert up to normalization.  On failure, calls
