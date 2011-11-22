@@ -95,6 +95,11 @@ adjust_for_fast_stride_in_long_direction(
         const int long_ni);
 
 static
+void
+pack_strides_according_to_order(
+        underling_fftw_extents * const e);
+
+static
 underling_fftw_extents
 create_underling_fftw_extents_for_complex(
         const underling_extents extents,
@@ -244,6 +249,18 @@ adjust_for_fast_stride_in_long_direction(
 }
 
 static
+void
+pack_strides_according_to_order(underling_fftw_extents * const e)
+{
+    // Modify strides to produce packed, contiguous data
+    e->stride[e->order[0]] = 1;
+    e->stride[e->order[1]] = e->stride[e->order[0]] * e->size[e->order[0]];
+    e->stride[e->order[2]] = e->stride[e->order[1]] * e->size[e->order[1]];
+    e->stride[e->order[3]] = e->stride[e->order[2]] * e->size[e->order[2]];
+    e->stride[e->order[4]] = e->stride[e->order[3]] * e->size[e->order[3]];
+}
+
+static
 underling_fftw_extents
 create_underling_fftw_extents_for_complex(
         const underling_extents extents,
@@ -365,7 +382,6 @@ underling_fftw_plan_create_c2c_forward(
         unsigned packed_flags)
 {
     if (!packed_flags) packed_flags = UNDERLING_FFTW_PACKED_NONE; // Default
-    assert(packed_flags == UNDERLING_FFTW_PACKED_NONE);           // FIXME
 
     underling_extents e = underling_local_extents(problem, long_ni);
 
@@ -374,8 +390,18 @@ underling_fftw_plan_create_c2c_forward(
 
     adjust_for_fast_stride_in_long_direction(&e, long_ni);
 
-    const underling_fftw_extents output
+    underling_fftw_extents output
         = create_underling_fftw_extents_for_complex(e, long_ni);
+
+    if (    (long_ni == 2 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N2)
+         || (long_ni == 0 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N0)) {
+        if (UNDERLING_UNLIKELY(in == out)) {
+            UNDERLING_ERROR_NULL("invalid packed_flags for in-place transform",
+                                 UNDERLING_EINVAL);
+        } else {
+            pack_strides_according_to_order(&output);
+        }
+    }
 
     return underling_fftw_plan_create_c2c_internal(
             long_ni, in, out, FFTW_FORWARD, fftw_rigor_flags,
@@ -392,7 +418,6 @@ underling_fftw_plan_create_c2c_backward(
         unsigned packed_flags)
 {
     if (!packed_flags) packed_flags = UNDERLING_FFTW_PACKED_NONE; // Default
-    assert(packed_flags == UNDERLING_FFTW_PACKED_NONE);           // FIXME
 
     underling_extents e = underling_local_extents(problem, long_ni);
 
@@ -401,8 +426,18 @@ underling_fftw_plan_create_c2c_backward(
 
     adjust_for_fast_stride_in_long_direction(&e, long_ni);
 
-    const underling_fftw_extents output
+    underling_fftw_extents output
         = create_underling_fftw_extents_for_complex(e, long_ni);
+
+    if (    (long_ni == 2 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N2)
+         || (long_ni == 0 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N0)) {
+        if (UNDERLING_UNLIKELY(in == out)) {
+            UNDERLING_ERROR_NULL("invalid packed_flags for in-place transform",
+                                 UNDERLING_EINVAL);
+        } else {
+            pack_strides_according_to_order(&output);
+        }
+    }
 
     return underling_fftw_plan_create_c2c_internal(
             long_ni, in, out, FFTW_BACKWARD, fftw_rigor_flags,
@@ -568,7 +603,6 @@ underling_fftw_plan_create_c2r_backward(
         unsigned packed_flags)
 {
     if (!packed_flags) packed_flags = UNDERLING_FFTW_PACKED_NONE; // Default
-    assert(packed_flags == UNDERLING_FFTW_PACKED_NONE);           // FIXME
 
     underling_extents e = underling_local_extents(problem, long_ni);
 
@@ -577,12 +611,22 @@ underling_fftw_plan_create_c2r_backward(
 
     adjust_for_fast_stride_in_long_direction(&e, long_ni);
 
-    const underling_fftw_extents output
+    underling_fftw_extents output
         = create_underling_fftw_extents_for_real(e, long_ni);
 
-    if (UNDERLING_UNLIKELY(input.order[2] != long_ni)) {
+    if (    (long_ni == 2 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N2)
+         || (long_ni == 0 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N0)) {
+        if (UNDERLING_UNLIKELY(in == out)) {
+            UNDERLING_ERROR_NULL("invalid packed_flags for in-place transform",
+                                 UNDERLING_EINVAL);
+        } else {
+            pack_strides_according_to_order(&output);
+        }
+    }
+
+    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
-                "Creation of c2r_backward plans in"
+                "Creation of in-place c2r_backward plans for"
                 " non-stride one directions is currently unimplemented",
                 UNDERLING_ESANITY);
     }
@@ -765,7 +809,6 @@ underling_fftw_plan_create_r2c_forward(
         unsigned packed_flags)
 {
     if (!packed_flags) packed_flags = UNDERLING_FFTW_PACKED_NONE; // Default
-    assert(packed_flags == UNDERLING_FFTW_PACKED_NONE);           // FIXME
 
     underling_extents e = underling_local_extents(problem, long_ni);
 
@@ -774,13 +817,23 @@ underling_fftw_plan_create_r2c_forward(
 
     adjust_for_fast_stride_in_long_direction(&e, long_ni);
 
-    const underling_fftw_extents output
+    underling_fftw_extents output
         = create_underling_fftw_extents_for_complex(e, long_ni);
 
-    if (UNDERLING_UNLIKELY(input.order[2] != long_ni)) {
+    if (    (long_ni == 2 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N2)
+         || (long_ni == 0 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N0)) {
+        if (UNDERLING_UNLIKELY(in == out)) {
+            UNDERLING_ERROR_NULL("invalid packed_flags for in-place transform",
+                                 UNDERLING_EINVAL);
+        } else {
+            pack_strides_according_to_order(&output);
+        }
+    }
+
+    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
-                "Creation of r2c_forward plans in non-stride"
-                " one directions is currently unimplemented.",
+                "Creation of in-place r2c_forward plans for"
+                " non-stride one directions is currently unimplemented.",
                 UNDERLING_ESANITY);
     }
 
