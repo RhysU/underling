@@ -45,6 +45,7 @@ struct tc
     int n0, n1, n2, howmany, long_ni;
     bool in_place;
     unsigned flags;
+    unsigned packed;
 };
 
 // Pull out the two slow directions, excluding long_ni
@@ -93,14 +94,15 @@ static void test_c2c_forward(tc t)
     BoostFailErrorHandlerFixture fix1;
 
     // Unpack test case parameters
-    MPI_Comm comm        = MPI_COMM_WORLD;
-    const int n0         = t.n0;
-    const int n1         = t.n1;
-    const int n2         = t.n2;
-    const int howmany    = t.howmany;
-    const int long_ni    = t.long_ni;
-    const unsigned flags = t.flags;
-    const bool in_place  = t.in_place;
+    MPI_Comm comm         = MPI_COMM_WORLD;
+    const int n0          = t.n0;
+    const int n1          = t.n1;
+    const int n2          = t.n2;
+    const int howmany     = t.howmany;
+    const int long_ni     = t.long_ni;
+    const unsigned flags  = t.flags;
+    const unsigned packed = t.packed;
+    const bool in_place   = t.in_place;
 
     if (flags) ensureFFTWTensor7PatchInPlace();
 
@@ -118,10 +120,19 @@ static void test_c2c_forward(tc t)
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
-                           << " with flags " << flags);
+                           << " with flags " << flags
+                           << " and packed " << packed);
+    }
+    if (in_place && long_ni == 2 && packed & underling::fftw::packed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
+        return;
+    }
+    if (in_place && long_ni == 0 && packed & underling::fftw::packed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
+        return;
     }
     if (nproc > 1 && (n0 == 1 || n1 == 1 || n2 == 1)) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        if (!procid) BOOST_TEST_MESSAGE("Skipping degenerate parallel test");
         return;
     }
 
@@ -134,7 +145,8 @@ static void test_c2c_forward(tc t)
                                   long_ni,
                                   f.in,
                                   f.out,
-                                  FFTW_ESTIMATE);
+                                  FFTW_ESTIMATE,
+                                  packed);
     BOOST_REQUIRE(forward);
     underling::fftw::plan backward(forward,         // Inverse constructor!
                                    f.out,
@@ -282,14 +294,15 @@ static void test_c2c_backward(tc t)
     BoostFailErrorHandlerFixture fix1;
 
     // Unpack test case parameters
-    MPI_Comm comm        = MPI_COMM_WORLD;
-    const int n0         = t.n0;
-    const int n1         = t.n1;
-    const int n2         = t.n2;
-    const int howmany    = t.howmany;
-    const int long_ni    = t.long_ni;
-    const unsigned flags = t.flags;
-    const bool in_place  = t.in_place;
+    MPI_Comm comm         = MPI_COMM_WORLD;
+    const int n0          = t.n0;
+    const int n1          = t.n1;
+    const int n2          = t.n2;
+    const int howmany     = t.howmany;
+    const int long_ni     = t.long_ni;
+    const unsigned flags  = t.flags;
+    const unsigned packed = t.packed;
+    const bool in_place   = t.in_place;
 
     if (flags) ensureFFTWTensor7PatchInPlace();
 
@@ -307,10 +320,19 @@ static void test_c2c_backward(tc t)
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
-                           << " with flags " << flags);
+                           << " with flags " << flags
+                           << " and packed " << packed);
+    }
+    if (in_place && long_ni == 2 && packed & underling::fftw::packed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
+        return;
+    }
+    if (in_place && long_ni == 0 && packed & underling::fftw::packed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
+        return;
     }
     if (nproc > 1 && (n0 == 1 || n1 == 1 || n2 == 1)) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        if (!procid) BOOST_TEST_MESSAGE("Skipping degenerate parallel test");
         return;
     }
 
@@ -323,7 +345,8 @@ static void test_c2c_backward(tc t)
                                    long_ni,
                                    f.in,
                                    f.out,
-                                   FFTW_ESTIMATE);
+                                   FFTW_ESTIMATE,
+                                   packed);
     BOOST_REQUIRE(backward);
     underling::fftw::plan forward(backward,         // Inverse constructor!
                                   f.out,
@@ -470,14 +493,15 @@ static void test_c2r(tc t)
     BoostFailErrorHandlerFixture fix1;
 
     // Unpack test case parameters
-    MPI_Comm comm        = MPI_COMM_WORLD;
-    const int n0         = t.n0;
-    const int n1         = t.n1;
-    const int n2         = t.n2;
-    const int howmany    = t.howmany;
-    const int long_ni    = t.long_ni;
-    const unsigned flags = t.flags;
-    const bool in_place  = t.in_place;
+    MPI_Comm comm         = MPI_COMM_WORLD;
+    const int n0          = t.n0;
+    const int n1          = t.n1;
+    const int n2          = t.n2;
+    const int howmany     = t.howmany;
+    const int long_ni     = t.long_ni;
+    const unsigned flags  = t.flags;
+    const unsigned packed = t.packed;
+    const bool in_place   = t.in_place;
 
     if (flags) ensureFFTWTensor7PatchInPlace();
 
@@ -495,18 +519,27 @@ static void test_c2r(tc t)
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
-                           << " with flags " << flags);
+                           << " with flags " << flags
+                           << " and packed " << packed);
     }
-    if (long_ni == 2 && flags & underling::transposed::long_n2) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+    if (/* FIXME in_place && */ long_ni == 2 && flags & underling::transposed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
         return;
     }
-    if (long_ni == 0 && flags & underling::transposed::long_n0) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+    if (/* FIXME in_place && */ long_ni == 0 && flags & underling::transposed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
+        return;
+    }
+    if (in_place && long_ni == 2 && packed & underling::fftw::packed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
+        return;
+    }
+    if (in_place && long_ni == 0 && packed & underling::fftw::packed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
         return;
     }
     if (nproc > 1 && (n0 == 1 || n1 == 1 || n2 == 1)) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        if (!procid) BOOST_TEST_MESSAGE("Skipping degenerate parallel test");
         return;
     }
 
@@ -517,7 +550,8 @@ static void test_c2r(tc t)
                                    long_ni,
                                    f.in,
                                    f.out,
-                                   FFTW_ESTIMATE);
+                                   FFTW_ESTIMATE,
+                                   packed);
     BOOST_REQUIRE(backward);
     underling::fftw::plan forward(backward,       // Inverse constructor!
                                   f.out,
@@ -660,14 +694,15 @@ static void test_r2c(tc t)
     BoostFailErrorHandlerFixture fix1;
 
     // Unpack test case parameters
-    MPI_Comm comm        = MPI_COMM_WORLD;
-    const int n0         = t.n0;
-    const int n1         = t.n1;
-    const int n2         = t.n2;
-    const int howmany    = t.howmany;
-    const int long_ni    = t.long_ni;
-    const unsigned flags = t.flags;
-    const bool in_place  = t.in_place;
+    MPI_Comm comm         = MPI_COMM_WORLD;
+    const int n0          = t.n0;
+    const int n1          = t.n1;
+    const int n2          = t.n2;
+    const int howmany     = t.howmany;
+    const int long_ni     = t.long_ni;
+    const unsigned flags  = t.flags;
+    const unsigned packed = t.packed;
+    const bool in_place   = t.in_place;
 
     if (flags) ensureFFTWTensor7PatchInPlace();
 
@@ -685,18 +720,27 @@ static void test_r2c(tc t)
                            << " using " << nproc << " processor"
                            << (nproc > 1 ? "s" : "")
                            << " when long in " << long_ni
-                           << " with flags " << flags);
+                           << " with flags " << flags
+                           << " and packed " << packed);
     }
-    if (long_ni == 2 && flags & underling::transposed::long_n2) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+    if (/* FIXME in_place && */ long_ni == 2 && flags & underling::transposed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
         return;
     }
-    if (long_ni == 0 && flags & underling::transposed::long_n0) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+    if (/* FIXME in_place && */ long_ni == 0 && flags & underling::transposed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
+        return;
+    }
+    if (in_place && long_ni == 2 && packed & underling::fftw::packed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
+        return;
+    }
+    if (in_place && long_ni == 0 && packed & underling::fftw::packed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
         return;
     }
     if (nproc > 1 && (n0 == 1 || n1 == 1 || n2 == 1)) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test case");
+        if (!procid) BOOST_TEST_MESSAGE("Skipping degenerate parallel test");
         return;
     }
 
@@ -707,7 +751,8 @@ static void test_r2c(tc t)
                                   long_ni,
                                   f.in,
                                   f.out,
-                                  FFTW_ESTIMATE);
+                                  FFTW_ESTIMATE,
+                                  packed);
     BOOST_REQUIRE(forward);
     underling::fftw::plan backward(forward,        // Inverse constructor!
                                    f.out,
@@ -876,12 +921,17 @@ init_unit_test_suite( int argc, char* argv[] )
     using underling::transposed::long_n0;
     const unsigned flags[] = { 0, long_n2, long_n0, long_n2 | long_n0 };
 
+    // Packed storage flags
+    const unsigned packed[]
+        = { underling::fftw::packed::none, underling::fftw::packed::all };
+
     // Create an outer product of all the cases we want to run
     const size_t ncases = sizeof(extents)/sizeof(extents[0])
                         * sizeof(howmanys)/sizeof(howmanys[0])
                         * sizeof(long_nis)/sizeof(long_nis[0])
                         * sizeof(places)/sizeof(places[0])
-                        * sizeof(flags)/sizeof(flags[0]);
+                        * sizeof(flags)/sizeof(flags[0])
+                        * sizeof(packed)/sizeof(packed[0]);
 
     tc * const cases = new tc[ncases];
     tc *       c     = cases;
@@ -891,6 +941,7 @@ init_unit_test_suite( int argc, char* argv[] )
     for (size_t l = 0; l < sizeof(long_nis)/sizeof(long_nis[0]); ++l)
     for (size_t p = 0; p < sizeof(places)/sizeof(places[0]); ++p)
     for (size_t f = 0; f < sizeof(flags)/sizeof(flags[0]); ++f)
+    for (size_t k = 0; k < sizeof(packed)/sizeof(packed[0]); ++k)
     {
         c->n0       = extents[e][0];
         c->n1       = extents[e][1];
@@ -899,6 +950,7 @@ init_unit_test_suite( int argc, char* argv[] )
         c->long_ni  = long_nis[l];
         c->in_place = places[p];
         c->flags    = flags[f];
+        c->packed   = packed[k];
         ++c;
     }
 
@@ -927,7 +979,8 @@ init_unit_test_suite( int argc, char* argv[] )
     return 0;
 }
 
-static void test_extents_consistency(const bool in_place = true)
+static void test_extents_consistency(const bool in_place,
+                                     const unsigned packed)
 {
     UnderlingFixture f(MPI_COMM_WORLD, 2, 3, 5, 6, /*flags*/0, in_place);
 
@@ -936,7 +989,8 @@ static void test_extents_consistency(const bool in_place = true)
                                    0,
                                    f.in,
                                    f.out,
-                                   FFTW_ESTIMATE);
+                                   FFTW_ESTIMATE,
+                                   packed);
 
     const int N = 5;
 
@@ -993,7 +1047,7 @@ static void test_extents_consistency(const bool in_place = true)
 
 BOOST_AUTO_TEST_CASE( extents_consistency )
 {
-    test_extents_consistency(true);
-    test_extents_consistency(false);
+    test_extents_consistency(true,  0);
+    test_extents_consistency(false, underling::fftw::packed::none);
+    test_extents_consistency(false, underling::fftw::packed::all);
 }
-

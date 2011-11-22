@@ -624,7 +624,7 @@ underling_fftw_plan_create_c2r_backward(
         }
     }
 
-    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
+    if (UNDERLING_UNLIKELY(/* FIXME in == out && */ input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
                 "Creation of in-place c2r_backward plans for"
                 " non-stride one directions is currently unimplemented",
@@ -830,7 +830,7 @@ underling_fftw_plan_create_r2c_forward(
         }
     }
 
-    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
+    if (UNDERLING_UNLIKELY(/* FIXME in == out && */ input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
                 "Creation of in-place r2c_forward plans for"
                 " non-stride one directions is currently unimplemented.",
