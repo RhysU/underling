@@ -65,7 +65,7 @@
 #endif
 
 // TODO Allow UNDERLING_TRANSPOSED_LONG_{N2,N0}
-// TODO Allow FFTs in particular directions
+// TODO Allow UNDERLING_FFTW_PACKED_LONG_{N2,N0}
 // TODO Allow different transform_flags
 // TODO Verify memory contents after all transposes complete
 
@@ -90,6 +90,7 @@ struct details {
     unsigned transposed_flags;
     unsigned transform_flags;
     unsigned fftw_rigor_flags;
+    unsigned packed_flags;
     char *wisdom_file;
     char fft_n[3];
     int mpi_inplace;
@@ -140,7 +141,7 @@ static const char doc[]               =
 "Options taking a 'bytes' parameter can be given common byte-related "
 "units.  For example --field-memory=5G indicates that approximately "
 "5 gigabytes of memory should be used on each rank to store field data. "
-"SI units like 'Ki' or 'MiB' are also accepted.\n"
+" SI units like 'Ki' or 'MiB' are also accepted.\n"
 ;
 
 static const char args_doc[] = "\nWISDOM_FILE";
@@ -714,10 +715,9 @@ int main(int argc, char *argv[])
     underling_fftw_plan forward_plan[3]  = { NULL, NULL, NULL };
     underling_fftw_plan backward_plan[3] = { NULL, NULL, NULL };
     for (int i = 3; i --> 0 ;) {
-        underling_fftw_plan (*planner)(const underling_problem problem,
-                                       int long_ni,
-                                       underling_real *in, underling_real *out,
-                                       unsigned fftw_rigor_flags) = NULL;
+        underling_fftw_plan (*planner)(const underling_problem,
+                                       int, underling_real *, underling_real *,
+                                       unsigned, unsigned) = NULL;
         const char * planner_name = NULL;
         switch (d.fft_n[i]) {
             case 'c':
@@ -733,7 +733,8 @@ int main(int argc, char *argv[])
             fprintf(rankout, "\nInvoking %s for long_n%d...\n", planner_name, i);
             tstart = MPI_Wtime();
             forward_plan[i] = planner(problem, i, f[0], f[!d.fft_inplace],
-                    d.forward ? d.fftw_rigor_flags : FFTW_ESTIMATE);
+                    d.forward ? d.fftw_rigor_flags : FFTW_ESTIMATE,
+                    d.packed_flags);
             tend = MPI_Wtime();
             fprintf(rankout, "...%s took %lf seconds"
                             " and returned (on rank 0):\n",
