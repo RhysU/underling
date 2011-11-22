@@ -451,7 +451,7 @@ underling_fftw_plan_create_c2c_internal(
                       : transform_type_c2c_backward;
     f->input          = input;
     f->plan_preorder  = NULL;
-    f->plan_fftw       = NULL;
+    f->plan_fftw      = NULL;
     f->plan_postorder = NULL;
     f->output         = output;
     f->in_place       = (in == out);
@@ -614,7 +614,7 @@ underling_fftw_plan_create_c2r_backward_internal(
     f->type           = transform_type_c2r_backward;
     f->input          = input;
     f->plan_preorder  = NULL;
-    f->plan_fftw       = NULL;
+    f->plan_fftw      = NULL;
     f->plan_postorder = NULL;
     f->output         = output;
     f->in_place       = (in == out);
@@ -807,7 +807,7 @@ underling_fftw_plan_create_r2c_forward_internal(
     f->type           = transform_type_r2c_forward;
     f->input          = input;
     f->plan_preorder  = NULL;
-    f->plan_fftw       = NULL;
+    f->plan_fftw      = NULL;
     f->plan_postorder = NULL;
     f->output         = output;
     f->in_place       = (in == out);
