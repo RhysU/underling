@@ -7,7 +7,7 @@ BUILT_SOURCES += .license.stamp
 
 .license.stamp: $(top_builddir)/LICENSE
 	rm -f .license.stamp
-	for file in $(wildcard $(srcdir)/*.[ch].in $(srcdir)/*.[ch]) ; do \
+	for file in $(wildcard $(srcdir)/*.[ch].in $(srcdir)/*.[ch] $(srcdir)/*.[ch]pp.in $(srcdir)/*.[ch]pp) ; do \
 		$(top_srcdir)/build-aux/update_license.pl $(top_builddir)/LICENSE $$file | tee -a $@ ;\
 	done
 	for file in $(wildcard $(srcdir)/*.[fF]90 $(srcdir)/*.[fF]) ; do \
