@@ -129,6 +129,7 @@ AX_CODE_COVERAGE
 dnl ------------------------------------------------
 dnl Generate Makefiles
 dnl ------------------------------------------------
+AC_SUBST([CONFIG_STATUS_DEPENDENCIES], ['$(top_srcdir)/LICENSE.in'])
 AC_CONFIG_FILES([
     LICENSE
     Makefile
