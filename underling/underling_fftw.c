@@ -102,13 +102,13 @@ pack_strides_according_to_order(
 static
 underling_fftw_extents
 create_underling_fftw_extents_for_complex(
-        const underling_extents extents,
+        const underling_extents e,
         const int long_ni);
 
 static
 underling_fftw_extents
 create_underling_fftw_extents_for_real(
-        const underling_extents extents,
+        const underling_extents e,
         const int long_ni);
 
 static
@@ -263,113 +263,124 @@ pack_strides_according_to_order(underling_fftw_extents * const e)
 static
 underling_fftw_extents
 create_underling_fftw_extents_for_complex(
-        const underling_extents extents,
+        const underling_extents e,
         const int long_ni)
 {
-    // Start by copying information from the domain decomposition
-    underling_fftw_extents retval;
-    memcpy(retval.start,  extents.start,  sizeof(extents.start));
-    memcpy(retval.size,   extents.size,   sizeof(extents.size));
-    memcpy(retval.stride, extents.stride, sizeof(extents.stride));
-    memcpy(retval.order,  extents.order,  sizeof(extents.order));
-
     // Sanity check layout assumptions
-    if (UNDERLING_UNLIKELY(retval.size[3] % 2)) {
+    if (UNDERLING_UNLIKELY(e.size[3] % 2)) {
         UNDERLING_ERROR_VAL(
                 "problem must have an even number of underling_real fields",
                 UNDERLING_EINVAL,
                 UNDERLING_FFTW_EXTENTS_INVALID);
     }
-    if (UNDERLING_UNLIKELY(retval.order[0] != 3)) {
+    if (UNDERLING_UNLIKELY(e.order[0] != 3)) {
+        UNDERLING_ERROR_VAL("Unknown interleaving: e.order[0] != 3",
+                            UNDERLING_ESANITY,
+                            UNDERLING_FFTW_EXTENTS_INVALID);
+    }
+    if (UNDERLING_UNLIKELY(e.start[long_ni] != 0)) {
         UNDERLING_ERROR_VAL(
-                "transformed fields not interleaved: retval.order[0] != 3",
+                "field does not start at zero: e.start[long_ni] != 0",
                 UNDERLING_EINVAL,
                 UNDERLING_FFTW_EXTENTS_INVALID);
     }
-    if (UNDERLING_UNLIKELY(retval.start[long_ni] != 0)) {
-        UNDERLING_ERROR_VAL(
-                "field does not start at zero: retval.start[long_ni] != 0",
-                UNDERLING_EINVAL,
-                UNDERLING_FFTW_EXTENTS_INVALID);
-    }
+
+    underling_fftw_extents r;
+
+    // Start by copying information from the domain decomposition
+    memcpy(r.start,  e.start,  sizeof(e.start));
+    memcpy(r.size,   e.size,   sizeof(e.size));
+    memcpy(r.stride, e.stride, sizeof(e.stride));
+    memcpy(r.order,  e.order,  sizeof(e.order));
 
     // Returned indices 3 and 4 describe interleaved, complex fields
     // built atop extents index 3:
-    retval.size[3]   /= 2; // Two adjacent reals make one complex field
-    retval.stride[3] *= 2;
-    retval.size[4]    = 2; // Each complex value consists of two reals
-    retval.stride[4]  = 1; // Real-valued components are adjacent
-    retval.start[4]   = 0; // Complex-values are always local
+    r.size[3]   /= 2;            // Two reals make one complex field
+    r.size[4]    = 2;            // Each complex consists of two reals
+    r.start[4]   = 0;            // Complex-values are always local
+    r.stride[4]  = r.stride[3];  // Real components are adjacent...
+    r.stride[3] *= 2;            // while complex values spread out
+
     // Real-valued components are fastest index
     for (int i = 3; i >= 0; --i) {
-        retval.order[i+1] = retval.order[i];
+        r.order[i+1] = r.order[i];
     }
-    retval.order[0] = 4;
+    r.order[0] = 4;
 
-    return retval;
+    return r;
 }
 
 static
 underling_fftw_extents
 create_underling_fftw_extents_for_real(
-        const underling_extents extents,
+        const underling_extents e,
         const int long_ni)
 {
-    // Start by copying information from the domain decomposition
-    underling_fftw_extents retval;
-    memcpy(retval.start,  extents.start,  sizeof(extents.start));
-    memcpy(retval.size,   extents.size,   sizeof(extents.size));
-    memcpy(retval.stride, extents.stride, sizeof(extents.stride));
-    memcpy(retval.order,  extents.order,  sizeof(extents.order));
 
     // Sanity check layout assumptions
-    if (UNDERLING_UNLIKELY(retval.size[3] % 2)) {
+    if (UNDERLING_UNLIKELY(e.size[3] % 2)) {
         UNDERLING_ERROR_VAL(
                 "problem must have an even number of underling_real fields",
                 UNDERLING_EINVAL,
                 UNDERLING_FFTW_EXTENTS_INVALID);
     }
-    if (UNDERLING_UNLIKELY(retval.order[0] != 3)) {
+    if (UNDERLING_UNLIKELY(e.order[0] != 3)) {
+        UNDERLING_ERROR_VAL("Unknown interleaving: e.order[0] != 3",
+                            UNDERLING_ESANITY,
+                            UNDERLING_FFTW_EXTENTS_INVALID);
+    }
+    if (UNDERLING_UNLIKELY(e.start[long_ni] != 0)) {
         UNDERLING_ERROR_VAL(
-                "transformed fields not interleaved: retval.order[0] != 3",
+                "field does not start at zero: e.start[long_ni] != 0",
                 UNDERLING_EINVAL,
                 UNDERLING_FFTW_EXTENTS_INVALID);
     }
-    if (UNDERLING_UNLIKELY(retval.start[long_ni] != 0)) {
-        UNDERLING_ERROR_VAL(
-                "field does not start at zero: retval.start[long_ni] != 0",
-                UNDERLING_EINVAL,
-                UNDERLING_FFTW_EXTENTS_INVALID);
-    }
-    if (UNDERLING_UNLIKELY(retval.start[long_ni] % 2)) {
+    if (UNDERLING_UNLIKELY(e.start[long_ni] % 2)) {
         UNDERLING_ERROR_VAL(
                 "field does not have even stride",
                 UNDERLING_EINVAL,
                 UNDERLING_FFTW_EXTENTS_INVALID);
     }
 
-    // The returned layout's index 3 describes real fields built from
-    // underling_extents index 3 and the long index.  The long direction does
-    // not "cover" the entire underlying memory to allow for real-to-complex
-    // padding.  Index 4 reflects that a real scalar value has a single
-    // real-valued component.  Definitely a bit goofy, but consistent with
-    // complex extents.
-    retval.size[long_ni]    = retval.size[long_ni] == 1
-                            ? /* degenerate complex size == real size == */ 1
-                            : 2*(retval.size[long_ni]-1);
-    retval.stride[long_ni] /= 2;
-    retval.size[3]         /= 2;
-    retval.stride[3]        = 1;
-    retval.size[4]          = 1;
-    retval.start[4]         = 0;
-    retval.stride[4]        = 1;
-    // Real-valued components are fastest index
-    for (int i = 3; i >= 0; --i) {
-        retval.order[i+1] = retval.order[i];
-    }
-    retval.order[0] = 4;
+    underling_fftw_extents r;
 
-    return retval;
+    if (e.order[1] == long_ni) {
+
+        // Start by copying information from the domain decomposition
+        memcpy(r.start,  e.start,  sizeof(e.start));
+        memcpy(r.size,   e.size,   sizeof(e.size));
+        memcpy(r.stride, e.stride, sizeof(e.stride));
+        memcpy(r.order,  e.order,  sizeof(e.order));
+
+        // The returned layout's index 3 describes real fields built from
+        // underling_extents index 3 and the long index.  The long direction does
+        // not "cover" the entire underlying memory to allow for real-to-complex
+        // padding.  Index 4 reflects that a real scalar value has a single
+        // real-valued component.  Definitely a bit goofy, but consistent with
+        // complex extents.
+        r.size[long_ni]    = r.size[long_ni] == 1
+                             ? /* degenerate complex size == real size == */ 1
+                             : 2*(r.size[long_ni]-1);
+        r.stride[long_ni] /= 2;
+        r.size[3]         /= 2;
+        r.stride[3]        = 1;
+        r.size[4]          = 1;
+        r.start[4]         = 0;
+        r.stride[4]        = 1;
+
+        // Real-valued components are fastest index
+        for (int i = 3; i >= 0; --i) {
+            r.order[i+1] = r.order[i];
+        }
+        r.order[0] = 4;
+
+    } else {
+        UNDERLING_ERROR_VAL("Unknown interleaving: e.order[1] != long_ni",
+                            UNDERLING_ESANITY,
+                            UNDERLING_FFTW_EXTENTS_INVALID);
+    }
+
+    return r;
 }
 
 underling_fftw_plan
