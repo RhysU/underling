@@ -353,11 +353,11 @@ create_underling_fftw_extents_for_real(
         memcpy(r.order,  e.order,  sizeof(e.order));
 
         // The returned layout's index 3 describes real fields built from
-        // underling_extents index 3 and the long index.  The long direction does
-        // not "cover" the entire underlying memory to allow for real-to-complex
-        // padding.  Index 4 reflects that a real scalar value has a single
-        // real-valued component.  Definitely a bit goofy, but consistent with
-        // complex extents.
+        // underling_extents index 3 and the long index.  The long direction
+        // does not "cover" the entire underlying memory to allow for
+        // real-to-complex padding.  Index 4 reflects that a real scalar value
+        // has a single real-valued component.  Definitely a bit goofy, but
+        // consistent with complex extents.
         r.size[long_ni]    = r.size[long_ni] == 1
                              ? /* degenerate complex size == real size == */ 1
                              : 2*(r.size[long_ni]-1);
