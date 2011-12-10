@@ -856,8 +856,8 @@ underling_problem_create(
     // Determine all necessary stride orders for row-major storage
     // -----------------------------------------------------------
     if (transposed_flags & UNDERLING_TRANSPOSED_LONG_N2) {
-        // Set stride order when long in n2: n2 x (n0/pB x n1/pA) x howmany
-        // TODO Confirm this ordering with FFTW_MPI_TRANSPOSED_IN
+        // Set stride order when long in n2:   n2 x (n0/pB x n1/pA) x howmany
+        // Confirmed ordering by email to fftw@fftw.org on 30 Nov 2011
         p->long_n[2].order[0] = 3; // Fastest, interleaved data
         p->long_n[2].order[1] = 1;
         p->long_n[2].order[2] = 0;
@@ -875,8 +875,8 @@ underling_problem_create(
     p->long_n[1].order[2] = 0;
     p->long_n[1].order[3] = 2; // Slowest
     if (transposed_flags & UNDERLING_TRANSPOSED_LONG_N0) {
-        // Set stride order when long in n0: n0 x (n1/pB x n2/pA) x howmany
-        // TODO Confirm this ordering with FFTW_MPI_TRANSPOSED_OUT
+        // Set stride order when long in n0:   n0 x (n1/pB x n2/pA) x howmany
+        // Confirmed ordering by email to fftw@fftw.org on 30 Nov 2011
         p->long_n[0].order[0] = 3; // Fastest, interleaved data
         p->long_n[0].order[1] = 2;
         p->long_n[0].order[2] = 1;
