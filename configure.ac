@@ -100,6 +100,7 @@ have_boost="yes"
 BOOST_REQUIRE([1.39],[have_boost="no"])
 if test "$have_boost" = "yes"; then
     BOOST_TEST
+    BOOST_PROGRAM_OPTIONS
 else
     AC_MSG_WARN([Boost.Test not usable so unit tests will not be built])
 fi
