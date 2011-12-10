@@ -41,7 +41,7 @@
 using underling::periodic_function;
 
 // Should internal-only tests be executed?
-static bool internal;
+static bool internal = false;
 
 // For unary function-based test case registration
 struct tc
@@ -527,11 +527,13 @@ static void test_c2r(tc t)
                            << " and packed " << packed);
     }
     namespace transposed = underling::transposed;
-    if ((!internal || in_place) && long_ni == 2 && flags & transposed::long_n2) {
+    if (    (in_place || (!in_place && !internal))
+         && long_ni == 2 && flags & transposed::long_n2) {
         if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
         return;
     }
-    if ((!internal || in_place) && long_ni == 0 && flags & transposed::long_n0) {
+    if (    (in_place || (!in_place && !internal))
+         && long_ni == 0 && flags & transposed::long_n0) {
         if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
         return;
     }
@@ -729,11 +731,13 @@ static void test_r2c(tc t)
                            << " and packed " << packed);
     }
     namespace transposed = underling::transposed;
-    if ((!internal || in_place) && long_ni == 2 && flags & transposed::long_n2) {
+    if (    (in_place || (!in_place && !internal))
+         && long_ni == 2 && flags & transposed::long_n2) {
         if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
         return;
     }
-    if ((!internal || in_place) && long_ni == 0 && flags & transposed::long_n0) {
+    if (    (in_place || (!in_place && !internal))
+         && long_ni == 0 && flags & transposed::long_n0) {
         if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
         return;
     }
