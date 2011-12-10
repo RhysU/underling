@@ -39,6 +39,7 @@
 
 // TODO Ensure grid/problem compatibility when both provided to methods!
 // TODO Add wisdom broadcasting and FFTW_WISDOM_ONLY handling
+// TODO Check for memory leaks stemming from planning failures
 
 // ********************************************************************
 // INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL

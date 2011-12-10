@@ -35,6 +35,8 @@
 #include <underling/error.h>
 #include "common.h"
 
+// TODO Check for memory leaks stemming from planning failures
+
 // ********************************************************************
 // INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL TYPES INTERNAL
 // ********************************************************************
@@ -1029,11 +1031,23 @@ underling_fftw_plan_create_inverse(
                 UNDERLING_ESANITY);
     }
 
-    // Sanity check that the inverse is indeed an inverse
-    assert(!underling_fftw_extents_cmp(
-                &plan_to_invert->input,  &retval->output));
-    assert(!underling_fftw_extents_cmp(
-                &plan_to_invert->output, &retval->input));
+    // Check that the inverse indeed inverts storage correctly.  Could have
+    // been an assertion, but the runtime cost is low compared to the debugging
+    // nightmare if the check ever silently failed in a production build.
+    if (UNDERLING_UNLIKELY(underling_fftw_extents_cmp(
+                    &plan_to_invert->input,  &retval->output))) {
+        UNDERLING_ERROR_REPORT("plan_to_invert->input != retval->output",
+                               UNDERLING_ESANITY);
+        underling_fftw_plan_destroy(retval);
+        return NULL;
+    }
+    if (UNDERLING_UNLIKELY(underling_fftw_extents_cmp(
+                    &plan_to_invert->output, &retval->input))) {
+        UNDERLING_ERROR_REPORT("plan_to_invert->output != retval->input",
+                               UNDERLING_ESANITY);
+        underling_fftw_plan_destroy(retval);
+        return NULL;
+    }
 
     return retval;
 }
