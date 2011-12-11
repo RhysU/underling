@@ -527,14 +527,12 @@ static void test_c2r(tc t)
                            << " and packed " << packed);
     }
     namespace transposed = underling::transposed;
-    if (    (in_place || (!in_place && !internal))
-         && long_ni == 2 && flags & transposed::long_n2) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
+    if (in_place && long_ni == 2 && flags & transposed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
         return;
     }
-    if (    (in_place || (!in_place && !internal))
-         && long_ni == 0 && flags & transposed::long_n0) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
+    if (in_place && long_ni == 0 && flags & transposed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
         return;
     }
     if (in_place && long_ni == 2 && packed & underling::fftw::packed::long_n2) {
@@ -572,7 +570,7 @@ static void test_c2r(tc t)
     BOOST_REQUIRE_EQUAL(forward.local_extents_output(),
                         backward.local_extents_input());
 
-    // Ensure FFT output is fastest in the long_ni direction
+    // Ensure FFT output is fastest in the real-valued long_ni direction
     BOOST_REQUIRE_EQUAL(4,       backward.local_extents_output().order[0]);
     BOOST_REQUIRE_EQUAL(3,       backward.local_extents_output().order[1]);
     BOOST_REQUIRE_EQUAL(long_ni, backward.local_extents_output().order[2]);
@@ -731,14 +729,12 @@ static void test_r2c(tc t)
                            << " and packed " << packed);
     }
     namespace transposed = underling::transposed;
-    if (    (in_place || (!in_place && !internal))
-         && long_ni == 2 && flags & transposed::long_n2) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
+    if (in_place && long_ni == 2 && flags & transposed::long_n2) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
         return;
     }
-    if (    (in_place || (!in_place && !internal))
-         && long_ni == 0 && flags & transposed::long_n0) {
-        if (!procid) BOOST_TEST_MESSAGE("Cowardly skipping test");
+    if (in_place && long_ni == 0 && flags & transposed::long_n0) {
+        if (!procid) BOOST_TEST_MESSAGE("Skipping invalid test");
         return;
     }
     if (in_place && long_ni == 2 && packed & underling::fftw::packed::long_n2) {
@@ -776,10 +772,10 @@ static void test_r2c(tc t)
     BOOST_REQUIRE_EQUAL(backward.local_extents_output(),
                         forward.local_extents_input());
 
-    // Ensure FFT output is fastest in the long_ni direction
-    BOOST_REQUIRE_EQUAL(4,       forward.local_extents_output().order[0]);
-    BOOST_REQUIRE_EQUAL(3,       forward.local_extents_output().order[1]);
-    BOOST_REQUIRE_EQUAL(long_ni, forward.local_extents_output().order[2]);
+    // Ensure FFT input is fastest in the real-valued long_ni direction
+    BOOST_REQUIRE_EQUAL(4,       forward.local_extents_input().order[0]);
+    BOOST_REQUIRE_EQUAL(3,       forward.local_extents_input().order[1]);
+    BOOST_REQUIRE_EQUAL(long_ni, forward.local_extents_input().order[2]);
 
     const underling::extents extents = f.problem.local_extents(long_ni);
     const double close_enough

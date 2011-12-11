@@ -637,7 +637,7 @@ underling_fftw_plan_create_c2r_backward(
         }
     }
 
-    if (UNDERLING_UNLIKELY(/* FIXME in == out && */ input.order[2] != long_ni)) {
+    if (UNDERLING_UNLIKELY(in == out && input.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
                 "Creation of in-place c2r_backward plans for"
                 " non-stride one directions is currently unimplemented",
@@ -825,13 +825,13 @@ underling_fftw_plan_create_r2c_forward(
 
     underling_extents e = underling_local_extents(problem, long_ni);
 
-    const underling_fftw_extents input
-        = create_underling_fftw_extents_for_real(e, long_ni);
+    const underling_fftw_extents output
+        = create_underling_fftw_extents_for_complex(e, long_ni);
 
     adjust_for_fast_stride_in_long_direction(&e, long_ni);
 
-    underling_fftw_extents output
-        = create_underling_fftw_extents_for_complex(e, long_ni);
+    underling_fftw_extents input
+        = create_underling_fftw_extents_for_real(e, long_ni);
 
     if (    (long_ni == 2 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N2)
          || (long_ni == 0 && packed_flags & UNDERLING_FFTW_PACKED_LONG_N0)) {
@@ -839,11 +839,11 @@ underling_fftw_plan_create_r2c_forward(
             UNDERLING_ERROR_NULL("invalid packed_flags for in-place transform",
                                  UNDERLING_EINVAL);
         } else {
-            pack_strides_according_to_order(&output);
+            pack_strides_according_to_order(&input);
         }
     }
 
-    if (UNDERLING_UNLIKELY(/* FIXME in == out && */ input.order[2] != long_ni)) {
+    if (UNDERLING_UNLIKELY(in == out && output.order[2] != long_ni)) {
         UNDERLING_ERROR_NULL(
                 "Creation of in-place r2c_forward plans for"
                 " non-stride one directions is currently unimplemented.",
