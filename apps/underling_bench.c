@@ -152,15 +152,21 @@ enum {
     KEY_PATIENT,
     KEY_EXHAUSTIVE,
     KEY_WISDOM_ONLY,
-    KEY_FORWARD,
-    KEY_BACKWARD,
-    KEY_BOTH,
+    KEY_DIR_FORWARD,
+    KEY_DIR_BACKWARD,
+    KEY_DIR_BOTH,
+    KEY_TRANS_N2,
+    KEY_TRANS_N0,
+    KEY_TRANS_ALL,
     KEY_FFT_IIC,
     KEY_FFT_IIR,
     KEY_FFT_ICC,
     KEY_FFT_ICR,
     KEY_FFT_CCC,
-    KEY_FFT_CCR
+    KEY_FFT_CCR,
+    KEY_PACK_N2,
+    KEY_PACK_N0,
+    KEY_PACK_ALL
 };
 
 static struct argp_option options[] = {
@@ -180,9 +186,14 @@ static struct argp_option options[] = {
     {"dims",       'P', "pAxpB",    0, "process grid for decomposition", 0 },
     {0, 0, 0, 0,
      "Controlling field transpose and transform directionality", 0},
-    {"forward",    KEY_FORWARD,  0, 0, "go from long_n2 to long_n0", 0},
-    {"backward",   KEY_BACKWARD, 0, 0, "go from long_n0 to long_n2", 0},
-    {"both",       KEY_BOTH,     0, 0, "perform forward then backward (default)", 0},
+    {"forward",    KEY_DIR_FORWARD,  0, 0, "go from long_n2 to long_n0", 0},
+    {"backward",   KEY_DIR_BACKWARD, 0, 0, "go from long_n0 to long_n2", 0},
+    {"both",       KEY_DIR_BOTH,     0, 0, "perform forward then backward (default)", 0},
+    {0, 0, 0, 0,
+     "Reducing on-node overhead by modifying storage ordering", 0},
+    {"trans",    KEY_TRANS_ALL, 0, 0, "use flags TRANSPOSED_LONG_N{0,2}", 0},
+    {"trans0",   KEY_TRANS_N0,  0, 0, "use flag  TRANSPOSED_LONG_N0",     0},
+    {"trans2",   KEY_TRANS_N2,  0, 0, "use flag  TRANSPOSED_LONG_N2",     0},
     {0, 0, 0, 0,
      "Adding Fourier transformations (--forward shown, --backward inverts)", 0},
     {"ccc", KEY_FFT_CCC, 0, 0, "c2c long_n0, c2c long_n1, c2c long_n2", 0},
@@ -191,6 +202,11 @@ static struct argp_option options[] = {
     {"icr", KEY_FFT_ICR, 0, 0, "             c2c long_n1, r2c long_n2", 0},
     {"iic", KEY_FFT_IIC, 0, 0, "                          c2c long_n2", 0},
     {"iir", KEY_FFT_IIR, 0, 0, "                          r2c long_n2", 0},
+    {0, 0, 0, 0,
+     "Forcing packed, contiguous output from Fourier transforms", 0},
+    {"pack",    KEY_PACK_ALL, 0, 0, "use flag FFTW_PACKED_ALL",     0},
+    {"pack0",   KEY_PACK_N0,  0, 0, "use flag FFTW_PACKED_LONG_N0", 0},
+    {"pack2",   KEY_PACK_N2,  0, 0, "use flag FFTW_PACKED_LONG_N2", 0},
     {0, 0, 0, 0,
      "Changing FFTW planning rigor", 0},
     {"estimate",    KEY_ESTIMATE,    0, 0, "plan with FFTW_ESTIMATE", 0},
@@ -252,19 +268,32 @@ parse_opt(int key, char *arg, struct argp_state *state)
             d->fftw_rigor_flags = FFTW_WISDOM_ONLY;
             break;
 
-        case KEY_FORWARD:
+        case KEY_DIR_FORWARD:
             d->forward  = 1;
             d->backward = 0;
             break;
 
-        case KEY_BACKWARD:
+        case KEY_DIR_BACKWARD:
             d->forward  = 0;
             d->backward = 1;
             break;
 
-        case KEY_BOTH:
+        case KEY_DIR_BOTH:
             d->forward  = 1;
             d->backward = 1;
+            break;
+
+        case KEY_TRANS_N2:
+            d->transposed_flags |= UNDERLING_TRANSPOSED_LONG_N2;
+            break;
+
+        case KEY_TRANS_N0:
+            d->transposed_flags |= UNDERLING_TRANSPOSED_LONG_N0;
+            break;
+
+        case KEY_TRANS_ALL:
+            d->transposed_flags |= UNDERLING_TRANSPOSED_LONG_N2;
+            d->transposed_flags |= UNDERLING_TRANSPOSED_LONG_N0;
             break;
 
         case KEY_FFT_IIC:
@@ -301,6 +330,18 @@ parse_opt(int key, char *arg, struct argp_state *state)
             d->fft_n[0] = 'c';
             d->fft_n[1] = 'c';
             d->fft_n[2] = 'r';
+            break;
+
+        case KEY_PACK_N2:
+            d->packed_flags |= UNDERLING_FFTW_PACKED_LONG_N2;
+            break;
+
+        case KEY_PACK_N0:
+            d->packed_flags |= UNDERLING_FFTW_PACKED_LONG_N0;
+            break;
+
+        case KEY_PACK_ALL:
+            d->packed_flags |= UNDERLING_FFTW_PACKED_ALL;
             break;
 
         case 'T':
