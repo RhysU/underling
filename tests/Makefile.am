@@ -55,8 +55,6 @@ test_underling_fftw_LDADD    = ../underling/libunderling.la
 test_underling_fftw_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_underling_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_underling_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
-test_underling_fftw_LDADD   += $(BOOST_PROGRAM_OPTIONS_LDFLAGS)
-test_underling_fftw_LDADD   += $(BOOST_PROGRAM_OPTIONS_LIBS)
 
 #############################################################################
 ### MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS MISCELLANEOUS ###

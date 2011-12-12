@@ -40,9 +40,6 @@
 
 using underling::periodic_function;
 
-// Should internal-only tests be executed?
-static bool internal = false;
-
 // For unary function-based test case registration
 struct tc
 {
@@ -902,26 +899,6 @@ init_unit_test_suite( int argc, char* argv[] )
     atexit(&underling_cleanup);        // Register finalize underling prereqs
 
     boost::unit_test::framework::master_test_suite().p_name.value = __FILE__;
-
-    // Process command line arguments
-    {
-        namespace po = boost::program_options;
-        po::options_description desc("Custom test options");
-        desc.add_options()
-            ("internal", "Run internal, development-only test cases)")
-        ;
-        po::variables_map vm;
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-        po::notify(vm);
-        if (vm.count("internal")) {
-            int procid;
-            MPI_Comm_rank(MPI_COMM_WORLD, &procid);
-            if (!procid) {
-                std::cout << "Internal test cases enabled." << std::endl;
-            }
-            internal = true;
-        }
-    }
 
     // Size of global extents
     const int extents[][3] = {  { 2, 3, 5 }
