@@ -17,6 +17,7 @@ CC=@MPICC@
 ## C-based benchmarking tool
 bin_PROGRAMS             += underling_bench
 underling_bench_SOURCES   = underling_bench.c mpi_argp.c
+underling_bench_SOURCES  += RngStream.h RngStream.c
 underling_bench_LDADD     = ../underling/libunderling.la
 underling_bench_LDADD    += ../gnulib/libgnu.la $(LTLIBINTL)
 underling_bench_LDADD    += $(GRVY_LIBS)
