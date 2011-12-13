@@ -39,7 +39,6 @@
 
 #include "argp.h"
 #include "mpi_argp.h"
-#include "RngStream.h"
 
 #include <mpi.h>
 #include <fftw3.h>
