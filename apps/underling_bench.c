@@ -65,8 +65,6 @@
 #define GRVY_TIMER_SUMMARIZE()
 #endif
 
-// TODO Allow UNDERLING_TRANSPOSED_LONG_{N2,N0}
-// TODO Allow UNDERLING_FFTW_PACKED_LONG_{N2,N0}
 // TODO Allow different transform_flags
 // TODO Verify memory contents after all transposes complete
 
