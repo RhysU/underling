@@ -35,6 +35,7 @@
 #include <string.h>
 #include <sysexits.h>
 #include <sys/file.h>
+#include <tgmath.h>
 #include <unistd.h>
 
 #include "argp.h"
@@ -95,6 +96,7 @@ struct details {
     int fft_inplace;
     int forward;
     int backward;
+    double abstol;
 };
 
 //*************************************************************
@@ -116,9 +118,18 @@ static void to_human_readable_byte_count(long bytes,
 
 static long from_human_readable_byte_count(const char *str);
 
-static void* malloc_and_fill(struct details *d,
-                             const long bytes,
-                             unsigned salt);
+static underling_real* calloc_field(struct details *d,
+                                    const long bytes);
+
+static void fill_field(underling_real *p,
+                       struct details *d,
+                       const long bytes,
+                       unsigned salt);
+
+static underling_real check_field(const underling_real *p,
+                                  struct details *d,
+                                  const long bytes,
+                                  unsigned salt);
 
 //*******************************************************************
 // ARGP DETAILS: http://www.gnu.org/s/libc/manual/html_node/Argp.html
@@ -168,13 +179,14 @@ enum {
 };
 
 static struct argp_option options[] = {
-    {"verbose",      'v', 0,       0, "produce verbose output",           0 },
-    {"repeat",       'r', "count", 0, "number of repetitions",            0 },
-    {"nthreads",     't', "count", 0, "number of concurrent threads",     0 },
-    {"nfields",      'n', "count", 0, "number of independent fields",     0 },
-    {"howmany",      'h', "count", 0, "howmany components per field",     0 },
-    {"mpi-in-place", 'i', 0,       0, "perform in-place MPI transposes",  0 },
-    {"fft-in-place", 'I', 0,       0, "perform in-place FFTs",            0 },
+    {"check",        'c', "abstol", 0, "absolute round trip tolerance to scaled by transform extents", 0},
+    {"verbose",      'v', 0,        0, "produce verbose output",                                       0},
+    {"repeat",       'r', "count",  0, "number of repetitions",                                        0},
+    {"nthreads",     't', "count",  0, "number of concurrent threads",                                 0},
+    {"nfields",      'n', "count",  0, "number of independent fields",                                 0},
+    {"howmany",      'h', "count",  0, "howmany components per field",                                 0},
+    {"mpi-in-place", 'i', 0,        0, "perform in-place MPI transposes",                              0},
+    {"fft-in-place", 'I', 0,        0, "perform in-place FFTs",                                        0},
     {0, 0, 0, 0,
      "Controlling global problem size (specify at most one)",     0 },
     {"field-memory", 'f', "bytes",    0, "per-rank field memory", 0 },
@@ -342,6 +354,19 @@ parse_opt(int key, char *arg, struct argp_state *state)
             d->packed_flags |= UNDERLING_FFTW_PACKED_ALL;
             break;
 
+        case 'c':
+            errno = 0;
+            if (1 != sscanf(arg ? arg : "", "%lf %c", &d->abstol, &ignore)) {
+                argp_failure(state, EX_USAGE, errno,
+                        "check option is malformed: '%s'", arg);
+            }
+            if (d->abstol < 0) {
+                argp_failure(state, EX_USAGE, 0,
+                        "abstol value %lf must be positive",
+                        d->abstol);
+            }
+            break;
+
         case 'T':
             errno = 0;
             {
@@ -483,6 +508,8 @@ static FILE *rankout, *rankerr;
 
 int main(int argc, char *argv[])
 {
+    int retval = 0;
+
     // For miscellanous timing usage
     double tstart, tend;
 
@@ -498,6 +525,7 @@ int main(int argc, char *argv[])
     d.fft_n[2] = 'i';
     d.fft_n[1] = 'i';
     d.fft_n[0] = 'i';
+    d.abstol   = -1;
 
     // Initialize/finalize MPI with profiling initially disabled
     MPI_Init(&argc, &argv);
@@ -628,9 +656,9 @@ int main(int argc, char *argv[])
         fprintf(rankout,
             "\n"
             "Real-to-complex FFTs imply real-valued grid is %d x %d x %d\n",
-            d.fft_n[0] == 'r' ? 2*(d.n0 - 1) : d.n0,
-            d.fft_n[1] == 'r' ? 2*(d.n1 - 1) : d.n1,
-            d.fft_n[2] == 'r' ? 2*(d.n2 - 1) : d.n2);
+            d.fft_n[0] == 'r' ? (2*(d.n0 - 1)+(d.n0 == 1)) : d.n0,
+            d.fft_n[1] == 'r' ? (2*(d.n1 - 1)+(d.n1 == 1)) : d.n1,
+            d.fft_n[2] == 'r' ? (2*(d.n2 - 1)+(d.n2 == 1)) : d.n2);
     }
     fprintf(rankout,
         "------------------------------------------------------------------------------\n"
@@ -650,7 +678,6 @@ int main(int argc, char *argv[])
         "Long n0: %2$5d/%5$4d x (%3$5d/%4$4d x %1$5d) = (%2$5d/%5$4d x %3$5d/%4$4d) x %1$5d\n"
         "------------------------------------------------------------------------------\n"
         "\n", d.n0, d.n1, d.n2, d.pA, d.pB);
-
 
     // Initialize underling_problem and find per-field memory requirements
     underling_problem problem = underling_problem_create(
@@ -726,8 +753,7 @@ int main(int argc, char *argv[])
     // Allocate memory for each field plus one optional scratch buffer
     underling_real *f[d.nfields + extra]; // C99
     for (int i = 0; i < d.nfields + extra; ++i) {
-        f[i] = (underling_real *) malloc_and_fill(
-                &d, local_memory * sizeof(underling_real), i);
+        f[i] = calloc_field(&d, local_memory * sizeof(underling_real));
         assert(f[i]);
     }
 
@@ -794,6 +820,28 @@ int main(int argc, char *argv[])
             fprintf(rankout, "\n");
         }
     }
+
+    // Fill state fields with well-defined garbage for check_field purposes
+    if (d.forward && d.backward) {
+        for (int i = 0; i < d.nfields; ++i) {
+            fill_field(f[i], &d, local_memory * sizeof(underling_real), i);
+        }
+    }
+
+    // Precompute the normalization factor required for check_field purposes
+    // Normalization factor is the product of all logical Fourier extents
+    const underling_real normalization = ((underling_real) 1) / (
+            ((long) (
+                d.fft_n[0] == 'c' ? d.n0 :
+                d.fft_n[0] == 'r' ? (2*(d.n0 - 1)+(d.n0 == 1)) : 1
+            )) * ((long) (
+                d.fft_n[1] == 'c' ? d.n1 :
+                d.fft_n[1] == 'r' ? (2*(d.n1 - 1)+(d.n1 == 1)) : 1
+            )) * ((long) (
+                d.fft_n[2] == 'c' ? d.n2 :
+                d.fft_n[2] == 'r' ? (2*(d.n2 - 1)+(d.n2 == 1)) : 1
+            ))
+        );
 
     // During execution field N is pointed to by f[o[N]] for {0, ..., nfields}.
     // Important as m < 0 and m > 0 must run different directions through memory.
@@ -866,6 +914,7 @@ int main(int argc, char *argv[])
                 }
                 for (int j = 0; j < d.nfields; ++j) o[j] += m[4];
             }
+
         }
 
         if (d.backward) {
@@ -929,11 +978,55 @@ int main(int argc, char *argv[])
                 }
                 for (int j = 0; j < d.nfields; ++j) o[j] += m[9];
             }
+
+        }
+
+        // Apply forward-and-reverse normalization for check_field purposes
+        if (d.forward && d.backward) {
+            for (int i = 0; i < d.nfields; ++i) {
+                for (size_t j = 0; j < local_memory; ++j) {
+                    f[i][j] *= normalization;
+                }
+            }
         }
     }
     tend = MPI_Wtime();
     GRVY_TIMER_FINALIZE();
     fprintf(rankout, "...ended benchmark main loop\n");
+
+    // If we're round tripping...
+    if (d.forward && d.backward) {
+
+        // ...compute the maximum absolute error observed on any rank...
+        // ...(using the same salt as malloc_and_fill for consistency)...
+        underling_real maxabserr = 0;
+        for (int i = 0; i < d.nfields; ++i) {
+            const underling_real abserr = check_field(
+                    f[i], &d, local_memory * sizeof(underling_real), i);
+            maxabserr = fmax(maxabserr, abserr);
+        }
+
+        // ...bring it down to rank zero at known precision and display...
+        struct {
+            double val;
+            int    rank;
+        } sendbuf, recvbuf;
+        sendbuf.val  = maxabserr;
+        sendbuf.rank = d.world_rank;
+        MPI_Allreduce(&sendbuf, &recvbuf, 1, MPI_DOUBLE_INT,
+                      MPI_MAXLOC, MPI_COMM_WORLD);
+        fprintf(rankout,
+                "Maximum absolute accumulated error %g observed on rank %d\n",
+                recvbuf.val, recvbuf.rank);
+
+        // ...and possibly warn of abstol failure or genuinely fail
+        if (d.abstol >= 0 && recvbuf.val > d.abstol / normalization) {
+            fprintf(rankout,
+                "Maximum observed error exceeds scaled abstol of %g\n",
+                d.abstol / normalization);
+            retval = 1;
+        }
+    }
 
     const double elapsed = tend - tstart;
     const double mean = elapsed / d.repeat;
@@ -985,7 +1078,7 @@ int main(int argc, char *argv[])
 
     // Finalizing of MPI, FFTW, underling handled by atexit()
 
-    return 0;
+    return retval;
 }
 
 void print_version(FILE *stream, struct argp_state *state)
@@ -1113,11 +1206,10 @@ done:
     return exp ? coeff * pow(unit, exp / 3) : coeff;
 }
 
-static void* malloc_and_fill(struct details *d,
-                             const long bytes,
-                             unsigned salt)
+static underling_real* calloc_field(struct details *d,
+                                    const long bytes)
 {
-    void *p = fftw_malloc(bytes); // Aligned malloc
+    underling_real *p = fftw_malloc(bytes); // Aligned malloc
     if (!p) {
         double coeff;
         const char *units;
@@ -1126,20 +1218,56 @@ static void* malloc_and_fill(struct details *d,
                 coeff, units, d->world_rank);
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
+    memset(p, 0, bytes);                    // Make it a calloc
+
+    return p;
+}
+
+static void fill_field(underling_real *p,
+                       struct details *d,
+                       const long bytes,
+                       unsigned salt)
+{
+    assert(p);
 
     // Store previous random seed and provide a new one based on rank, salt
     char state[64];
     initstate(d->world_rank + salt, state, sizeof(state)/sizeof(state[0]));
     char *previous = setstate(state);
 
-    // Fill
+    // Fill using well-defined garbage
     const size_t count = bytes / sizeof(underling_real);
     const underling_real inv_rand_max = ((underling_real) 1) / RAND_MAX;
     for (size_t i = 0; i < count; ++i)
-        ((underling_real *) p)[i] = random() * inv_rand_max;
+        p[i] = random()*inv_rand_max + salt;
+
+    // Restore previous random state
+    setstate(previous);
+}
+
+static underling_real check_field(const underling_real *p,
+                                  struct details *d,
+                                  const long bytes,
+                                  unsigned salt)
+{
+    assert(p);
+
+    // Store previous random seed and provide a new one based on rank, salt
+    char state[64];
+    initstate(d->world_rank + salt, state, sizeof(state)/sizeof(state[0]));
+    char *previous = setstate(state);
+
+    // Compute maximum observed error using random numbers from fill_field
+    underling_real maxabserr = 0;
+    const size_t count = bytes / sizeof(underling_real);
+    const underling_real inv_rand_max = ((underling_real) 1) / RAND_MAX;
+    for (size_t i = 0; i < count; ++i) {
+        const underling_real expected = random() * inv_rand_max + salt;
+        maxabserr = fmax(maxabserr, fabs(p[i] - expected));
+    }
 
     // Restore previous random state
     setstate(previous);
 
-    return p;
+    return maxabserr;
 }
