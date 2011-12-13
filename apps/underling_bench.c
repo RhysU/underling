@@ -1134,8 +1134,9 @@ static void* malloc_and_fill(struct details *d,
 
     // Fill
     const size_t count = bytes / sizeof(underling_real);
+    const underling_real inv_rand_max = ((underling_real) 1) / RAND_MAX;
     for (size_t i = 0; i < count; ++i)
-        ((double *) p)[i] = (double) random();
+        ((underling_real *) p)[i] = random() * inv_rand_max;
 
     // Restore previous random state
     setstate(previous);
