@@ -510,7 +510,7 @@ int main(int argc, char *argv[])
 {
     int retval = 0;
 
-    // For miscellanous timing usage
+    // For miscellaneous timing usage
     double tstart, tend;
 
     // Initialize default argument storage and default values
