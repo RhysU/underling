@@ -511,7 +511,7 @@ int main(int argc, char *argv[])
     int retval = 0;
 
     // For miscellaneous timing usage
-    double tstart, tend;
+    double tstart;
 
     // Initialize default argument storage and default values
     struct details d;
@@ -768,9 +768,8 @@ int main(int argc, char *argv[])
                 | (d.backward  ? UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1
                                | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 : 0),
             d.fftw_rigor_flags);
-    tend = MPI_Wtime();
     fprintf(rankout, "...underling_plan_create took %lf seconds",
-            tend - tstart);
+            MPI_Wtime() - tstart);
     if (d.verbose) {
         fputs(" and returned (on rank 0):\n", rankout);
         underling_fprint_plan(t_plan, rankout);
@@ -803,9 +802,8 @@ int main(int argc, char *argv[])
             forward_plan[i] = planner(problem, i, f[0], f[!d.fft_inplace],
                     d.forward ? d.fftw_rigor_flags : FFTW_ESTIMATE,
                     d.packed_flags);
-            tend = MPI_Wtime();
             fprintf(rankout, "...%s took %lf seconds",
-                    planner_name, tend - tstart);
+                    planner_name, MPI_Wtime() - tstart);
             if (d.verbose) {
                 fputs(" and returned (on rank 0):\n", rankout);
                 underling_fftw_fprint_plan(forward_plan[i], rankout);
@@ -818,9 +816,8 @@ int main(int argc, char *argv[])
             backward_plan[i] = underling_fftw_plan_create_inverse(
                     forward_plan[i], f[0], f[!d.fft_inplace],
                     d.backward ? d.fftw_rigor_flags : FFTW_ESTIMATE);
-            tend = MPI_Wtime();
             fprintf(rankout, "...underling_fftw_plan_create_inverse took %lf seconds",
-                    tend - tstart);
+                    MPI_Wtime() - tstart);
             if (d.verbose) {
                 fputs(" and returned (on rank 0):\n", rankout);
                 underling_fftw_fprint_plan(forward_plan[i], rankout);
@@ -857,9 +854,11 @@ int main(int argc, char *argv[])
 
     fprintf(rankout, "\nBeginning benchmark main loop...\n");
     GRVY_TIMER_INIT(argp_program_version);
-    tstart = MPI_Wtime();
+    double tmean = 0;  // Mean and sample variance per Knuth's algorithm from
+    double tM2   = 0;  // wikipedia.org/wiki/Algorithms_for_calculating_variance
     for (int i = 0; i < d.repeat; ++i) {
         fprintf(rankout, "\tIteration %d\n", i);
+        const double tstart = MPI_Wtime();
 
         if (d.forward) {
 
@@ -989,7 +988,16 @@ int main(int argc, char *argv[])
 
         }
 
+        // Update mean and M2 for timing per online algorithm
+        {
+            const double x     = MPI_Wtime() - tstart;
+            const double delta = x - tmean;
+            tmean += delta/(i + 1);
+            tM2   += delta*(x - tmean);
+        }
+
         // Apply forward-and-backward normalization for check_field purposes
+        // Ignore for timing as it is not strictly part of the benchmark
         if (d.forward && d.backward) {
             for (int i = 0; i < d.nfields; ++i) {
                 for (size_t j = 0; j < local_memory; ++j) {
@@ -998,9 +1006,9 @@ int main(int argc, char *argv[])
             }
         }
     }
-    tend = MPI_Wtime();
     GRVY_TIMER_FINALIZE();
     fprintf(rankout, "...ended benchmark main loop\n");
+    const double tvariance = tM2 / (d.repeat - 1);
 
     // If we're round tripping...
     if (d.forward && d.backward) {
@@ -1036,10 +1044,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    const double elapsed = tend - tstart;
-    const double mean = elapsed / d.repeat;
-    fprintf(rankout, "Mean time across %d iteration(s) was %8.6g seconds\n",
-            d.repeat, mean);
+    // Display timing information from rank zero
+    if (d.repeat <= 1) {
+        fprintf(rankout, "Time for one iteration was %8.6g seconds\n", tmean);
+    } else {
+        fprintf(rankout,
+            "Mean time for %d iterations was %8.6g seconds (variance %8.6g)\n",
+            d.repeat, tmean, tvariance);
+    }
 
     // TODO Get timing information back from multiple ranks
     if (d.world_rank == 0) { GRVY_TIMER_SUMMARIZE(); }
