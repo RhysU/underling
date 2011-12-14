@@ -393,7 +393,7 @@ parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'v':
-            d->verbose = 1;
+            ++d->verbose;
             break;
 
         case 'r':
@@ -769,10 +769,13 @@ int main(int argc, char *argv[])
                                | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 : 0),
             d.fftw_rigor_flags);
     tend = MPI_Wtime();
-    fprintf(rankout, "...underling_plan_create took %lf seconds"
-                     " and returned (on rank 0):\n", tend - tstart);
-    underling_fprint_plan(t_plan, rankout);
-    fprintf(rankout, "\n");
+    fprintf(rankout, "...underling_plan_create took %lf seconds",
+            tend - tstart);
+    if (d.verbose) {
+        fputs(" and returned (on rank 0):\n", rankout);
+        underling_fprint_plan(t_plan, rankout);
+    }
+    fputc('\n', rankout);
 
     // Create any necessary transform plans.
     // Note forward plans are preferred to create corresponding backward plans
@@ -801,11 +804,13 @@ int main(int argc, char *argv[])
                     d.forward ? d.fftw_rigor_flags : FFTW_ESTIMATE,
                     d.packed_flags);
             tend = MPI_Wtime();
-            fprintf(rankout, "...%s took %lf seconds"
-                            " and returned (on rank 0):\n",
-                            planner_name, tend - tstart);
-            underling_fftw_fprint_plan(forward_plan[i], rankout);
-            fprintf(rankout, "\n");
+            fprintf(rankout, "...%s took %lf seconds",
+                    planner_name, tend - tstart);
+            if (d.verbose) {
+                fputs(" and returned (on rank 0):\n", rankout);
+                underling_fftw_fprint_plan(forward_plan[i], rankout);
+            }
+            fputc('\n', rankout);
         }
         if (d.backward && forward_plan[i]) {
             fprintf(rankout, "\nInvoking underling_fftw_plan_create_inverse for long_n%d...\n", i);
@@ -814,10 +819,13 @@ int main(int argc, char *argv[])
                     forward_plan[i], f[0], f[!d.fft_inplace],
                     d.backward ? d.fftw_rigor_flags : FFTW_ESTIMATE);
             tend = MPI_Wtime();
-            fprintf(rankout, "...underling_fftw_plan_create_inverse took %lf seconds"
-                            " and returned (on rank 0):\n", tend - tstart);
-            underling_fftw_fprint_plan(forward_plan[i], rankout);
-            fprintf(rankout, "\n");
+            fprintf(rankout, "...underling_fftw_plan_create_inverse took %lf seconds",
+                    tend - tstart);
+            if (d.verbose) {
+                fputs(" and returned (on rank 0):\n", rankout);
+                underling_fftw_fprint_plan(forward_plan[i], rankout);
+            }
+            fputc('\n', rankout);
         }
     }
 
