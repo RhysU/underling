@@ -989,7 +989,7 @@ int main(int argc, char *argv[])
 
         }
 
-        // Apply forward-and-reverse normalization for check_field purposes
+        // Apply forward-and-backward normalization for check_field purposes
         if (d.forward && d.backward) {
             for (int i = 0; i < d.nfields; ++i) {
                 for (size_t j = 0; j < local_memory; ++j) {
