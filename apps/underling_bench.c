@@ -826,6 +826,46 @@ int main(int argc, char *argv[])
         }
     }
 
+    // If sufficiently verbose, output extent information for all stages.
+    // Perform one rank at a time to avoid jumbling output.
+    if ((d.world_size==1 && d.verbose) || (d.world_size>1 && d.verbose>1)) {
+        const int stage[6] = {2, 1, 0, 0, 1, 2};         // Data traversal
+        const underling_fftw_plan *dp[6] = {             // across forward and
+            forward_plan,  forward_plan,  forward_plan,  // backward directions
+            backward_plan, backward_plan, backward_plan  // in a single loop
+        };
+
+        for (int r = 0; r < d.world_size; ++r) {         // Walk all ranks
+            MPI_Barrier(MPI_COMM_WORLD);                 // Synchronize
+            if (r != d.world_rank) continue;             // Take turns in loop
+
+            printf("\nStep-by-step storage info for rank %d:\n", d.world_rank);
+            for (size_t i = 0; i < sizeof(stage)/sizeof(stage[0]); ++i) {
+                const int l = stage[i];
+                if ((dp[i])[l]) {
+                    underling_fftw_extents in
+                        = underling_fftw_local_extents_input((dp[i])[l]);
+                    printf("\tlong_n%d FFT input:  ", l);
+                    underling_fftw_fprint_extents(&in, stdout);
+                    putchar('\n');
+
+                    underling_fftw_extents out
+                        = underling_fftw_local_extents_output((dp[i])[l]);
+                    printf("\tlong_n%d FFT output: ", l);
+                    underling_fftw_fprint_extents(&out, stdout);
+                    putchar('\n');
+                } else {
+                    underling_extents t = underling_local_extents(problem, l);
+                    printf("\tlong_n%d storage:    ", l);
+                    underling_fprint_extents(&t, stdout);
+                    putchar('\n');
+                }
+            }
+            fflush(stdout);
+        }
+        MPI_Barrier(MPI_COMM_WORLD);  // Let last rank flush
+    }
+
     // Fill state fields with well-defined garbage for check_field purposes
     if (d.forward && d.backward) {
         for (int i = 0; i < d.nfields; ++i) {
