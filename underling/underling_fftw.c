@@ -1062,7 +1062,7 @@ underling_fftw_local_extents_input(
     }
 
     underling_fftw_extents retval = plan->input; // Create temporary
-    return retval;                              // Return temporary
+    return retval;                               // Return temporary
 }
 
 underling_fftw_extents
@@ -1075,7 +1075,7 @@ underling_fftw_local_extents_output(
     }
 
     underling_fftw_extents retval = plan->output; // Create temporary
-    return retval;                               // Return temporary
+    return retval;                                // Return temporary
 }
 
 static
