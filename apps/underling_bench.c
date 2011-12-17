@@ -129,7 +129,8 @@ static void fill_field(underling_real *p,
 static underling_real check_field(const underling_real *p,
                                   struct details *d,
                                   const long bytes,
-                                  unsigned salt);
+                                  unsigned salt,
+                                  underling_fftw_plan plan);
 
 //*******************************************************************
 // ARGP DETAILS: http://www.gnu.org/s/libc/manual/html_node/Argp.html
@@ -867,6 +868,7 @@ int main(int argc, char *argv[])
     }
 
     // Fill state fields with well-defined garbage for check_field purposes
+    // We fill all of the field, not just the check_field-relevant parts
     if (d.forward && d.backward) {
         for (int i = 0; i < d.nfields; ++i) {
             fill_field(f[i], &d, local_memory * sizeof(underling_real), i);
@@ -894,7 +896,7 @@ int main(int argc, char *argv[])
 
     fprintf(rankout, "\nBeginning benchmark main loop...\n");
     GRVY_TIMER_INIT(argp_program_version);
-    double tmean = 0;  // Mean and sample variance per Knuth's algorithm from
+    double tmean = 0;  // Mean, sample variance per Knuth/Welford algorithm from
     double tM2   = 0;  // wikipedia.org/wiki/Algorithms_for_calculating_variance
     for (int i = 0; i < d.repeat; ++i) {
         fprintf(rankout, "\tIteration %d\n", i);
@@ -1028,7 +1030,7 @@ int main(int argc, char *argv[])
 
         }
 
-        // Update mean and M2 for timing per online algorithm
+        // Update mean and M2 for timing per online Knuth/Welford algorithm
         {
             const double x     = MPI_Wtime() - tstart;
             const double delta = x - tmean;
@@ -1054,11 +1056,15 @@ int main(int argc, char *argv[])
     if (d.forward && d.backward) {
 
         // ...compute the maximum absolute error observed on any rank...
-        // ...(using the same salt as malloc_and_fill for consistency)...
+        // ...(using the same salt as fill_field for consistency)...
+        // ...(checking only data and not communication buffers)...
         underling_real maxabserr = 0;
         for (int i = 0; i < d.nfields; ++i) {
+            underling_extents e = underling_local_extents(problem, 2);
+            assert(e.extent <= local_memory);
             const underling_real abserr = check_field(
-                    f[i], &d, local_memory * sizeof(underling_real), i);
+                    f[i], &d, e.extent * sizeof(underling_real),
+                    i, forward_plan[2]);
             maxabserr = fmax(maxabserr, abserr);
         }
 
@@ -1305,10 +1311,17 @@ static void fill_field(underling_real *p,
     setstate(previous);
 }
 
+// Check that the data in p matches the values set by fill_field.  One annoying
+// complication is that real-value fields may contain padded entries not
+// preserved across transforms.  We use data from plan to account for that.
+// Another annoyance is that fields may contain communication-only scratch
+// space-- we rely on the caller to not specify parameter bytes beyond the
+// details we care about.  In practice, this uses underling_extents.extents.
 static underling_real check_field(const underling_real *p,
                                   struct details *d,
                                   const long bytes,
-                                  unsigned salt)
+                                  unsigned salt,
+                                  underling_fftw_plan plan)
 {
     assert(p);
 
@@ -1321,13 +1334,30 @@ static underling_real check_field(const underling_real *p,
     underling_real maxabserr = 0;
     const size_t count = bytes / sizeof(underling_real);
     const underling_real inv_rand_max = ((underling_real) 1) / RAND_MAX;
+
+    // Check if we need to specially handle for real-valued padding...
+    if (plan) {
+        underling_fftw_extents e = underling_fftw_local_extents_input(plan);
+        if (e.size[3] == 1 && e.size[4] == 1 /* i.e., real-valued */) {
+            // ...Yes we do.  Ignore padding between real-valued contents
+            for (size_t i = 0; i < count; ++i) {
+                const underling_real expected = random() * inv_rand_max + salt;
+                if (i % e.stride[e.order[3]] < (size_t) e.size[e.order[2]]) {
+                    maxabserr = fmax(maxabserr, fabs(p[i] - expected));
+                }
+            }
+
+            setstate(previous);  // Restore previous random state
+            return maxabserr;    // Return to caller
+        }
+    }
+
+    // ...No we do not.  Just rip through contiguous memory
     for (size_t i = 0; i < count; ++i) {
         const underling_real expected = random() * inv_rand_max + salt;
         maxabserr = fmax(maxabserr, fabs(p[i] - expected));
     }
 
-    // Restore previous random state
-    setstate(previous);
-
-    return maxabserr;
+    setstate(previous);  // Restore previous random state
+    return maxabserr;    // Return to caller
 }
