@@ -39,6 +39,7 @@
 #include <unistd.h>
 
 #include "argp.h"
+#include "minmax.h"
 #include "mpi_argp.h"
 
 #include <mpi.h>
@@ -1332,14 +1333,16 @@ static underling_real check_field(const underling_real *p,
 
     // Compute maximum observed error using random numbers from fill_field
     underling_real maxabserr = 0;
-    const size_t count = bytes / sizeof(underling_real);
+    size_t count = bytes / sizeof(underling_real);
     const underling_real inv_rand_max = ((underling_real) 1) / RAND_MAX;
 
     // Check if we need to specially handle for real-valued padding...
     if (plan) {
         underling_fftw_extents e = underling_fftw_local_extents_input(plan);
         if (e.size[3] == 1 && e.size[4] == 1 /* i.e., real-valued */) {
-            // ...Yes we do.  Ignore padding between real-valued contents
+            // ...Yes we do.
+            // Ignore padding between and after any relevant real scalars
+            count = MIN(count,(size_t)e.stride[e.order[4]]*e.size[e.order[4]]);
             for (size_t i = 0; i < count; ++i) {
                 const underling_real expected = random() * inv_rand_max + salt;
                 if (i % e.stride[e.order[3]] < (size_t) e.size[e.order[2]]) {

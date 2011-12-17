@@ -58,6 +58,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module malloc-posix:
   # Code from module memchr:
   # Code from module mempcpy:
+  # Code from module minmax:
   # Code from module msvc-inval:
   # Code from module msvc-nothrow:
   # Code from module multiarch:
@@ -139,14 +140,20 @@ if test $REPLACE_GETOPT = 1; then
   AC_LIBOBJ([getopt])
   AC_LIBOBJ([getopt1])
   gl_PREREQ_GETOPT
+  dnl Arrange for unistd.h to include getopt.h.
+  GNULIB_GL_UNISTD_H_GETOPT=1
 fi
+AC_SUBST([GNULIB_GL_UNISTD_H_GETOPT])
 gl_MODULE_INDICATOR_FOR_TESTS([getopt-gnu])
 gl_FUNC_GETOPT_POSIX
 if test $REPLACE_GETOPT = 1; then
   AC_LIBOBJ([getopt])
   AC_LIBOBJ([getopt1])
   gl_PREREQ_GETOPT
+  dnl Arrange for unistd.h to include getopt.h.
+  GNULIB_GL_UNISTD_H_GETOPT=1
 fi
+AC_SUBST([GNULIB_GL_UNISTD_H_GETOPT])
 AC_SUBST([LIBINTL])
 AC_SUBST([LTLIBINTL])
 gl_FUNC_MALLOC_GNU
@@ -171,6 +178,7 @@ if test $HAVE_MEMPCPY = 0; then
   gl_PREREQ_MEMPCPY
 fi
 gl_STRING_MODULE_INDICATOR([mempcpy])
+gl_MINMAX
 gl_MSVC_INVAL
 if test $HAVE_MSVC_INVALID_PARAMETER_HANDLER = 1; then
   AC_LIBOBJ([msvc-inval])
@@ -426,6 +434,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/memchr.c
   lib/memchr.valgrind
   lib/mempcpy.c
+  lib/minmax.h
   lib/msvc-inval.c
   lib/msvc-inval.h
   lib/msvc-nothrow.c
@@ -486,6 +495,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/math_h.m4
   m4/memchr.m4
   m4/mempcpy.m4
+  m4/minmax.m4
   m4/mmap-anon.m4
   m4/msvc-inval.m4
   m4/msvc-nothrow.m4
