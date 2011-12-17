@@ -7,7 +7,7 @@ AUTOMAKE_OPTIONS = foreign
 if BUILD_TESTS
     MAYBE_TESTS = tests
 endif
-SUBDIRS = gnulib underling examples apps $(MAYBE_TESTS) doxygen
+SUBDIRS = gnulib underling $(MAYBE_TESTS) apps examples doxygen
 
 # Distribute these items:
 DIST_SUBDIRS = gnulib underling examples tests apps doxygen
