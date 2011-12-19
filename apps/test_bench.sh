@@ -4,10 +4,14 @@ set -eu
 # Initialize test infrastructure
 source "`dirname $0`/test_setup.sh"
 
-: ${FIELD:=--field-global=19x23x29}
-: ${CHECK:=--check=1e-15}
-: ${PATIENCE:=--estimate}
-: ${FILTER:=tee -a $testdir/output | grep error}
+# Do unto others...
+renice +5 -p $$
+
+: ${FIELD:=--field-global=19x23x29}  # Field size for tests
+: ${CHECK:=--check=1e-15}            # Check tolerance (scaled by FIELD!)
+: ${PATIENCE:=--estimate}            # Planning rigor
+: ${TEE=tee -a $testdir/output}      # Captures last command output to file
+: ${GREP=grep error}                 # Filter output displayed
 
 # Shorthand
 bench="./underling_bench $PATIENCE"
@@ -21,9 +25,162 @@ NP=
 P=
 eval "$METACASE"
 
-banner "Transposes only"
+banner "Basic out-of-place transposes"
 (
-    prun $bench $FIELD $P $CHECK --howmany=1 | tee -a $testdir/output | grep error
+    for h in 1 2 5; do
+        prun $bench $FIELD $P $CHECK \
+            --howmany=$h |$TEE|$GREP 2>&1
+        test ${PIPESTATUS[0]} -eq 0 || exit 1
+    done
 )
+
+banner "Basic out-of-place transposes with TRANSPOSED_LONG_N{0,2}"
+(
+    for h in 1 2 5; do
+        prun $bench $FIELD $P $CHECK --trans \
+            --howmany=$h |$TEE|$GREP 2>&1
+        test ${PIPESTATUS[0]} -eq 0 || exit 1
+    done
+)
+
+banner "Basic in-place transposes"
+(
+    for h in 1 2 5; do
+        prun $bench $FIELD $P $CHECK --mpi-in-place \
+            --howmany=$h |$TEE|$GREP 2>&1
+        test ${PIPESTATUS[0]} -eq 0 || exit 1
+    done
+)
+
+banner "Basic in-place transposes with TRANSPOSED_LONG_N{0,2}"
+(
+    for h in 1 2 5; do
+        prun $bench $FIELD $P $CHECK --mpi-in-place --trans \
+            --howmany=$h |$TEE|$GREP 2>&1
+        test ${PIPESTATUS[0]} -eq 0 || exit 1
+    done
+)
+
+for fft in ccc ccr icc icr iic iir
+do
+
+    banner "Transpose out-of-place and transform out-of-place ($fft)"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose in-place and transform out-of-place ($fft)"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --mpi-in-place --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose out-of-place and transform in-place ($fft)"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --fft-in-place --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose in-place and transform in-place ($fft)"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --mpi-in-place --fft-in-place --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+done
+
+for fft in ccc icc iic
+do
+
+    banner "Transpose out-of-place and transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --trans --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose in-place and transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --mpi-in-place --trans --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose out-of-place and transform in-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --fft-in-place --trans --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose in-place and transform in-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --mpi-in-place --fft-in-place --trans --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+done
+
+for fft in ccc ccr icc icr iic iir
+do
+    banner "Transpose out-of-place and packed transform out-of-place ($fft)"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --pack --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose in-place and packed transform out-of-place ($fft)"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --mpi-in-place --pack --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose out-of-place and packed transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --pack --trans --$fft \
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+    banner "Transpose in-place and packed transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    (
+        for h in 2 6; do
+            prun $bench $FIELD $P $CHECK --mpi-in-place --pack --trans --$fft
+                --howmany=$h |$TEE|$GREP 2>&1
+            test ${PIPESTATUS[0]} -eq 0 || exit 1
+        done
+    )
+
+done
 
 done

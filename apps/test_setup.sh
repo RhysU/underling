@@ -30,10 +30,8 @@ fi
 # Minimalistic command execution infrastructure
 banner_prefix=`basename $0`
 banner() { echo; echo $banner_prefix${METACASE:+ (}${METACASE:-}${METACASE:+)}: "$@" ; }
-run()    { echo mpiexec -np 1        "$@" ; mpiexec -np 1        "$@"                ; }
-runq()   { echo mpiexec -np 1        "$@" ; mpiexec -np 1        "$@" > /dev/null    ; }
-prun()   { echo mpiexec -np ${NP:-1} "$@" ; mpiexec -np ${NP:-1} "$@"                ; }
-prunq()  { echo mpiexec -np ${NP:-1} "$@" ; mpiexec -np ${NP:-1} "$@" > /dev/null    ; }
+run()    { echo mpiexec -np 1        "$@" 1>&2 ; mpiexec -np 1        "$@"           ; }
+prun()   { echo mpiexec -np ${NP:-1} "$@" 1>&2 ; mpiexec -np ${NP:-1} "$@"           ; }
 
 # Create directory for scratch use
 test -z "${TMPDIR-}" && export TMPDIR=.
