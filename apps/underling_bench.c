@@ -1351,7 +1351,7 @@ static underling_real check_field(const underling_real *p,
     // Check if we need to specially handle for real-valued padding...
     if (plan) {
         underling_fftw_extents e = underling_fftw_local_extents_input(plan);
-        if (e.size[3] == 1 && e.size[4] == 1 /* i.e., real-valued */) {
+        if (e.size[4] == 1 /* i.e., real-valued */) {
             // ...Yes we do.
             // Ignore padding between and after any relevant real scalars
             count = MIN(count,(size_t)e.stride[e.order[4]]*e.size[e.order[4]]);
