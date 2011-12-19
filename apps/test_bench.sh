@@ -5,7 +5,7 @@ set -eu
 source "`dirname $0`/test_setup.sh"
 
 # Do unto others...
-renice +5 -p $$
+renice +7 -p $$
 
 : ${FIELD:=--field-global=19x23x29}  # Field size for tests
 : ${CHECK:=--check=1e-15}            # Check tolerance (scaled by FIELD!)
@@ -18,7 +18,7 @@ bench="./underling_bench $PATIENCE"
 
 # Run each test case in this file under the following circumstances
 # (which can be overridden by providing the environment variable METACASES).
-for METACASE in ${METACASES:= 'NP=1' } #FIXME 'NP=3;P=--dims=3x0' 'NP=3;P=--dims=0x3' 'NP=4'}
+for METACASE in ${METACASES:= 'NP=1' 'NP=3;P=--dims=3x0' 'NP=3;P=--dims=0x3' 'NP=4'}
 do
 
 NP=
