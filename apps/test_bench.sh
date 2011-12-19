@@ -25,7 +25,7 @@ NP=
 P=
 eval "$METACASE"
 
-banner "Basic out-of-place transposes"
+banner $LINENO "Basic out-of-place transposes"
 (
     for h in 1 2 5; do
         prun $bench $FIELD $P $CHECK \
@@ -34,7 +34,7 @@ banner "Basic out-of-place transposes"
     done
 )
 
-banner "Basic out-of-place transposes with TRANSPOSED_LONG_N{0,2}"
+banner $LINENO "Basic out-of-place transposes with TRANSPOSED_LONG_N{0,2}"
 (
     for h in 1 2 5; do
         prun $bench $FIELD $P $CHECK --trans \
@@ -43,7 +43,7 @@ banner "Basic out-of-place transposes with TRANSPOSED_LONG_N{0,2}"
     done
 )
 
-banner "Basic in-place transposes"
+banner $LINENO "Basic in-place transposes"
 (
     for h in 1 2 5; do
         prun $bench $FIELD $P $CHECK --mpi-in-place \
@@ -52,7 +52,7 @@ banner "Basic in-place transposes"
     done
 )
 
-banner "Basic in-place transposes with TRANSPOSED_LONG_N{0,2}"
+banner $LINENO "Basic in-place transposes with TRANSPOSED_LONG_N{0,2}"
 (
     for h in 1 2 5; do
         prun $bench $FIELD $P $CHECK --mpi-in-place --trans \
@@ -64,7 +64,7 @@ banner "Basic in-place transposes with TRANSPOSED_LONG_N{0,2}"
 for fft in ccc ccr icc icr iic iir
 do
 
-    banner "Transpose out-of-place and transform out-of-place ($fft)"
+    banner $LINENO "Transpose out-of-place and transform out-of-place ($fft)"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --$fft \
@@ -73,7 +73,7 @@ do
         done
     )
 
-    banner "Transpose in-place and transform out-of-place ($fft)"
+    banner $LINENO "Transpose in-place and transform out-of-place ($fft)"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --mpi-in-place --$fft \
@@ -82,7 +82,7 @@ do
         done
     )
 
-    banner "Transpose out-of-place and transform in-place ($fft)"
+    banner $LINENO "Transpose out-of-place and transform in-place ($fft)"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --fft-in-place --$fft \
@@ -91,7 +91,7 @@ do
         done
     )
 
-    banner "Transpose in-place and transform in-place ($fft)"
+    banner $LINENO "Transpose in-place and transform in-place ($fft)"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --mpi-in-place --fft-in-place --$fft \
@@ -105,7 +105,7 @@ done
 for fft in ccc icc iic
 do
 
-    banner "Transpose out-of-place and transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    banner $LINENO "Transpose out-of-place and transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --trans --$fft \
@@ -114,7 +114,7 @@ do
         done
     )
 
-    banner "Transpose in-place and transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    banner $LINENO "Transpose in-place and transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --mpi-in-place --trans --$fft \
@@ -123,7 +123,7 @@ do
         done
     )
 
-    banner "Transpose out-of-place and transform in-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    banner $LINENO "Transpose out-of-place and transform in-place ($fft) with TRANSPOSED_LONG_N{0,2}"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --fft-in-place --trans --$fft \
@@ -132,7 +132,7 @@ do
         done
     )
 
-    banner "Transpose in-place and transform in-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    banner $LINENO "Transpose in-place and transform in-place ($fft) with TRANSPOSED_LONG_N{0,2}"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --mpi-in-place --fft-in-place --trans --$fft \
@@ -145,7 +145,7 @@ done
 
 for fft in ccc ccr icc icr iic iir
 do
-    banner "Transpose out-of-place and packed transform out-of-place ($fft)"
+    banner $LINENO "Transpose out-of-place and packed transform out-of-place ($fft)"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --pack --$fft \
@@ -154,7 +154,7 @@ do
         done
     )
 
-    banner "Transpose in-place and packed transform out-of-place ($fft)"
+    banner $LINENO "Transpose in-place and packed transform out-of-place ($fft)"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --mpi-in-place --pack --$fft \
@@ -163,7 +163,7 @@ do
         done
     )
 
-    banner "Transpose out-of-place and packed transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    banner $LINENO "Transpose out-of-place and packed transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --pack --trans --$fft \
@@ -172,7 +172,7 @@ do
         done
     )
 
-    banner "Transpose in-place and packed transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
+    banner $LINENO "Transpose in-place and packed transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
     (
         for h in 2 6; do
             prun $bench $FIELD $P $CHECK --mpi-in-place --pack --trans --$fft

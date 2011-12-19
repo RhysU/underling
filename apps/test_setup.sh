@@ -29,7 +29,11 @@ fi
 
 # Minimalistic command execution infrastructure
 banner_prefix=`basename $0`
-banner() { echo; echo $banner_prefix${METACASE:+ (}${METACASE:-}${METACASE:+)}: "$@" ; }
+banner() {
+    echo -en "\n$banner_prefix:$1${METACASE:+ }"
+    shift
+    echo ${METACASE:+ (}${METACASE:-}${METACASE:+)}: "$@"
+}
 run()    { echo mpiexec -np 1        "$@" 1>&2 ; mpiexec -np 1        "$@"           ; }
 prun()   { echo mpiexec -np ${NP:-1} "$@" 1>&2 ; mpiexec -np ${NP:-1} "$@"           ; }
 
