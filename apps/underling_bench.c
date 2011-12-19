@@ -66,9 +66,6 @@
 #define GRVY_TIMER_SUMMARIZE()
 #endif
 
-// TODO Allow different transform_flags
-// TODO Verify memory contents after all transposes complete
-
 //****************************************************************
 // DATA STRUCTURES DATA STRUCTURES DATA STRUCTURES DATA STRUCTURES
 //****************************************************************
@@ -828,6 +825,31 @@ int main(int argc, char *argv[])
         }
     }
 
+    // If requested, gather wisdom and then write to disk on rank 0
+    // Attempt advisory locking to reduce processes stepping on each other
+    if (d.wisdom_file) {
+        fftw_mpi_gather_wisdom(MPI_COMM_WORLD);
+    }
+    if (d.wisdom_file && d.world_rank == 0) {
+        FILE *w = fopen(d.wisdom_file, "w+");
+        if (w) {
+            fprintf(rankout, "Saving wisdom to file %s\n", d.wisdom_file);
+            if (flock(fileno(w), LOCK_EX)) {
+                fprintf(rankout, "WARNING: LOCK_EX failed on wisdom file: %s\n",
+                        strerror(errno));
+            }
+            fftw_export_wisdom_to_file(w);
+            if (flock(fileno(w), LOCK_UN)) {
+                fprintf(rankout, "WARNING: LOCK_UN failed on wisdom file: %s\n",
+                        strerror(errno));
+            }
+            fclose(w);
+        } else {
+            fprintf(rankout, "WARNING: Unable to open file %s: %s\n",
+                    d.wisdom_file, strerror(errno));
+        }
+    }
+
     // If sufficiently verbose, output extent information for all stages.
     // Perform one rank at a time to avoid jumbling output.
     if ((d.world_size==1 && d.verbose) || (d.world_size>1 && d.verbose>1)) {
@@ -1051,9 +1073,37 @@ int main(int argc, char *argv[])
     }
     GRVY_TIMER_FINALIZE();
     fprintf(rankout, "...ended benchmark main loop\n");
-    const double tvariance = tM2 / (d.repeat - 1);
+    double tvariance = tM2 / (d.repeat - 1);
 
-    // If we're round tripping...
+    // TODO Get timing information back from multiple ranks
+    if (d.world_rank == 0) { GRVY_TIMER_SUMMARIZE(); }
+
+    // Acquire and display worst-observed tmean and tvariance from any rank
+    {
+        struct { double val; int rank; } recvbuf[2], sendbuf[2] = {
+            { tmean, d.world_rank }, { tvariance, d.world_rank }
+        };
+        MPI_Reduce(&sendbuf, &recvbuf, 2, MPI_DOUBLE_INT,
+                   MPI_MAXLOC, 0, MPI_COMM_WORLD);
+
+        if (d.world_rank == 0 && d.repeat == 1) {
+            printf("Iteration time was %8.6g seconds", recvbuf[0].val);
+            if (d.world_size > 1) printf(" on worst rank %d", recvbuf[0].rank);
+            putchar('\n');
+        } else if (d.world_rank == 0) {
+            printf("Iteration mean time was %8.6g seconds across %d iterations",
+                   recvbuf[0].val, d.repeat);
+            if (d.world_size > 1) printf(" on worst rank %d", recvbuf[0].rank);
+            putchar('\n');
+            printf("Iteration variance was %8.6g seconds", recvbuf[1].val);
+            if (d.world_size > 1) printf(" on worst rank %d", recvbuf[1].rank);
+            putchar('\n');
+        } else {
+            // NOP
+        }
+    }
+
+    // If we round tripped...
     if (d.forward && d.backward) {
 
         // ...compute the maximum absolute error observed on any rank...
@@ -1070,14 +1120,11 @@ int main(int argc, char *argv[])
         }
 
         // ...bring it down to rank zero at known precision and display...
-        struct {
-            double val;
-            int    rank;
-        } sendbuf, recvbuf;
-        sendbuf.val  = maxabserr;
-        sendbuf.rank = d.world_rank;
-        MPI_Allreduce(&sendbuf, &recvbuf, 1, MPI_DOUBLE_INT,
-                      MPI_MAXLOC, MPI_COMM_WORLD);
+        struct { double val; int rank; } recvbuf, sendbuf = {
+            maxabserr, d.world_rank
+        };
+        MPI_Reduce(&sendbuf, &recvbuf, 1, MPI_DOUBLE_INT,
+                   MPI_MAXLOC, 0, MPI_COMM_WORLD);
         fprintf(rankout,
                 "Maximum absolute accumulated error %g observed on rank %d\n",
                 recvbuf.val, recvbuf.rank);
@@ -1090,18 +1137,6 @@ int main(int argc, char *argv[])
             retval = 1;
         }
     }
-
-    // Display timing information from rank zero
-    if (d.repeat <= 1) {
-        fprintf(rankout, "Time for one iteration was %8.6g seconds\n", tmean);
-    } else {
-        fprintf(rankout,
-            "Mean time for %d iterations was %8.6g seconds (variance %8.6g)\n",
-            d.repeat, tmean, tvariance);
-    }
-
-    // TODO Get timing information back from multiple ranks
-    if (d.world_rank == 0) { GRVY_TIMER_SUMMARIZE(); }
 
     // Deallocate memory for each field plus one possible scratch buffer
     for (int i = 0; i < d.nfields + extra; ++i) {
@@ -1119,29 +1154,6 @@ int main(int argc, char *argv[])
     underling_plan_destroy(t_plan);
     underling_problem_destroy(problem);
     underling_grid_destroy(grid);
-
-    // If available, gather wisdom and then write to disk on rank 0
-    // Attempt advisory locking to reduce processes stepping on each other
-    fftw_mpi_gather_wisdom(MPI_COMM_WORLD);
-    if (d.wisdom_file && d.world_rank == 0) {
-        FILE *w = fopen(d.wisdom_file, "w+");
-        if (w) {
-            fprintf(rankout, "Saving wisdom to file %s\n", d.wisdom_file);
-            if (flock(fileno(w), LOCK_EX)) {
-                fprintf(rankout, "WARNING: LOCK_EX failed on wisdom file: %s\n",
-                        strerror(errno));
-            }
-            fftw_export_wisdom_to_file(w);
-            if (flock(fileno(w), LOCK_UN)) {
-                fprintf(rankout, "WARNING: LOCK_UN failed on wisdom file: %s\n",
-                        strerror(errno));
-            }
-            fclose(w);
-        } else {
-            fprintf(rankout, "WARNING: Unable to open file %s: %s\n",
-                    d.wisdom_file, strerror(errno));
-        }
-    }
 
     // Finalizing of MPI, FFTW, underling handled by atexit()
 
