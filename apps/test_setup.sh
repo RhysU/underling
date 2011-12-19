@@ -35,11 +35,16 @@ runq()   { echo mpiexec -np 1        "$@" ; mpiexec -np 1        "$@" > /dev/nul
 prun()   { echo mpiexec -np ${NP:-1} "$@" ; mpiexec -np ${NP:-1} "$@"                ; }
 prunq()  { echo mpiexec -np ${NP:-1} "$@" ; mpiexec -np ${NP:-1} "$@" > /dev/null    ; }
 
+# Create directory for scratch use
+test -z "${TMPDIR-}" && export TMPDIR=.
+testdir=`mktemp -d`
+
 # Install teardown() function at exit unless TEST_UNDERLING_DEBUG is non-empty
 declare -ir starttime=`date +%s`
 teardown() {
     METACASE=
     banner "Tearing down"
+    rm -rvf "$testdir"                     # Remove scratch directory
     test -z "`jobs -p`" || kill `jobs -p`  # Kill any lingering jobs
 
     declare -ir endtime=`date +%s`
