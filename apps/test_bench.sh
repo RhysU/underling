@@ -175,7 +175,7 @@ do
     banner $LINENO "Transpose in-place and packed transform out-of-place ($fft) with TRANSPOSED_LONG_N{0,2}"
     (
         for h in 2 6; do
-            prun $bench $FIELD $P $CHECK --mpi-in-place --pack --trans --$fft
+            prun $bench $FIELD $P $CHECK --mpi-in-place --pack --trans --$fft \
                 --howmany=$h |$TEE|$GREP 2>&1
             test ${PIPESTATUS[0]} -eq 0 || exit 1
         done
