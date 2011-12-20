@@ -24,7 +24,7 @@ TESTS              += test_error
 check_PROGRAMS     += test_error
 test_error_SOURCES  = test_error.cpp
 test_error_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
-test_error_LDADD    = ../underling/libunderling.la $(FFTW3_MPI_THREADS_LIBS)
+test_error_LDADD    = ../underling/libunderling.la
 test_error_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_error_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
@@ -32,7 +32,7 @@ TESTS                += test_fftw_1D
 check_PROGRAMS       += test_fftw_1D
 test_fftw_1D_SOURCES  = test_fftw_1D.cpp
 test_fftw_1D_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
-test_fftw_1D_LDADD    = ../underling/libunderling.la $(FFTW3_MPI_THREADS_LIBS)
+test_fftw_1D_LDADD    = ../underling/libunderling.la
 test_fftw_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_fftw_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
@@ -42,7 +42,6 @@ check_PROGRAMS         += test_underling
 test_underling_SOURCES  = test_underling.cpp
 test_underling_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
 test_underling_LDADD    = ../underling/libunderling.la
-test_underling_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
@@ -52,7 +51,6 @@ check_PROGRAMS             += test_underling_fftw
 test_underling_fftw_SOURCES  = test_underling_fftw.cpp
 test_underling_fftw_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
 test_underling_fftw_LDADD    = ../underling/libunderling.la
-test_underling_fftw_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_underling_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_underling_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
