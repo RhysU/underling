@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
-// underling 0.3.0: an FFTW MPI-based library for 3D pencil decompositions
+// underling 0.3.1: an FFTW MPI-based library for 3D pencil decompositions
 // http://pecos.ices.utexas.edu/
 //
 // Copyright (C) 2010, 2011 The PECOS Development Team
