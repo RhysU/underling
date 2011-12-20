@@ -20,13 +20,12 @@ noinst_HEADERS += fixtures.hpp
 CC=@MPICC@
 CXX=@MPICXX@
 
+# C-based to avoid some indecipherable Ubuntu 11.10 linking issues
 TESTS              += test_error
 check_PROGRAMS     += test_error
-test_error_SOURCES  = test_error.cpp
+test_error_SOURCES  = test_error.c
 test_error_CPPFLAGS = $(AM_CPPFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
 test_error_LDADD    = ../underling/libunderling.la
-test_error_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
-test_error_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
 TESTS                += test_fftw_1D
 check_PROGRAMS       += test_fftw_1D

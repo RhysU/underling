@@ -22,17 +22,15 @@
 #endif
 #include <underling/error.h>
 
-#define BOOST_TEST_MODULE $Id$
-#include <boost/test/included/unit_test.hpp>
-
 #define CHECK(x) errors[n].number = x ; errors[n].name = #x ; n++ ;
 #define MAX_ERRS 64
 
 int verbose = 0 ;
 
-BOOST_AUTO_TEST_CASE( main_test )
+int
+main (void)
 {
-  int i, j, n = 0 ;
+  int n = 0, r = 0;
 
 #pragma warning(push,disable:2021)
   struct {
@@ -48,30 +46,33 @@ BOOST_AUTO_TEST_CASE( main_test )
   CHECK(UNDERLING_ESANITY);
   CHECK(UNDERLING_ENOMEM);
 
-  for (i = 0 ; i < n ; i++)
+  for (int i = 0 ; i < n ; i++)
     {
       if (verbose) {
-        std::cout << errors[i].name << " = " << errors[i].number << std::endl;
+        printf("%s = %d\n", errors[i].name, errors[i].number);
       }
     }
 
-  for (i = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
     {
       int status = 0;
-      for (j = 0; j < n; j++)
+      for (int j = 0; j < n; j++)
         {
           if (j != i)
               status |= (errors[i].number == errors[j].number);
         }
-
-      BOOST_CHECK_MESSAGE(!status, "Found non-distinct error value");
+      if (status)
+        {
+          r = 1;
+          printf("Found non-distinct error value\n");
+        }
     }
 
-  for (i = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
     {
       int status = 0;
       int e1 = errors[i].number ;
-      for (j = 0; j < n; j++)
+      for (int j = 0; j < n; j++)
         {
           if (j != i)
             {
@@ -79,6 +80,12 @@ BOOST_AUTO_TEST_CASE( main_test )
               status |= (underling_strerror(e1) == underling_strerror(e2)) ;
             }
         }
-      BOOST_CHECK_MESSAGE(!status, "Found non-distinct error message");
+      if (status)
+        {
+          r = 1;
+          printf("Found non-distinct error message\n");
+        }
     }
+
+  return r;
 }
