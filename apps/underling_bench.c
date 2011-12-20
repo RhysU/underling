@@ -1120,17 +1120,16 @@ int main(int argc, char *argv[])
         }
 
         // ...bring it down to rank zero at known precision and display...
-        struct { double val; int rank; } recvbuf, sendbuf = {
-            maxabserr, d.world_rank
-        };
-        MPI_Reduce(&sendbuf, &recvbuf, 1, MPI_DOUBLE_INT,
-                   MPI_MAXLOC, 0, MPI_COMM_WORLD);
+        struct { double val; int rank; } commbuf = { maxabserr, d.world_rank };
+        MPI_Allreduce(MPI_IN_PLACE, &commbuf, 1,
+                      MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
         fprintf(rankout,
                 "Maximum absolute accumulated error %g observed on rank %d\n",
-                recvbuf.val, recvbuf.rank);
+                commbuf.val, commbuf.rank);
 
-        // ...and possibly warn of abstol failure or genuinely fail
-        if (d.abstol >= 0 && recvbuf.val > d.abstol / normalization) {
+        // ...and possibly warn of abstol failure or genuinely fail...
+        // ...with failure being uniform across all ranks due to Allreduce.
+        if (d.abstol >= 0 && commbuf.val > d.abstol / normalization) {
             fprintf(rankout,
                 "Maximum observed error exceeds scaled abstol of %g\n",
                 d.abstol / normalization);
