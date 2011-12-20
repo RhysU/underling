@@ -1167,7 +1167,7 @@ underling_plan_create(
         const underling_problem problem,
         underling_real * in,
         underling_real * out,
-        unsigned transform_flags,
+        unsigned transpose_flags,
         unsigned rigor_flags)
 {
     if (UNDERLING_UNLIKELY(problem == NULL)) {
@@ -1179,10 +1179,10 @@ underling_plan_create(
     if (UNDERLING_UNLIKELY(out == NULL)) {
         UNDERLING_ERROR_NULL("out == NULL", UNDERLING_EINVAL);
     }
-    if (UNDERLING_UNLIKELY(transform_flags
+    if (UNDERLING_UNLIKELY(transpose_flags
                 & ~(UNDERLING_TRANSPOSE_ALL | UNDERLING_TRANSPOSE_NONE))) {
         UNDERLING_ERROR_NULL(
-            "transform_flags contains non-direction bit", UNDERLING_EINVAL);
+            "transpose_flags contains non-direction bit", UNDERLING_EINVAL);
     }
     const unsigned non_rigor_mask =   ~FFTW_ESTIMATE
                                     & ~FFTW_MEASURE
@@ -1195,12 +1195,12 @@ underling_plan_create(
     }
 
     // Be ready to execute all transforms if trivial flag provided
-    if (transform_flags == 0) {
-        transform_flags = UNDERLING_TRANSPOSE_ALL;
+    if (transpose_flags == 0) {
+        transpose_flags = UNDERLING_TRANSPOSE_ALL;
     }
     // Disable all transpose directions whenever transpose none is set
-    if (transform_flags & UNDERLING_TRANSPOSE_NONE) {
-        transform_flags &= ~UNDERLING_TRANSPOSE_ALL;
+    if (transpose_flags & UNDERLING_TRANSPOSE_NONE) {
+        transpose_flags &= ~UNDERLING_TRANSPOSE_ALL;
     }
 
     // Create and initialize the plan workspace
@@ -1219,7 +1219,7 @@ underling_plan_create(
     }
 
     // Create the requested FFTW MPI plans
-    if (transform_flags | UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1) {
+    if (transpose_flags | UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1) {
         p->plan_backwardA = underling_transpose_fftw_plan(
                 problem->backwardA, in, out, rigor_flags | destroy_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardA == NULL)) {
@@ -1236,7 +1236,7 @@ underling_plan_create(
                 "UNDERLING_DEBUG backwardB", problem->backwardB);
     }
 
-    if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0) {
+    if (transpose_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0) {
         p->plan_backwardB = underling_transpose_fftw_plan(
                 problem->backwardB, in, out, rigor_flags | destroy_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardB == NULL)) {
@@ -1253,7 +1253,7 @@ underling_plan_create(
                 "UNDERLING_DEBUG forwardB", problem->forwardB);
     }
 
-    if (transform_flags | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1) {
+    if (transpose_flags | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1) {
         p->plan_forwardB = underling_transpose_fftw_plan(
                 problem->forwardB, in, out, rigor_flags | destroy_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardB == NULL)) {
@@ -1270,7 +1270,7 @@ underling_plan_create(
                 "UNDERLING_DEBUG forwardA", problem->forwardA);
     }
 
-    if (transform_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2) {
+    if (transpose_flags | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2) {
         p->plan_forwardA = underling_transpose_fftw_plan(
                 problem->forwardA, in, out, rigor_flags | destroy_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardA == NULL)) {

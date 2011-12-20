@@ -38,10 +38,20 @@ extern "C" {
  * Provides a parallel, pencil-based 3D Cartesian domain decomposition atop
  * FFTW MPI.  The decomposition splits the 3D domain \c n0 by \c n1 by \c n2
  * across the 2D Cartesian topology given by \c pA by \c pB.  Parallel
- * transposes and local reordering are used to make the domain "long" and
- * stride one in each direction.  Arbitrary-length interleaved data sets may be
+ * transposes and local reordering are used to make the domain "long" (and
+ * often stride one) in each direction.
+ *
+ * One generally defines an \ref underling_grid, an \ref underling_problem atop
+ * the grid, and then an \ref underling_plan for executing transposes.  The
+ * storage details in each transpose step are given by an \ref
+ * underling_extents instance.  Arbitrary-length interleaved data sets may be
  * transposed.  Methods which must be called collectively in the MPI sense are
  * marked in their descriptions.
+ */
+
+/**
+ * @name Storage details
+ * @{
  */
 
 /**
@@ -49,24 +59,6 @@ extern "C" {
  * All stride and size information is given in terms of this type.
  */
 typedef double underling_real;
-
-/**
- * A type encapsulating a reusable domain-to-processor mapping.
- **/
-typedef struct underling_grid_s *underling_grid;
-
-/**
- * A type encapsulating all parallel decomposition information,
- * including required local storage and stride details.
- */
-typedef struct underling_problem_s *underling_problem;
-
-/**
- * A type encapsulating the FFTW MPI invocations necessary
- * to transition from being long in one direction to long in another.
- * Similar in nature to an \c fftw_plan.
- */
-typedef struct underling_plan_s *underling_plan;
 
 /**
  * A transparent type storing the local sizes, strides, and storage when the
@@ -125,8 +117,41 @@ typedef struct underling_extents {
     size_t extent;
 } underling_extents;
 
-/** A static instance used to communicate wholly invalid extents */
+/** A static instance used to communicate wholly invalid, unusable extents */
 extern const underling_extents UNDERLING_EXTENTS_INVALID;
+
+/**
+ * Dump an instance's internals in a debugging-friendly format.
+ *
+ * @param extents Extents to dump.
+ * @param output_file Desired output handle,
+ *                    which may be \c stdout or \c stderr.
+ */
+void
+underling_fprint_extents(
+        const underling_extents *extents,
+        FILE *output_file) UNDERLING_API;
+
+/**
+ * Compare two underling_extents instances using lexicographic ordering.
+ *
+ * @param e1 First instance to compare.
+ * @param e2 Second instance to compare.
+ *
+ * @return Returns an integer less than, equal to, or greater than zero if
+ *         <tt>*e1</tt> is found, respectively, to be less than, to match,
+ *         or be greater than <tt>*e2</tt>.
+ */
+int
+underling_extents_cmp(const underling_extents * const e1,
+                      const underling_extents * const e2) UNDERLING_API;
+
+/**@}*/
+
+/**
+ * @name Library initialization and cleanup
+ * @{
+ */
 
 /**
  * Initialize underling.  Caller must have initialized MPI, FFTW MPI, and
@@ -198,101 +223,17 @@ void underling_only_cleanup() UNDERLING_API;
   */
 void underling_cleanup() UNDERLING_API;
 
+/**@}*/
+
 /**
- * Compare two underling_extents instances using lexicographic ordering.
- *
- * @param e1 First instance to compare.
- * @param e2 Second instance to compare.
- *
- * @return Returns an integer less than, equal to, or greater than zero if
- *         <tt>*e1</tt> is found, respectively, to be less than, to match,
- *         or be greater than <tt>*e2</tt>.
+ * @name Creation and usage of underling_grids
+ * @{
  */
-int
-underling_extents_cmp(const underling_extents * const e1,
-                      const underling_extents * const e2) UNDERLING_API;
 
 /**
- * Flag indicating a transform from long in \c n2 to long in \c n1.
- *
- * @see The documentation for underling_grid_create for more
- *      details on the associated storage order.
- **/
-#define UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1 (1U << 0)
-
-/**
- * Flag indicating a transform from long in \c n1 to long in \c n0.
- *
- * @see The documentation for underling_grid_create for more
- *      details on the associated storage order.
+ * A type encapsulating a reusable domain-to-processor mapping.
  */
-#define UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0 (1U << 1)
-
-/**
- * Flag indicating a transform from long in \c n0 to long in \c n1.
- *
- * @see The documentation for underling_grid_create for more
- *      details on the associated storage order.
- */
-#define UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1 (1U << 2)
-
-/**
- * Flag indicating a transform from long in \c n1 to long in \c n2.
- *
- * @see The documentation for underling_grid_create for more
- *      details on the associated storage order.
- */
-#define UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 (1U << 3)
-
-/**
- * Flag indicating that no transposes will be performed.  Useful when pencil
- * decomposition details are of interest but one does not need to execute any
- * transposes.  Parallel decomposition and stride order details will be
- * available though memory requirements will not be.
- *
- * When present, this flag \em overrides and \em disables all of
- * UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1,
- * UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0,
- * UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1, and
- * UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2.
- *
- */
-#define UNDERLING_TRANSPOSE_NONE (1U << 4)
-
-/** Convenience flag indicating all transform directions */
-#define UNDERLING_TRANSPOSE_ALL                       \
-         (   UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1   \
-           | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0   \
-           | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1   \
-           | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 )
-
-/**
- * Flag indicating that "long in n2" storage is stored as <tt>n2 x (n0/pB x
- * n1/pA)</tt> in row-major order.  This differs from the normal storage
- * documented at underling_grid_create.  Using this flag may speed up
- * underling_execute_long_n2_to_long_n1 and
- * underling_execute_long_n1_to_long_n2.  Both underling_local_extents and
- * underling_local will automatically return information reflecting this
- * storage choice.
- *
- * @see The documentation for underling_grid_create for more
- *      details on storage ordering.
- */
-#define UNDERLING_TRANSPOSED_LONG_N2 (1U << 4)
-
-/**
- * Flag indicating that "long in n0" storage is stored as <tt>n0 x (n1/pB x
- * n2/pA)</tt> in row-major order.  This differs from the normal storage
- * documented at underling_grid_create.  Using this flag may speed up
- * underling_execute_long_n1_to_long_n0 and
- * underling_execute_long_n0_to_long_n1.  Both underling_local_extents and
- * underling_local will automatically return information reflecting this
- * storage choice.
- *
- * @see The documentation for underling_grid_create for more
- *      details on storage ordering.
- */
-#define UNDERLING_TRANSPOSED_LONG_N0 (1U << 5)
+typedef struct underling_grid_s *underling_grid;
 
 /**
  * Collectively create a reusable domain-to-processor mapping across the given
@@ -384,6 +325,31 @@ underling_grid_destroy(
         underling_grid grid) UNDERLING_API;
 
 /**
+ * Dump an instance's internals in a debugging-friendly format.
+ *
+ * @param grid Grid to dump.
+ * @param output_file Desired output handle,
+ *                    which may be \c stdout or \c stderr.
+ */
+void
+underling_fprint_grid(
+        const underling_grid grid,
+        FILE *output_file) UNDERLING_API;
+
+/**@}*/
+
+/**
+ * @name Creation and usage of underling_problems
+ * @{
+ */
+
+/**
+ * A type encapsulating all parallel decomposition information,
+ * including required local storage and stride details.
+ */
+typedef struct underling_problem_s *underling_problem;
+
+/**
  * Collectively create an instance encapsulating the parallel decomposition
  * details for a decomposition over \c grid containing \c howmany
  * scalar fields of type underling_real.
@@ -416,6 +382,18 @@ underling_problem_create(
 void
 underling_problem_destroy(
         underling_problem problem) UNDERLING_API;
+
+/**
+ * Dump an instance's internals in a debugging-friendly format.
+ *
+ * @param problem Problem to dump.
+ * @param output_file Desired output handle,
+ *                    which may be \c stdout or \c stderr.
+ */
+void
+underling_fprint_problem(
+        const underling_problem problem,
+        FILE *output_file) UNDERLING_API;
 
 /**
  * Obtain the processor-local sizes, storage details, and global starting
@@ -566,6 +544,74 @@ underling_global_memory_optimum(
         const underling_problem problem) UNDERLING_API;
 
 /**
+ * Flag indicating a transform from long in \c n2 to long in \c n1.
+ *
+ * @see The documentation for underling_grid_create for more
+ *      details on the associated storage order.
+ **/
+#define UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1 (1U << 0)
+
+/**
+ * Flag indicating a transform from long in \c n1 to long in \c n0.
+ *
+ * @see The documentation for underling_grid_create for more
+ *      details on the associated storage order.
+ */
+#define UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0 (1U << 1)
+
+/**
+ * Flag indicating a transform from long in \c n0 to long in \c n1.
+ *
+ * @see The documentation for underling_grid_create for more
+ *      details on the associated storage order.
+ */
+#define UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1 (1U << 2)
+
+/**
+ * Flag indicating a transform from long in \c n1 to long in \c n2.
+ *
+ * @see The documentation for underling_grid_create for more
+ *      details on the associated storage order.
+ */
+#define UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 (1U << 3)
+
+/**
+ * Flag indicating that no transposes will be performed.  Useful when pencil
+ * decomposition details are of interest but one does not need to execute any
+ * transposes.  Parallel decomposition and stride order details will be
+ * available though memory requirements will not be.
+ *
+ * When present, this flag \em overrides and \em disables all of
+ * UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1,
+ * UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0,
+ * UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1, and
+ * UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2.
+ *
+ */
+#define UNDERLING_TRANSPOSE_NONE (1U << 4)
+
+/** Convenience flag indicating all transform directions */
+#define UNDERLING_TRANSPOSE_ALL                       \
+         (   UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1   \
+           | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0   \
+           | UNDERLING_TRANSPOSE_LONG_N0_TO_LONG_N1   \
+           | UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N2 )
+
+/**@}*/
+
+/**
+ * @name Creation and usage of underling_plans
+ * @{
+ */
+
+/**
+ * A type encapsulating the FFTW MPI invocations necessary
+ * to transition from being long in one direction to long in another.
+ * Similar in nature to an \c fftw_plan.
+ */
+typedef struct underling_plan_s *underling_plan;
+
+/**
  * Collectively create an execution plan to solve the given decomposition
  * problem using the given input and output buffers.  Creating a plan may have
  * significant cost.  Once a plan is created, it may be repeatedly used on
@@ -579,7 +625,7 @@ underling_global_memory_optimum(
  * will often run more slowly than out-of-place plans.
  *
  * Planning cost can be reduced by only requesting the transform capabilities
- * you require using \c transform_flags.  It should contain the bitwise OR of
+ * you require using \c transpose_flags.  It should contain the bitwise OR of
  * one or more of the following:
  *  - UNDERLING_TRANSPOSE_LONG_N2_TO_LONG_N1
  *  - UNDERLING_TRANSPOSE_LONG_N1_TO_LONG_N0
@@ -614,7 +660,7 @@ underling_global_memory_optimum(
  * @param out Output buffer of size at least
  *            <tt>underling_local_memory(problem)</tt>
  *            <tt>underling_real</tt>s used as the target data.
- * @param transform_flags Desired transforms to plan.  Specifying zero
+ * @param transpose_flags Desired transposes to plan.  Specifying zero
  *                        is equivalent to specifying UNDERLING_TRANSPOSE_ALL.
  * @param fftw_rigor_flags Desired FFTW planning rigor.  Specifying zero
  *                         is equivalent to specifying FFTW_MEASURE.
@@ -629,7 +675,7 @@ underling_plan_create(
         const underling_problem problem,
         underling_real * in,
         underling_real * out,
-        unsigned transform_flags,
+        unsigned transpose_flags,
         unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
@@ -640,6 +686,18 @@ underling_plan_create(
 void
 underling_plan_destroy(
         underling_plan plan) UNDERLING_API;
+
+/**
+ * Dump an instance's internals in a debugging-friendly format.
+ *
+ * @param plan Plan to dump.
+ * @param output_file Desired output handle,
+ *                    which may be \c stdout or \c stderr.
+ */
+void
+underling_fprint_plan(
+        const underling_plan plan,
+        FILE *output_file) UNDERLING_API;
 
 /**
  * Collectively transform data from being long in \c n2 within buffer \c in to
@@ -701,52 +759,34 @@ underling_execute_long_n1_to_long_n2(
         underling_real * out) UNDERLING_API;
 
 /**
- * Dump an instance's internals in a debugging-friendly format.
+ * Flag indicating that "long in n2" storage is stored as <tt>n2 x (n0/pB x
+ * n1/pA)</tt> in row-major order.  This differs from the normal storage
+ * documented at underling_grid_create.  Using this flag may speed up
+ * underling_execute_long_n2_to_long_n1 and
+ * underling_execute_long_n1_to_long_n2.  Both underling_local_extents and
+ * underling_local will automatically return information reflecting this
+ * storage choice.
  *
- * @param grid Grid to dump.
- * @param output_file Desired output handle,
- *                    which may be \c stdout or \c stderr.
+ * @see The documentation for underling_grid_create for more
+ *      details on storage ordering.
  */
-void
-underling_fprint_grid(
-        const underling_grid grid,
-        FILE *output_file) UNDERLING_API;
+#define UNDERLING_TRANSPOSED_LONG_N2 (1U << 4)
 
 /**
- * Dump an instance's internals in a debugging-friendly format.
+ * Flag indicating that "long in n0" storage is stored as <tt>n0 x (n1/pB x
+ * n2/pA)</tt> in row-major order.  This differs from the normal storage
+ * documented at underling_grid_create.  Using this flag may speed up
+ * underling_execute_long_n1_to_long_n0 and
+ * underling_execute_long_n0_to_long_n1.  Both underling_local_extents and
+ * underling_local will automatically return information reflecting this
+ * storage choice.
  *
- * @param problem Problem to dump.
- * @param output_file Desired output handle,
- *                    which may be \c stdout or \c stderr.
+ * @see The documentation for underling_grid_create for more
+ *      details on storage ordering.
  */
-void
-underling_fprint_problem(
-        const underling_problem problem,
-        FILE *output_file) UNDERLING_API;
+#define UNDERLING_TRANSPOSED_LONG_N0 (1U << 5)
 
-/**
- * Dump an instance's internals in a debugging-friendly format.
- *
- * @param extents Extents to dump.
- * @param output_file Desired output handle,
- *                    which may be \c stdout or \c stderr.
- */
-void
-underling_fprint_extents(
-        const underling_extents *extents,
-        FILE *output_file) UNDERLING_API;
-
-/**
- * Dump an instance's internals in a debugging-friendly format.
- *
- * @param plan Plan to dump.
- * @param output_file Desired output handle,
- *                    which may be \c stdout or \c stderr.
- */
-void
-underling_fprint_plan(
-        const underling_plan plan,
-        FILE *output_file) UNDERLING_API;
+/**@}*/
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 // Quasi-hidden setting used for debugging deadlock conditions
