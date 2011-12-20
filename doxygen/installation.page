@@ -1,15 +1,15 @@
 /*! \page installation Installation
 
-ESIO uses the GNU autotools suite (autoconf, automake, and libtool) for its
+Underling uses the GNU autotools suite (autoconf, automake, and libtool) for its
 development build system.  This system is popular among the Linux development
 community and provides a familiar build environment for end users.
 
-To build ESIO starting from a release distribution, untar the distribution and
+To build underling starting from a release distribution, untar the distribution and
 enter the top-level directory.
 
 \code
- > tar xvfz esio-$(VERSION).tar.gz
- > cd esio-$(VERSION)/
+ > tar xvfz underling-$(VERSION).tar.gz
+ > cd underling-$(VERSION)/
 \endcode
 
 <h2>Configuration Requirements</h2>
@@ -17,56 +17,52 @@ enter the top-level directory.
 <dl>
   <dt>GNU Make</dt>
   <dd>You must have <a href="http://www.gnu.org/software/make/">GNU
-      Make</a> installed as ESIO's build system relies on many GNU
+      Make</a> installed as underling's build system relies on many GNU
       extensions.
   </dd>
   <dt>Compilers</dt>
-  <dd>You must have a working C and Fortran 90 compiler from the
-      same vendor.  Currently the GNU (<tt>gcc</tt>/<tt>gfortran</tt>)
-      and Intel (<tt>icc</tt>/<tt>ifort</tt>) compilers are supported. If
-      ESIO's configure script cannot automatically detect the correct
-      compiler location, try setting \$CC and \$FC environment
+  <dd>You must have a working C and C++ compiler from the
+      same vendor.  Currently the GNU (<tt>gcc</tt>/<tt>g++</tt>)
+      and Intel (<tt>icc</tt>/<tt>icpc</tt>) compilers are supported. If
+      underling's configure script cannot automatically detect the correct
+      compiler location, try setting \$CC and \$CXX environment
       variables prior to running configure.
   </dd>
   <dt>MPI</dt>
   <dd>You must have a working Message Passing Interface (MPI)
-      implementation.  If ESIO's configure script cannot automatically
+      implementation.  If underling's configure script cannot automatically
       detect your MPI installation, try setting the \$MPICC and \$MPIFC
       environment variables prior to running configure.
   </dd>
-  <dt>HDF5</dt>
-  <dd>You must have a working <a
-      href="http://www.hdfgroup.org/HDF5/">HDF5</a>
-      installation compiled with MPI parallel support (see HDF5
-      configure's <code>--enable-parallel</code> option for details).
-      HDF5 Fortran support  is <i>not</i>required.  The same MPI stack and
-      Fortran compiler used to compile HDF5 must be used to build ESIO.
-      ESIO's configure script should detect the appropriate information
-      if HDF5's <code>h5pcc</code> compiler wrapper is in your path.
-      If your HDF5 installation is not detected correctly, you may use
-      ESIO's <code>--with-hdf5</code> option to specify a location.
+  <dt>FFTW 3.3</dt>
+  <dd>You must have a working <a href="http://www.fftw.org/">FFTW 3.3.0</a> or
+      later installation compiled with MPI parallel support (enabled with
+      <code>--enable-mpi</code> at configure time).  You may also wish to enable
+      threading (either or both of <code>--enable-openmp</code>,
+      <code>--enable-threads</code>).  The same MPI stack and compiler used to
+      compile FFTW should be used to compile underling.
   </dd>
   <dt>GRVY (optional)</dt>
-  <dd>ESIO can optionally use The Groovy Toolkit (GRVY) if it is
+  <dd>Underling can optionally use The Groovy Toolkit (GRVY) if it is
       detected at configure time.  If your GRVY installation is not
-      detected correctly, you may use ESIO's <code>--with-grvy</code>
+      detected correctly, you may use underling's <code>--with-grvy</code>
       option to specify a location.
   </dd>
 </dl>
 
-To configure ESIO, within the esio-$(VERSION) directory issue
+To configure underling, within the underling-$(VERSION) directory issue
 \code
  > ./configure
 \endcode
 where you should add any additional configure options at the end of
 the command.  One very useful option is the <code>--prefix=DIR</code>
-which sets your desired top-level installation directory for ESIO.
+which sets your desired top-level installation directory for underling.
 
 <h2> Library Build </h2>
 
 Once configured, issue a <tt>make</tt> to build the software. If successful,
-this will build the ESIO library (static and dynamic versions), several
-examples, and some additional ESIO-related utilities.
+this will build the underling library (static and dynamic versions), possibly
+some examples, and some additional underling-related utilities.
 
 \code > make \endcode
 
@@ -78,9 +74,13 @@ these tests, issue
 
 \code > make check \endcode
 
-Many of the tests require your MPI installation's <code>mpiexec</code>
-command to be usable.  Such tests may not be executable on many public
-high performance computing platform login nodes.
+Many of the tests require your MPI installation's <code>mpiexec</code> command
+to be usable.  Such tests may not be executable on many public high performance
+computing platform login nodes.
+
+Also note that the benchmarking tool, <code>underling_bench</code>, has a
+<code>--check</code> option which can be used to ensure the library is running
+correctly on any scale problem.
 
 <h2> Installation </h2>
 
@@ -89,6 +89,7 @@ After the build is complete, issue
 \code > make install \endcode
 
 to install the library.  The installation will consist of three top-level
-directories housing ESIO's include files, compiled libraries, and utilities.
+directories housing underling's include files, compiled libraries, and
+utilities.
 
 */
