@@ -37,6 +37,15 @@ extern "C" {
  * information via the underling_extents struct.
  */
 
+/** @name Creation, execution, and destruction of underling_fftw_plans
+ * @{
+ */
+
+/**
+ * A type encapsulating FFTW-like planning information.
+ */
+typedef struct underling_fftw_plan_s *underling_fftw_plan;
+
 /**
  * Flag indicating the FFT transform output and input for the "long in n2"
  * direction is packed contiguously in memory.  Transform input must likewise
@@ -93,80 +102,6 @@ extern "C" {
  *      and UNDERLING_FFTW_PACKED_ALL for alternatives.
  */
 #define UNDERLING_FFTW_PACKED_NONE (1U << 8)
-
-/**
- * A transparent type storing the local sizes, strides, and storage when the
- * data is long in a particular direction \c n0, \c n1, or \c n2.
- *
- * The global data stored locally in direction <tt>i</tt> in {0,1,2,3,4} is
- * <tt>[start[i],start[i] + size[i])</tt> where the lower index is inclusive
- * and the upper index exclusive.  If both indices are the same then no data is
- * stored locally in the given direction.
- *
- * Indices {0,1,2} correspond to information about directions n{0,1,2},
- * respectively.  Index <tt>3</tt> gives information regarding the interleaved
- * data fields whose number is determined by the <tt>howmany</tt> parameter to
- * underling_problem_create. Index <tt>4</tt> gives information about the
- * scalar components that comprise index 3.  It always has size two for
- * a complex-valued field and size one for a real-valued field.
- */
-typedef struct underling_fftw_extents {
-    /**
-     * The inclusive global data starting offset in directions
-     * <tt>n{0,1,2}</tt>.  Indices <tt>3</tt> and <tt>4</tt> give information
-     * on the interleaved data fields and is always equal to zero.
-     **/
-    int start[5];
-
-    /**
-     * The amount of global data stored locally in directions
-     * <tt>n{0,1,2}</tt>.  Index <tt>3</tt> gives information on the
-     * interleaved data fields and is always equal to the <tt>howmany/2</tt>
-     * parameter provided to underling_problem_create.  Index <tt>4</tt> is
-     * <tt>2</tt> for a complex-valued field and <tt>1</tt> for a real-valued
-     * field.
-     */
-    int size[5];
-
-    /**
-     * The stride between adjacent elements in directions <tt>n{0,1,2}</tt>.
-     * Indices <tt>3</tt> and <tt>4</tt> give information on the interleaved
-     * data fields.
-     */
-    int stride[5];
-
-    /**
-     * The storage order from the fastest index to the slowest.  That is,
-     * <tt>order[0]</tt> gives the index in {0,1,2,3,4} of the fastest
-     * direction, <tt>order[1]</tt> gives the index of the next fastest
-     * direction, etc.  Useful in generic algorithms which are independent of
-     * which direction is long but in which you need to walk memory optimally.
-     */
-    int order[5];
-} underling_fftw_extents;
-
-/** A static instance used to communicate wholly invalid extents */
-extern const underling_fftw_extents UNDERLING_FFT_EXTENTS_INVALID;
-
-/**
- * Compare two underling_fftw_extents instances using lexicographic ordering.
- *
- * @param e1 First instance to compare.
- * @param e2 Second instance to compare.
- *
- * @return Returns an integer less than, equal to, or greater than zero if
- *         <tt>*e1</tt> is found, respectively, to be less than, to match,
- *         or be greater than <tt>*e2</tt>.
- */
-int
-underling_fftw_extents_cmp(
-        const underling_fftw_extents * const e1,
-        const underling_fftw_extents * const e2) UNDERLING_API;
-
-/**
- * A type encapsulating FFTW-like planning information.
- */
-typedef struct underling_fftw_plan_s *underling_fftw_plan;
 
 /**
  * Create a plan to perform a forward complex-to-complex FFT on the given data
@@ -290,6 +225,134 @@ underling_fftw_plan_create_inverse(
         unsigned fftw_rigor_flags) UNDERLING_API;
 
 /**
+ * Perform a previously planned FFT.  Appropriate calls to the underlying FFT
+ * implementation will occur.  The input and output buffers <em>must</em> be
+ * aligned identically to the input and output buffers provided during
+ * planning.
+ *
+ * @param plan Plan to be executed.
+ * @param in  Input buffer on which to execute the plan.  For out-of-place
+ *            transforms, this buffer's contents will be destroyed.
+ * @param out Output buffer on which to execute the plan.  For in-place
+ *            transforms, one must specify <tt>out == in</tt>.
+ *
+ * @return UNDERLING_SUCCESS (zero) on success and non-zero on failure.
+ */
+int
+underling_fftw_plan_execute(
+        const underling_fftw_plan plan,
+        underling_real * in,
+        underling_real * out) UNDERLING_API;
+
+/**
+ * Destroy all resources associated with the given plan.
+ *
+ * @param plan Plan to be destroyed.
+ */
+void
+underling_fftw_plan_destroy(
+        underling_fftw_plan plan) UNDERLING_API;
+
+/**
+ * Dump an instance's internals in a debugging-friendly format.
+ *
+ * @param plan Plan to be dumped.
+ * @param output_file Desired output handle,
+ *                    which may be \c stdout or \c stderr.
+ */
+void
+underling_fftw_fprint_plan(
+        const underling_fftw_plan plan,
+        FILE *output_file) UNDERLING_API;
+
+/**@}*/
+
+/** @name Obtaining storage details for an underling_fftw_plan
+ * @{
+ */
+
+/**
+ * A transparent type storing the local sizes, strides, and storage when the
+ * data is long in a particular direction \c n0, \c n1, or \c n2.
+ *
+ * The global data stored locally in direction <tt>i</tt> in {0,1,2,3,4} is
+ * <tt>[start[i],start[i] + size[i])</tt> where the lower index is inclusive
+ * and the upper index exclusive.  If both indices are the same then no data is
+ * stored locally in the given direction.
+ *
+ * Indices {0,1,2} correspond to information about directions n{0,1,2},
+ * respectively.  Index <tt>3</tt> gives information regarding the interleaved
+ * data fields whose number is determined by the <tt>howmany</tt> parameter to
+ * underling_problem_create. Index <tt>4</tt> gives information about the
+ * scalar components that comprise index 3.  It always has size two for
+ * a complex-valued field and size one for a real-valued field.
+ */
+typedef struct underling_fftw_extents {
+    /**
+     * The inclusive global data starting offset in directions
+     * <tt>n{0,1,2}</tt>.  Indices <tt>3</tt> and <tt>4</tt> give information
+     * on the interleaved data fields and is always equal to zero.
+     **/
+    int start[5];
+
+    /**
+     * The amount of global data stored locally in directions
+     * <tt>n{0,1,2}</tt>.  Index <tt>3</tt> gives information on the
+     * interleaved data fields and is always equal to the <tt>howmany/2</tt>
+     * parameter provided to underling_problem_create.  Index <tt>4</tt> is
+     * <tt>2</tt> for a complex-valued field and <tt>1</tt> for a real-valued
+     * field.
+     */
+    int size[5];
+
+    /**
+     * The stride between adjacent elements in directions <tt>n{0,1,2}</tt>.
+     * Indices <tt>3</tt> and <tt>4</tt> give information on the interleaved
+     * data fields.
+     */
+    int stride[5];
+
+    /**
+     * The storage order from the fastest index to the slowest.  That is,
+     * <tt>order[0]</tt> gives the index in {0,1,2,3,4} of the fastest
+     * direction, <tt>order[1]</tt> gives the index of the next fastest
+     * direction, etc.  Useful in generic algorithms which are independent of
+     * which direction is long but in which you need to walk memory optimally.
+     */
+    int order[5];
+} underling_fftw_extents;
+
+/** A static instance used to communicate wholly invalid extents */
+extern const underling_fftw_extents UNDERLING_FFT_EXTENTS_INVALID;
+
+/**
+ * Compare two underling_fftw_extents instances using lexicographic ordering.
+ *
+ * @param e1 First instance to compare.
+ * @param e2 Second instance to compare.
+ *
+ * @return Returns an integer less than, equal to, or greater than zero if
+ *         <tt>*e1</tt> is found, respectively, to be less than, to match,
+ *         or be greater than <tt>*e2</tt>.
+ */
+int
+underling_fftw_extents_cmp(
+        const underling_fftw_extents * const e1,
+        const underling_fftw_extents * const e2) UNDERLING_API;
+
+/**
+ * Dump an instance's internals in a debugging-friendly format.
+ *
+ * @param extents Extents to dump.
+ * @param output_file Desired output handle,
+ *                    which may be \c stdout or \c stderr.
+ */
+void
+underling_fftw_fprint_extents(
+        const underling_fftw_extents *extents,
+        FILE *output_file) UNDERLING_API;
+
+/**
  * Obtain local size, stride, and storage information for the input data
  * to a given plan.  This information should be used to "load" the data
  * prior to executing the plan with underling_fftw_plan_execute.
@@ -383,57 +446,7 @@ underling_fftw_local_output(
         int *stride,
         int *order) UNDERLING_API;
 
-/**
- * Perform a previously planned FFT.  Appropriate calls to the underlying FFT
- * implementation will occur.  The input and output buffers <em>must</em> be
- * aligned identically to the input and output buffers provided during
- * planning.
- *
- * @param plan Plan to be executed.
- * @param in  Input buffer on which to execute the plan.  For out-of-place
- *            transforms, this buffer's contents will be destroyed.
- * @param out Output buffer on which to execute the plan.  For in-place
- *            transforms, one must specify <tt>out == in</tt>.
- *
- * @return UNDERLING_SUCCESS (zero) on success and non-zero on failure.
- */
-int
-underling_fftw_plan_execute(
-        const underling_fftw_plan plan,
-        underling_real * in,
-        underling_real * out) UNDERLING_API;
-/**
- * Destroy all resources associated with the given plan.
- *
- * @param plan Plan to be destroyed.
- */
-void
-underling_fftw_plan_destroy(
-        underling_fftw_plan plan) UNDERLING_API;
-
-/**
- * Dump an instance's internals in a debugging-friendly format.
- *
- * @param extents Extents to dump.
- * @param output_file Desired output handle,
- *                    which may be \c stdout or \c stderr.
- */
-void
-underling_fftw_fprint_extents(
-        const underling_fftw_extents *extents,
-        FILE *output_file) UNDERLING_API;
-
-/**
- * Dump an instance's internals in a debugging-friendly format.
- *
- * @param plan Plan to be dumped.
- * @param output_file Desired output handle,
- *                    which may be \c stdout or \c stderr.
- */
-void
-underling_fftw_fprint_plan(
-        const underling_fftw_plan plan,
-        FILE *output_file) UNDERLING_API;
+/**@}*/
 
 #ifdef __cplusplus
 } /* extern "C" */
