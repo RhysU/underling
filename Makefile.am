@@ -19,8 +19,8 @@ EXTRA_DIST  += m4/gnulib-cache.m4
 
 dist-hook: docs
 	: # Eliminate SCM directories in dist tarball
-	find $(distdir)/ -name '.svn' -type d -exec rm -rf {} \;
-	find $(distdir)/ -name '.git' -type d -exec rm -rf {} \;
+	find $(distdir)/ -name '.svn' -type d -exec rm -f {} \;
+	find $(distdir)/ -name '.git' -type d -exec rm -f {} \;
 	: # Include generated documentation in the dist tarball
 	cp -rv $(top_builddir)/docs $(top_distdir)
 
