@@ -243,12 +243,12 @@ public:
     plan(const problem &p,
          underling_real * in,
          underling_real * out,
-         unsigned transform_flags  = 0,
+         unsigned transpose_flags  = 0,
          unsigned fftw_rigor_flags = 0)
         : plan_(underling_plan_create(p.get(),
                                       in,
                                       out,
-                                      transform_flags,
+                                      transpose_flags,
                                       fftw_rigor_flags))
     {}
 
