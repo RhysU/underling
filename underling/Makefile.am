@@ -20,7 +20,7 @@ CC=@MPICC@
 AM_CPPFLAGS += $(FFTW3_THREADS_CFLAGS)
 
 # Make public C APIs visible in resulting libraries-- see visibility.h
-AM_CPPFLAGS += -UNDERLING_SHARED_EXPORTS
+AM_CPPFLAGS += -DUNDERLING_SHARED_EXPORTS
 
 # Public underling C library
 lib_LTLIBRARIES         += libunderling.la
