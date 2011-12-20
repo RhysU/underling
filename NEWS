@@ -1,3 +1,36 @@
+What's new in underling 0.3.0
+-----------------------------
+
+This release includes breaking underling_fftw.h API changes.
+
+New features for contiguous packing of fields on out-of-place transposes:
+
+     * Feature #1295: Support c2r_backward out-of-place when not stride one
+     * Feature #1296: Support r2c_forward out-of-place when not stride one
+     * Feature #2067: Support contiguous field storage
+     * Feature #2150: Add --packed (or similar) options to undering_bench
+
+Improved testing, usability, and portability:
+
+     * Bug #2147: Used boost::noncopyable within C++ headers
+     * Bug #2148: Improve header ordering wrt portability
+     * Document #1903: Add logical groupings to API Doxygen
+     * Feature #1955: Add --check feature to underling_bench
+     * Feature #2196: Add --check items into unit tests
+     * Support #2074: Move includes to top of implementation files
+
+Miscellaneous items:
+
+     * Bug #2059: c2r_backward plan creation fails on grid with n0 = 1, n1 = 8, n2 = 1
+     * Bug #2198: underling_bench --iir --howmany=4 --check 1e-15 fails
+     * Feature #2054: Add underling_fwd.hpp and underling_fftw_fwd.hpp
+     * Feature #2192: Remove program_options dependency from tests
+     * Feature #2199: Roll underling 0.3.0 release
+     * Support #2201: More gracefully handle MPI_Dims_create failure
+
+Pulled in newest gnulib updates.
+
+
 What's new in underling 0.2.1
 -----------------------------
 
