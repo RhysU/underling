@@ -291,7 +291,7 @@ typedef struct underling_fftw_extents {
     /**
      * The inclusive global data starting offset in directions
      * <tt>n{0,1,2}</tt>.  Indices <tt>3</tt> and <tt>4</tt> give information
-     * on the interleaved data fields and is always equal to zero.
+     * on the interleaved data fields and are always equal to zero.
      **/
     int start[5];
 
