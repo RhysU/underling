@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_FFTW_HPP
-#define __UNDERLING_FFTW_HPP
+#ifndef UNDERLING_FFTW_HPP
+#define UNDERLING_FFTW_HPP
 
 #include <underling/underling_fftw.h>
 #include <underling/underling.hpp>
@@ -233,4 +233,4 @@ bool operator==(const underling::fftw::extents &e1,
     return !underling_fftw_extents_cmp(&e1, &e2);
 }
 
-#endif // __UNDERLING_FFTW_HPP
+#endif // UNDERLING_FFTW_HPP

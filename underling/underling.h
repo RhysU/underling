@@ -22,8 +22,8 @@
 //
 //-----------------------------------------------------------------------el-
 // $Id$
-#ifndef __UNDERLING_H
-#define __UNDERLING_H
+#ifndef UNDERLING_H
+#define UNDERLING_H
 
 #include <stddef.h>
 #include <stdio.h>
@@ -799,4 +799,4 @@ underling_debug_transpose(
 } /* extern "C" */
 #endif
 
-#endif // __UNDERLING_H
+#endif // UNDERLING_H

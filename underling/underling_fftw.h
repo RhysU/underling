@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_FFT_H
-#define __UNDERLING_FFT_H
+#ifndef UNDERLING_FFT_H
+#define UNDERLING_FFT_H
 
 #include <underling/underling.h>
 
@@ -452,4 +452,4 @@ underling_fftw_local_output(
 } /* extern "C" */
 #endif
 
-#endif // __UNDERLING_FFT_H
+#endif // UNDERLING_FFT_H

@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_MPI_ARGP_H__
-#define __UNDERLING_MPI_ARGP_H__
+#ifndef UNDERLING_MPI_ARGP_H
+#define UNDERLING_MPI_ARGP_H
 
 #include "argp.h"
 
@@ -53,4 +53,4 @@ error_t mpi_argp_parse(const int rank,
                        int *arg_index,
                        void *input);
 
-#endif /* __UNDERLING_MPI_ARGP_H__ */
+#endif /* UNDERLING_MPI_ARGP_H__ */

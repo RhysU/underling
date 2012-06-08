@@ -22,8 +22,8 @@
 //
 //-----------------------------------------------------------------------el-
 // $Id$
-#ifndef __UNDERLING_COMMON_H
-#define __UNDERLING_COMMON_H
+#ifndef UNDERLING_COMMON_H
+#define UNDERLING_COMMON_H
 
 #if __GNUC__ >= 3
 /**
@@ -56,4 +56,4 @@ Provides hint to the compiler to optimize for the expression being false.
 #endif /* MPI_MAX_NAME_STRING */
 #endif /* MPI_MAX_OBJECT_NAME */
 
-#endif // __UNDERLING_COMMON_H
+#endif // UNDERLING_COMMON_H

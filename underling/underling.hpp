@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_HPP
-#define __UNDERLING_HPP
+#ifndef UNDERLING_HPP
+#define UNDERLING_HPP
 
 #include <ostream>
 #include <underling/underling.h>
@@ -327,4 +327,4 @@ bool operator==(const underling::extents &e1,
     return !underling_extents_cmp(&e1, &e2);
 }
 
-#endif // __UNDERLING_HPP
+#endif // UNDERLING_HPP

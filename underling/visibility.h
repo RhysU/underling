@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_VISIBILITY_H__
-#define __UNDERLING_VISIBILITY_H__
+#ifndef UNDERLING_VISIBILITY_H
+#define UNDERLING_VISIBILITY_H
 
 /** \cond INTERNAL */
 
@@ -55,4 +55,4 @@
 
 /** \endcond */
 
-#endif /* __UNDERLING_VISIBILITY_H__ */
+#endif /* UNDERLING_VISIBILITY_H__ */

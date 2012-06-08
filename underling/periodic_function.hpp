@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_PERIODIC_FUNCTION_HPP
-#define __UNDERLING_PERIODIC_FUNCTION_HPP
+#ifndef UNDERLING_PERIODIC_FUNCTION_HPP
+#define UNDERLING_PERIODIC_FUNCTION_HPP
 
 #include <cassert>
 #include <complex>
@@ -208,4 +208,4 @@ typename std::complex<FPT> periodic_function<FPT,Integer>::wave(
 
 } // namespace underling
 
-#endif // __UNDERLING_PERIODIC_FUNCTION_HPP
+#endif // UNDERLING_PERIODIC_FUNCTION_HPP

@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_VERSION_H__
-#define __UNDERLING_VERSION_H__
+#ifndef UNDERLING_VERSION_H
+#define UNDERLING_VERSION_H
 
 /** @file
  * Provides underling version information.
@@ -47,4 +47,4 @@
                            + UNDERLING_MINOR_VERSION *    100  \
                            + UNDERLING_POINT_VERSION *      1)
 
-#endif /* __UNDERLING_VERSION_H__ */
+#endif /* UNDERLING_VERSION_H__ */

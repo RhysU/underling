@@ -23,8 +23,8 @@
 //-----------------------------------------------------------------------el-
 // $Id$
 
-#ifndef __UNDERLING_ERROR_H__
-#define __UNDERLING_ERROR_H__
+#ifndef UNDERLING_ERROR_H
+#define UNDERLING_ERROR_H
 
 #include <stdio.h>
 #include <underling/visibility.h>
@@ -341,4 +341,4 @@ underling_set_stream(FILE * new_stream) UNDERLING_API;
 } /* extern "C" */
 #endif
 
-#endif /* __UNDERLING_ERROR_H__ */
+#endif /* UNDERLING_ERROR_H__ */
