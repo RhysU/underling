@@ -1,5 +1,5 @@
 # DO NOT EDIT! GENERATED AUTOMATICALLY!
-# Copyright (C) 2002-2011 Free Software Foundation, Inc.
+# Copyright (C) 2002-2012 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -52,8 +52,10 @@ AC_DEFUN([gl_EARLY],
   # Code from module getopt-gnu:
   # Code from module getopt-posix:
   # Code from module gettext-h:
+  # Code from module gnumakefile:
   # Code from module include_next:
   # Code from module intprops:
+  # Code from module maintainer-makefile:
   # Code from module malloc-gnu:
   # Code from module malloc-posix:
   # Code from module memchr:
@@ -89,7 +91,9 @@ AC_DEFUN([gl_EARLY],
   # Code from module sys_types:
   # Code from module sysexits:
   # Code from module unistd:
+  # Code from module useless-if-before-free:
   # Code from module vasnprintf:
+  # Code from module vc-list-files:
   # Code from module verify:
   # Code from module vsnprintf:
   # Code from module wchar:
@@ -156,6 +160,18 @@ fi
 AC_SUBST([GNULIB_GL_UNISTD_H_GETOPT])
 AC_SUBST([LIBINTL])
 AC_SUBST([LTLIBINTL])
+# Autoconf 2.61a.99 and earlier don't support linking a file only
+# in VPATH builds.  But since GNUmakefile is for maintainer use
+# only, it does not matter if we skip the link with older autoconf.
+# Automake 1.10.1 and earlier try to remove GNUmakefile in non-VPATH
+# builds, so use a shell variable to bypass this.
+GNUmakefile=GNUmakefile
+m4_if(m4_version_compare([2.61a.100],
+        m4_defn([m4_PACKAGE_VERSION])), [1], [],
+      [AC_CONFIG_LINKS([$GNUmakefile:$GNUmakefile], [],
+        [GNUmakefile=$GNUmakefile])])
+AC_CONFIG_COMMANDS_PRE([m4_ifdef([AH_HEADER],
+  [AC_SUBST([CONFIG_INCLUDE], m4_defn([AH_HEADER]))])])
 gl_FUNC_MALLOC_GNU
 if test $REPLACE_MALLOC = 1; then
   AC_LIBOBJ([malloc])
@@ -398,6 +414,8 @@ AC_DEFUN([gl_FILE_LIST], [
   build-aux/snippet/arg-nonnull.h
   build-aux/snippet/c++defs.h
   build-aux/snippet/warn-on-use.h
+  build-aux/useless-if-before-free
+  build-aux/vc-list-files
   lib/alloca.c
   lib/alloca.in.h
   lib/argp-ba.c
@@ -501,6 +519,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/msvc-nothrow.m4
   m4/multiarch.m4
   m4/nocrash.m4
+  m4/off_t.m4
   m4/printf.m4
   m4/rawmemchr.m4
   m4/size_max.m4
@@ -532,4 +551,6 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/wchar_t.m4
   m4/wint_t.m4
   m4/xsize.m4
+  top/GNUmakefile
+  top/maint.mk
 ])
