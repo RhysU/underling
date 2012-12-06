@@ -14,7 +14,7 @@ href="http://www.fftw.org/"> FFTW</a>.  Pencil decompositions are a natural way
 to distribute O(n^3) data across O(n^2) processors and are well-suited for
 memory-intensive, structured spectral turbulence simulations and postprocessing
 codes.  It may be useful in other domains as well.  The library is written in
-C99 and may be used by C89+ or C++ applications.
+C99 and may be used by C89 or C++ applications.
 
 The underling library provides:
 <ul>
