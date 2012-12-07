@@ -5,7 +5,7 @@ AC_INIT([underling], [0.3.1], [rhys@ices.utexas.edu])
 AC_REVISION([$Id$])
 PACKAGE_DESCRIPTION="an FFTW MPI-based library for 3D pencil decompositions"
 AC_SUBST([PACKAGE_DESCRIPTION])
-PACKAGE_URL="http://pecos.ices.utexas.edu/"
+PACKAGE_URL="http://red.ices.utexas.edu/projects/underling"
 AC_SUBST([PACKAGE_URL])
 
 dnl ------------------------------------------------
