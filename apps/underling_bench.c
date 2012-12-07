@@ -400,9 +400,9 @@ parse_opt(int key, char *arg, struct argp_state *state)
                 argp_failure(state, EX_USAGE, errno,
                         "repeat option is malformed: '%s'", arg);
             }
-            if (d->repeat < 1) {
+            if (d->repeat < 0) {
                 argp_failure(state, EX_USAGE, 0,
-                        "repeat value %d must be strictly positive",
+                        "repeat value %d must be nonnegative",
                         d->repeat);
             }
             break;
@@ -1078,7 +1078,7 @@ int main(int argc, char *argv[])
     if (d.world_rank == 0) { GRVY_TIMER_SUMMARIZE(); }
 
     // Acquire and display worst-observed tmean and tvariance from any rank
-    {
+    if (d.repeat) {
         struct { double val; int rank; } recvbuf[2], sendbuf[2] = {
             { tmean, d.world_rank }, { tvariance, d.world_rank }
         };
@@ -1103,7 +1103,7 @@ int main(int argc, char *argv[])
     }
 
     // If we round tripped...
-    if (d.forward && d.backward) {
+    if (d.repeat && d.forward && d.backward) {
 
         // ...compute the maximum absolute error observed on any rank...
         // ...(using the same salt as fill_field for consistency)...
