@@ -5,8 +5,8 @@
 // underling 0.3.1: an FFTW MPI-based library for 3D pencil decompositions
 // http://red.ices.utexas.edu/projects/underling
 //
-// Copyright (C) 2010, 2011, 2012 Rhys Ulerich
-// Copyright (C) 2012 The PECOS Development Team
+// Copyright (C) 2010, 2011, 2012, 2013 Rhys Ulerich
+// Copyright (C) 2012, 2013 The PECOS Development Team
 //
 // This file is part of underling.
 //
@@ -15,13 +15,13 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
+// underling is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with underling.  If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------el-
 // $Id$
 ***************************************************************************/
