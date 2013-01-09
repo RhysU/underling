@@ -1,18 +1,18 @@
 /* Compile-time assert-like macros.
 
-   Copyright (C) 2005-2006, 2009-2012 Free Software Foundation, Inc.
+   Copyright (C) 2005-2006, 2009-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as published by
+   it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
+   You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* Written by Paul Eggert, Bruno Haible, and Jim Meyering.  */
@@ -125,13 +125,17 @@
        extern int (*dummy (void)) [sizeof (struct {...})];
 
    * GCC warns about duplicate declarations of the dummy function if
-     -Wredundant_decls is used.  GCC 4.3 and later have a builtin
+     -Wredundant-decls is used.  GCC 4.3 and later have a builtin
      __COUNTER__ macro that can let us generate unique identifiers for
      each dummy function, to suppress this warning.
 
    * This implementation exploits the fact that older versions of GCC,
      which do not support _Static_assert, also do not warn about the
      last declaration mentioned above.
+
+   * GCC warns if -Wnested-externs is enabled and verify() is used
+     within a function body; but inside a function, you can always
+     arrange to use verify_expr() instead.
 
    * In C++, any struct definition inside sizeof is invalid.
      Use a template type to work around the problem.  */

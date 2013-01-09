@@ -1,19 +1,19 @@
 /* Hierarchical argument parsing, layered over getopt
-   Copyright (C) 1995-2000, 2002-2004, 2009-2012 Free Software Foundation, Inc.
+   Copyright (C) 1995-2000, 2002-2004, 2009-2013 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Miles Bader <miles@gnu.ai.mit.edu>.
 
    This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as published by
+   it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
+   You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
@@ -880,11 +880,11 @@ __argp_parse (const struct argp *argp, int argc, char **argv, unsigned flags,
 #ifndef _LIBC
   if (!(flags & ARGP_PARSE_ARGV0))
     {
-#ifdef HAVE_DECL_PROGRAM_INVOCATION_NAME
+#if HAVE_DECL_PROGRAM_INVOCATION_NAME
       if (!program_invocation_name)
         program_invocation_name = argv[0];
 #endif
-#ifdef HAVE_DECL_PROGRAM_INVOCATION_SHORT_NAME
+#if HAVE_DECL_PROGRAM_INVOCATION_SHORT_NAME
       if (!program_invocation_short_name)
         program_invocation_short_name = __argp_base_name (argv[0]);
 #endif

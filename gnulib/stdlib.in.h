@@ -1,18 +1,18 @@
 /* A GNU-like <stdlib.h>.
 
-   Copyright (C) 1995, 2001-2004, 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 1995, 2001-2004, 2006-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as published by
+   it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
+   You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #if __GNUC__ >= 3
@@ -87,8 +87,8 @@ struct random_data
 #endif
 
 #if (@GNULIB_MKSTEMP@ || @GNULIB_MKSTEMPS@ || @GNULIB_GETSUBOPT@ || defined GNULIB_POSIXCHECK) && ! defined __GLIBC__ && !((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__)
-/* On MacOS X 10.3, only <unistd.h> declares mkstemp.  */
-/* On MacOS X 10.5, only <unistd.h> declares mkstemps.  */
+/* On Mac OS X 10.3, only <unistd.h> declares mkstemp.  */
+/* On Mac OS X 10.5, only <unistd.h> declares mkstemps.  */
 /* On Cygwin 1.7.1, only <unistd.h> declares getsubopt.  */
 /* But avoid namespace pollution on glibc systems and native Windows.  */
 # include <unistd.h>
@@ -457,10 +457,19 @@ _GL_WARN_ON_USE (posix_openpt, "posix_openpt is not portable - "
 #if @GNULIB_PTSNAME@
 /* Return the pathname of the pseudo-terminal slave associated with
    the master FD is open on, or NULL on errors.  */
-# if !@HAVE_PTSNAME@
+# if @REPLACE_PTSNAME@
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef ptsname
+#   define ptsname rpl_ptsname
+#  endif
+_GL_FUNCDECL_RPL (ptsname, char *, (int fd));
+_GL_CXXALIAS_RPL (ptsname, char *, (int fd));
+# else
+#  if !@HAVE_PTSNAME@
 _GL_FUNCDECL_SYS (ptsname, char *, (int fd));
-# endif
+#  endif
 _GL_CXXALIAS_SYS (ptsname, char *, (int fd));
+# endif
 _GL_CXXALIASWARN (ptsname);
 #elif defined GNULIB_POSIXCHECK
 # undef ptsname
