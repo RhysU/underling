@@ -1,1 +1,121 @@
-See docs/html/index.html for underling's complete documentation.
+                          underling Build Procedure
+                       =============================
+
+0. Purpose
+----------
+
+The underling library provides simple, scalable means to manipulate
+MPI-parallel, three dimensional pencil decompositions using FFTW.  Pencil
+decompositions are a natural way to distribute O(n^3) data across O(n^2)
+processors and are well-suited for memory-intensive, structured spectral
+turbulence simulations and postprocessing codes.  It may be useful in other
+domains as well.  The library is written in C99 and may be used by C89 or C++
+applications.
+
+
+1. Introduction
+---------------
+
+This document describes how to build underling from source code on Unix-like
+systems.  underling uses the GNU autotools suite (autoconf, automake, and
+libtool) for its build system.
+
+
+2. Dependencies
+---------------
+
+The code depends upon the following:
+
+    1) A C99 and C++ compiler from the same vendor (e.g. gcc/g++ or icc/icpc)
+    2) A working MPI implementation (e.g. mpicc/mpicxx)
+    3) FFTW 3.3 or later from http://www.fftw.org/ compiled with MPI support
+       (--enable-mpi); threading support (--enable-openmp and/or
+       --enable-threads) is also recommended.  The same MPI stack and compiler
+       used to build FFTW should be used to build underling.
+    4) GNU Make from http://www.gnu.org/software/make/
+
+The following optional dependencies are recommended for full functionality:
+
+    1) Boost from http://www.boost.org/ (>= 1.39, required to build the
+       unit tests via Boost.Test)
+    2) GRVY from https://github.com/hpcsi/grvy (>= 0.27)
+    3) Doxygen from https://www.doxygen.nl/ and Graphviz from
+       https://graphviz.org/ to build the API documentation
+
+On Ubuntu, the required and optional dependencies are available as system
+packages.  Install the build toolchain:
+
+    sudo apt install autoconf automake libtool pkg-config g++
+
+Install MPI and the required libraries:
+
+    sudo apt install \
+        libopenmpi-dev openmpi-bin \
+        libfftw3-dev libfftw3-mpi-dev \
+        libboost-all-dev
+
+Optionally, install documentation tools:
+
+    sudo apt install doxygen graphviz
+
+
+3. Configuration
+----------------
+
+If you have no `configure' script in the top level directory, run `bootstrap'
+to create one using GNU autoconf and automake.  Using bootstrap will require a
+recent version of autoconf, automake, libtool, and pkg-config's pkg.m4 macros.
+
+Before compiling underling, you need to run the provided `configure' script.
+Generally, just `./configure' will work, but you may wish to provide more
+parameters.  Two useful options are `--prefix=DIR', which sets the top-level
+installation directory, and `--with-grvy=DIR', which specifies a GRVY location
+that was not autodetected.  Run `./configure --help' for details.
+
+If underling's configure script cannot automatically detect the correct
+compiler or MPI locations, set the $CC, $CXX, and $MPICC environment variables
+prior to running configure.
+
+
+4. Compilation
+--------------
+
+To compile underling after it has been configured, simply type `make'.  This
+builds the underling library (static and dynamic versions), some examples, and
+the underling_bench benchmarking utility.
+
+    make
+    make install
+
+
+5. Testing
+--------------
+
+Automated tests can be compiled and run using `make check'.
+
+Many of the tests require your MPI installation's `mpiexec' command to be
+usable, which may not be the case on many high performance computing platform
+login nodes.  The benchmarking tool, underling_bench, also provides a `--check'
+option to confirm the library is running correctly on any scale problem.
+
+
+6. Documentation
+--------------
+
+The full API documentation is generated with Doxygen.  After configuring, build
+the HTML documentation with
+
+    make docs
+
+which writes the result to docs/html/index.html.  Building the documentation
+requires Doxygen, and Graphviz is recommended for the generated diagrams.  When
+a Doxygen installation is detected at configure time, the documentation is also
+built as part of `make dist'.
+
+
+7. Attribution
+--------------
+
+underling has been developed by The PECOS Development Team
+(http://pecos.ices.utexas.edu/).  Bug reports, requests, and contributions are
+welcome at rhys@ices.utexas.edu.
