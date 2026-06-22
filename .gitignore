@@ -13,3 +13,17 @@
 /Makefile
 /Makefile.in
 /*.pc
+
+# Build artifacts
+configure~
+**/Makefile.in
+**/.libs/
+**/*.o
+**/*.lo
+**/*.la
+**/test-suite.log
+**/*.log
+**/*.trs
+build-aux/compile
+build-aux/test-driver
+underling/config.h.in~
