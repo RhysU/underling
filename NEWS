@@ -1,3 +1,32 @@
+What's new in underling master
+------------------------------
+
+Build system and test suite modernization:
+
+     * Updated m4/boost.m4 to upstream serial 39 (from tsuna/boost.m4),
+       replacing the previous serial 16.  The new version correctly handles
+       GCC 13's preprocessor behavior of emitting #linemarker directives
+       between a macro identifier and its value, which previously caused
+       Boost version detection to silently produce an empty string.
+
+     * Added explicit $(FFTW3_MPI_THREADS_LIBS) to LDADD for underling_bench
+       and all test programs (test_fftw_1D, test_underling, test_underling_fftw).
+       Modern linkers built with --as-needed no longer propagate transitive
+       library dependencies, so libraries used directly must be listed directly.
+
+     * Added -lm to underling_bench LDADD.  GCC 13 no longer implicitly links
+       libm, requiring an explicit entry for programs calling math functions.
+
+     * Updated tests/test_tools.hpp to use the current Boost.Test API:
+       replaced the removed boost::test_tools::close_at_tolerance /
+       percent_tolerance with a direct relative-tolerance comparison using
+       std::abs and std::max.
+
+     * Added OMPI_ALLOW_RUN_AS_ROOT=1 / OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 to
+       TESTS_ENVIRONMENT in apps/Makefile.am and tests/Makefile.am so that
+       'make check' succeeds when run as root (as in CI containers).
+
+
 What's new in underling 0.3.0
 -----------------------------
 
