@@ -12,6 +12,7 @@ BUILT_SOURCES      = # Append below
 CLEANFILES         = # Append below
 TESTS              = # Append below
 TESTS_ENVIRONMENT  = # Append below
+TESTS_ENVIRONMENT += OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
 noinst_HEADERS += test_tools.hpp
 noinst_HEADERS += fixtures.hpp
@@ -32,6 +33,7 @@ check_PROGRAMS       += test_fftw_1D
 test_fftw_1D_SOURCES  = test_fftw_1D.cpp
 test_fftw_1D_CXXFLAGS = $(AM_CXXFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
 test_fftw_1D_LDADD    = ../underling/libunderling.la
+test_fftw_1D_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_fftw_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_fftw_1D_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
@@ -41,6 +43,7 @@ check_PROGRAMS         += test_underling
 test_underling_SOURCES  = test_underling.cpp
 test_underling_CXXFLAGS = $(AM_CXXFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
 test_underling_LDADD    = ../underling/libunderling.la
+test_underling_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_underling_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 
@@ -50,6 +53,7 @@ check_PROGRAMS             += test_underling_fftw
 test_underling_fftw_SOURCES  = test_underling_fftw.cpp
 test_underling_fftw_CXXFLAGS = $(AM_CXXFLAGS) $(FFTW3_MPI_THREADS_CFLAGS)
 test_underling_fftw_LDADD    = ../underling/libunderling.la
+test_underling_fftw_LDADD   += $(FFTW3_MPI_THREADS_LIBS)
 test_underling_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS)
 test_underling_fftw_LDADD   += $(BOOST_UNIT_TEST_FRAMEWORK_LIBS)
 

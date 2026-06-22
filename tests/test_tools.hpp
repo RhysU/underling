@@ -25,8 +25,9 @@
 #ifndef UNDERLING_TEST_TOOLS_HPP
 #define UNDERLING_TEST_TOOLS_HPP
 
+#include <algorithm>
 #include <complex>
-#include <boost/test/floating_point_comparison.hpp>
+#include <boost/test/tools/floating_point_comparison.hpp>
 #include <boost/test/test_tools.hpp>
 
 #pragma warning(push,disable:1418)
@@ -40,13 +41,10 @@ bool check_close_collections(const FPT *left_begin, const FPT *left_end,
                              const FPT *right_begin, const FPT *right_end,
                              FPT percent_tolerance)
 {
-    const ::boost::test_tools::close_at_tolerance<FPT> is_close
-        = ::boost::test_tools::close_at_tolerance<FPT>(
-                ::boost::test_tools::percent_tolerance(percent_tolerance));
-
     int pos = 0;
     bool res = true;
     std::ostringstream errormsg;
+    const FPT rel_tol = percent_tolerance / FPT(100);
 
     for( ;
          left_begin != left_end && right_begin != right_end;
@@ -60,8 +58,10 @@ bool check_close_collections(const FPT *left_begin, const FPT *left_end,
             if (std::abs(*right_begin) > percent_tolerance) pos_okay = false;
         } else if ( *right_begin == 0 ) {
             if (std::abs(*left_begin) > percent_tolerance) pos_okay = false;
-        } else if( !is_close(*left_begin,*right_begin) ) {
-            pos_okay = false;
+        } else {
+            const FPT denom = std::max(std::abs(*left_begin), std::abs(*right_begin));
+            if (std::abs(*left_begin - *right_begin) / denom > rel_tol)
+                pos_okay = false;
         }
 
         if (!pos_okay) {

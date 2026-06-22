@@ -13,6 +13,7 @@ noinst_HEADERS      = mpi_argp.h
 noinst_PROGRAMS     = # Append below
 TESTS               = # Append below
 TESTS_ENVIRONMENT   = # Append below
+TESTS_ENVIRONMENT  += OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
 # Use MPI compiler wrappers
 CC=@MPICC@
@@ -22,6 +23,8 @@ bin_PROGRAMS             += underling_bench
 underling_bench_SOURCES   = underling_bench.c mpi_argp.c
 underling_bench_LDADD     = ../underling/libunderling.la
 underling_bench_LDADD    += ../gnulib/libgnu.la $(LTLIBINTL)
+underling_bench_LDADD    += $(FFTW3_MPI_THREADS_LIBS)
+underling_bench_LDADD    += -lm
 underling_bench_LDADD    += $(GRVY_LIBS)
 
 ## Tests built atop the benchmarking tool
