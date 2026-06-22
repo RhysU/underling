@@ -206,7 +206,7 @@ AC_LANG_POP([C++])dnl
   AC_CACHE_CHECK([for Boost's header version],
     [boost_cv_lib_version],
     [m4_pattern_allow([^BOOST_LIB_VERSION$])dnl
-     _BOOST_SED_CPP([/^boost-lib-version = /{s///;s/\"//g;p;q;}],
+     _BOOST_SED_CPP([/^boost-lib-version = \"/{s/^[^\"]*\"//;s/\".*//;p;q};/^boost-lib-version = $/{:blv_loop; n; /^#/b blv_loop; s/^[[:space:]]*\"//;s/\".*//;p;q}],
                     [#include <boost/version.hpp>
 boost-lib-version = BOOST_LIB_VERSION],
     [boost_cv_lib_version=`cat conftest.i`])])
