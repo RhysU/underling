@@ -26,6 +26,12 @@ Build system and test suite modernization:
        TESTS_ENVIRONMENT in apps/Makefile.am and tests/Makefile.am so that
        'make check' succeeds when run as root (as in CI containers).
 
+     * Silenced all autoreconf obsolete-macro warnings.  Refreshed the
+       Autoconf Archive macros ax_mpi.m4, ax_tls.m4, and ax_pthread.m4
+       (replacing acx_pthread.m4); replaced AM_CONFIG_HEADER, AC_PROG_CC_C99,
+       AC_HELP_STRING, and the AC_GNU_SOURCE workaround with their modern
+       equivalents; and added AM_PROG_AR for the non-POSIX archiver.
+
 
 What's new in underling 0.3.0
 -----------------------------

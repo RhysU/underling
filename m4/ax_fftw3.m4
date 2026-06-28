@@ -72,7 +72,7 @@ fi
 # Check if POSIX Threads is another possible way to go.
 ax_fftw3_save_LDFLAGS=$LDFLAGS
 LDFLAGS="$LDFLAGS $ax_fftw3_libs_pre"
-ACX_PTHREAD([
+AX_PTHREAD([
     AC_DEFINE(HAVE_PTHREAD,[1],
             [Define if you have POSIX threads libraries and header files])
     # Note the new function name to thwart caching from earlier AC_CHECK_LIB
@@ -107,7 +107,7 @@ AM_CONDITIONAL([HAVE_FFTW3_OPENMP],   [test "$ax_fftw3_found_openmp"   = yes])
 
 # Search for FFTW MPI independent of FFTW threading result
 ax_fftw3_found_mpi=no
-AC_REQUIRE([ACX_MPI])
+AC_REQUIRE([AX_MPI])
 ax_fftw3_save_CC=$CC
 CC=$MPICC
 ax_fftw3_save_LDFLAGS=$LDFLAGS
