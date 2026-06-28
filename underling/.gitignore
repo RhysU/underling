@@ -1,7 +1,7 @@
 /config.h
 /config.h.in
 /.deps
-/.license.stamp
+/license-stamp
 /Makefile
 /Makefile.dep
 /Makefile.in
