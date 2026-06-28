@@ -1,5 +1,5 @@
 /.deps
-/.license.stamp
+/license-stamp
 /Makefile
 /Makefile.dep
 /Makefile.in
