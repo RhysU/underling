@@ -41,6 +41,11 @@ prun()   { echo mpiexec -np ${NP:-1} "$@" 1>&2 ; mpiexec -np ${NP:-1} "$@"      
 test -z "${TMPDIR-}" && export TMPDIR=.
 testdir=`mktemp -d`
 
+# Confine OpenMPI/PRTE per-launch session directories (prterun.*) to $testdir
+# so they are removed by teardown() below instead of accumulating in the
+# working directory across the hundreds of mpiexec invocations these tests run.
+export PRTE_MCA_prte_tmpdir_base="$testdir"
+
 # Install teardown() function at exit unless TEST_UNDERLING_DEBUG is non-empty
 declare -ir starttime=`date +%s`
 teardown() {
