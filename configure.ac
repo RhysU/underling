@@ -14,12 +14,12 @@ dnl ------------------------------------------------
 AC_CONFIG_COMMANDS_PRE([m4_ifdef([AH_HEADER],
     [AC_SUBST([CONFIG_INCLUDE], m4_defn([AH_HEADER]))])])
 AC_CONFIG_SRCDIR([underling/underling.h])
-AM_CONFIG_HEADER(underling/config.h)
+AC_CONFIG_HEADERS([underling/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AX_PREFIX_CONFIG_H([underling/underling-config.h])
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE(1.11 no-define tar-ustar color-tests -Wall foreign check-news)
+AM_INIT_AUTOMAKE(1.11 no-define tar-ustar color-tests -Wall -Wno-portability foreign check-news)
 AC_PREREQ([2.64])
 AX_AM_MACROS
 AX_ADD_AM_CTAGSFLAGS
@@ -48,7 +48,7 @@ AX_TLS()
 if test "x$ax_enable_debug" != "xno"; then
     AX_TRACEBACK()
 fi
-ACX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for C, e.g. mpicc.))
+AX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for C, e.g. mpicc.))
 MPICC_LOCATION=$(eval command -v $MPICC)
 AC_SUBST([MPICC_LOCATION])
 AC_LANG_POP([C])
@@ -59,7 +59,7 @@ AX_COMPILER_VENDOR()
 if test "x$ax_enable_debug" != "xno"; then
     AX_TRACEBACK()
 fi
-ACX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for C++, e.g. mpicxx.))
+AX_MPI(,AC_MSG_ERROR(Could not find MPI compilation tools for C++, e.g. mpicxx.))
 MPICXX_LOCATION=$(eval command -v $MPICXX)
 AC_SUBST([MPICXX_LOCATION])
 AC_LANG_POP([C++])
@@ -70,6 +70,7 @@ dnl ------------------------------------------------
 dnl Enable GNU libtool
 dnl Current version checks also in Makefile.am
 dnl ------------------------------------------------
+AM_PROG_AR
 LT_INIT([])
 LT_PREREQ([2.2.6])
 AC_SUBST(LIBTOOL_DEPS)
