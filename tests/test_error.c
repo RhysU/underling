@@ -29,10 +29,36 @@
 #endif
 #include <underling/error.h>
 
+#include <string.h>
+
 #define CHECK(x) errors[n].number = x ; errors[n].name = #x ; n++ ;
 #define MAX_ERRS 64
 
 int verbose = 0 ;
+
+static char captured_reason[256];
+static int captured_errno = 0;
+
+static void
+capture_error_handler(const char *reason,
+                      const char *file,
+                      int line,
+                      int underling_errno)
+{
+    (void)file;
+    (void)line;
+    strncpy(captured_reason, reason, sizeof(captured_reason) - 1);
+    captured_reason[sizeof(captured_reason) - 1] = '\0';
+    captured_errno = underling_errno;
+}
+
+static void *
+test_error_null_fmt_helper(const char *provider)
+{
+    UNDERLING_ERROR_NULL_FMT(UNDERLING_ESANITY,
+            "fftw_plan_guru_r2r (from %s) returned NULL plan",
+            provider);
+}
 
 int
 main (void)
@@ -93,6 +119,40 @@ main (void)
           printf("Found non-distinct error message\n");
         }
     }
+
+  /* Test UNDERLING_ERROR_NULL_FMT formats and reports correctly */
+  {
+      underling_error_handler_t *prev
+          = underling_set_error_handler(capture_error_handler);
+
+      captured_reason[0] = '\0';
+      captured_errno = 0;
+      void *result = test_error_null_fmt_helper("/usr/lib/libfftw3.so");
+
+      if (result != 0) {
+          r = 1;
+          printf("UNDERLING_ERROR_NULL_FMT did not return 0\n");
+      }
+      if (captured_errno != UNDERLING_ESANITY) {
+          r = 1;
+          printf("UNDERLING_ERROR_NULL_FMT reported wrong errno: %d\n",
+                 captured_errno);
+      }
+      if (strstr(captured_reason, "/usr/lib/libfftw3.so") == NULL) {
+          r = 1;
+          printf("UNDERLING_ERROR_NULL_FMT did not format provider path"
+                 " into message: %s\n", captured_reason);
+      }
+      if (strstr(captured_reason, "fftw_plan_guru_r2r") == NULL) {
+          r = 1;
+          printf("UNDERLING_ERROR_NULL_FMT did not include function name"
+                 " in message: %s\n", captured_reason);
+      }
+      if (verbose)
+          printf("UNDERLING_ERROR_NULL_FMT message: %s\n", captured_reason);
+
+      underling_set_error_handler(prev);
+  }
 
   return r;
 }
