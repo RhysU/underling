@@ -194,6 +194,9 @@ underling_fftw_plan_reorder_complex(
         const underling_fftw_extents * const output,
         const unsigned flags)
 {
+    const char *r2r_provider
+        = underling_library_path(fftw_plan_guru_r2r);
+
     const int howmany_rank = sizeof(input->size)/sizeof(input->size[0]);
     fftw_iodim howmany_dims[howmany_rank];
     for (int i = 0; i < howmany_rank; ++i) {
@@ -206,8 +209,9 @@ underling_fftw_plan_reorder_complex(
                                           data_in, data_out, NULL, flags);
 
     if (UNDERLING_UNLIKELY(retval == NULL)) {
-        UNDERLING_ERROR_NULL("FFTW returned NULL reorder_complex plan",
-                UNDERLING_ESANITY);
+        UNDERLING_ERROR_NULL_FMT(UNDERLING_ESANITY,
+                "fftw_plan_guru_r2r (from %s) returned NULL reorder_complex plan",
+                r2r_provider);
     }
 
     return retval;
@@ -512,6 +516,9 @@ underling_fftw_plan_create_c2c_internal(
     f->output         = output;
     f->in_place       = (in == out);
 
+    const char *split_dft_provider
+        = underling_library_path(fftw_plan_guru_split_dft);
+
     // Determine when if/when we reorder relative to the FFT operation
     const underling_fftw_extents *transform_in, *transform_out;
     if (f->in_place) {
@@ -597,8 +604,9 @@ underling_fftw_plan_create_c2c_internal(
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_fftw == NULL)) {
             underling_fftw_plan_destroy(f);
-            UNDERLING_ERROR_NULL(
-                    "FFTW returned NULL FFT plan", UNDERLING_ESANITY);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_ESANITY,
+                    "fftw_plan_guru_split_dft (from %s) returned NULL FFT plan",
+                    split_dft_provider);
         }
     }
 
@@ -688,6 +696,11 @@ underling_fftw_plan_create_c2r_backward_internal(
     f->output         = output;
     f->in_place       = (in == out);
 
+    const char *r2r_provider
+        = underling_library_path(fftw_plan_guru_r2r);
+    const char *split_dft_c2r_provider
+        = underling_library_path(fftw_plan_guru_split_dft_c2r);
+
     // Prepare the pre-ordering plan
     if (f->in_place) {
         const int howmany_rank = sizeof(input.size)/sizeof(input.size[0]);
@@ -715,9 +728,9 @@ underling_fftw_plan_create_c2r_backward_internal(
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_preorder == NULL)) {
             underling_fftw_plan_destroy(f);
-            UNDERLING_ERROR_NULL(
-                    "FFTW returned NULL c2r_backward preorder plan",
-                    UNDERLING_ESANITY);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_ESANITY,
+                    "fftw_plan_guru_r2r (from %s) returned NULL c2r_backward preorder plan",
+                    r2r_provider);
         }
     } else {
         // NOP: No pre-ordering necessary for out-of-place
@@ -764,8 +777,9 @@ underling_fftw_plan_create_c2r_backward_internal(
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_fftw == NULL)) {
             underling_fftw_plan_destroy(f);
-            UNDERLING_ERROR_NULL("FFTW returned NULL c2r_backward FFT plan",
-                    UNDERLING_ESANITY);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_ESANITY,
+                    "fftw_plan_guru_split_dft_c2r (from %s) returned NULL c2r_backward FFT plan",
+                    split_dft_c2r_provider);
         }
     }
 
@@ -799,9 +813,9 @@ underling_fftw_plan_create_c2r_backward_internal(
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_postorder == NULL)) {
             underling_fftw_plan_destroy(f);
-            UNDERLING_ERROR_NULL(
-                    "FFTW returned NULL c2r_backward postorder plan",
-                    UNDERLING_ESANITY);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_ESANITY,
+                    "fftw_plan_guru_r2r (from %s) returned NULL c2r_backward postorder plan",
+                    r2r_provider);
         }
     } else {
         // NOP: No post-ordering necessary for out-of-place
@@ -894,6 +908,11 @@ underling_fftw_plan_create_r2c_forward_internal(
     f->output         = output;
     f->in_place       = (in == out);
 
+    const char *r2r_provider
+        = underling_library_path(fftw_plan_guru_r2r);
+    const char *split_dft_r2c_provider
+        = underling_library_path(fftw_plan_guru_split_dft_r2c);
+
     // Prepare the pre-ordering plan
     if (f->in_place) {
         // We must always pay to reorder the output data.  Ignoring input
@@ -940,8 +959,9 @@ underling_fftw_plan_create_r2c_forward_internal(
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_fftw == NULL)) {
             underling_fftw_plan_destroy(f);
-            UNDERLING_ERROR_NULL("FFTW returned NULL r2c_forward FFT plan",
-                    UNDERLING_ESANITY);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_ESANITY,
+                    "fftw_plan_guru_split_dft_r2c (from %s) returned NULL r2c_forward FFT plan",
+                    split_dft_r2c_provider);
         }
     }
 
@@ -975,9 +995,9 @@ underling_fftw_plan_create_r2c_forward_internal(
                 fftw_rigor_flags | FFTW_DESTROY_INPUT);
         if (UNDERLING_UNLIKELY(f->plan_postorder == NULL)) {
             underling_fftw_plan_destroy(f);
-            UNDERLING_ERROR_NULL(
-                    "FFTW returned NULL r2c_forward postorder plan",
-                    UNDERLING_ESANITY);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_ESANITY,
+                    "fftw_plan_guru_r2r (from %s) returned NULL r2c_forward postorder plan",
+                    r2r_provider);
         }
     } else {
         // NOP: No post-ordering necessary for out-of-place

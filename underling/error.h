@@ -247,6 +247,22 @@ underling_set_stream(FILE * new_stream) UNDERLING_API;
         UNDERLING_ERROR_VAL(reason, underling_errno, 0)
 
 /**
+ * Like \c UNDERLING_ERROR_NULL but accepts \c printf style format arguments.
+ * Formats into a fixed-size stack buffer before reporting.
+ *
+ * @param underling_errno Error status to report.
+ * @param fmt             Format string.
+ * @param ...             Format arguments.
+ */
+#define UNDERLING_ERROR_NULL_FMT(underling_errno, fmt, ...) \
+       do { \
+       char _err_buf[256]; \
+       snprintf(_err_buf, sizeof(_err_buf), fmt, __VA_ARGS__); \
+       underling_error (_err_buf, __FILE__, __LINE__, underling_errno) ; \
+       return 0 ; \
+       } while (0)
+
+/**
  * Invokes underling_error using \c underling_errno but \em does \em not return
  * from the current function.  Automatically provides file and line
  * information.

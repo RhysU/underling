@@ -88,6 +88,14 @@ if test "x$ax_fftw3_found_mpi" != "xyes"; then
 fi
 saved_CC=$CC
 CC=$MPICC
+AC_CHECK_HEADERS([dlfcn.h])
+AC_CHECK_LIB([dl],[dladdr],[
+        AC_DEFINE([HAVE_DLADDR], [1], [Define if dladdr is available])
+        DL_LIBS="-ldl"
+    ],[
+        DL_LIBS=""
+    ])
+AC_SUBST([DL_LIBS])
 AC_CHECK_LIB([fftw3_mpi],[fftw_mpi_execute_dft],[
         AC_DEFINE([HAVE_FFTW33_BETA1_OR_LATER],
                   [1], [Are we building against 3.3-beta1 or later?])

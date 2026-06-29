@@ -1,6 +1,14 @@
 What's new in underling master
 ------------------------------
 
+Improved error reporting:
+
+     * NULL FFTW plan errors now report the shared library path of the
+       specific FFTW function that returned NULL, using dladdr when
+       available.  Motivated by Suzerain defect #11 where MKL silently
+       interposed FFTW symbols due to link ordering, causing NULL plan
+       failures that were misleadingly attributed to FFTW itself.
+
 Build system and test suite modernization:
 
      * Updated m4/boost.m4 to upstream serial 39 (from tsuna/boost.m4),

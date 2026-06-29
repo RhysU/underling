@@ -1211,6 +1211,9 @@ underling_plan_create(
     // Copy the problem parameters to the problem workspace
     p->in_place = (in == out);
 
+    const char *transpose_provider
+        = underling_library_path(fftw_mpi_plan_many_transpose);
+
     // Deadlock debugging logic which can be selectively enabled at runtime
     if (debug_comm != MPI_COMM_NULL) {
         underling_dump_transposes(debug_comm, stdout,
@@ -1223,9 +1226,9 @@ underling_plan_create(
                 problem->backwardA, in, out, rigor_flags | destroy_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardA == NULL)) {
             underling_plan_destroy(p);
-            UNDERLING_ERROR_NULL(
-                    "FFTW MPI returned NULL plan: plan_backwardA",
-                    UNDERLING_EFAILED);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_EFAILED,
+                    "fftw_mpi_plan_many_transpose (from %s) returned NULL plan: plan_backwardA",
+                    transpose_provider);
         }
     }
 
@@ -1240,9 +1243,9 @@ underling_plan_create(
                 problem->backwardB, in, out, rigor_flags | destroy_flags);
         if (UNDERLING_UNLIKELY(p->plan_backwardB == NULL)) {
             underling_plan_destroy(p);
-            UNDERLING_ERROR_NULL(
-                    "FFTW MPI returned NULL plan: plan_backwardB",
-                    UNDERLING_EFAILED);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_EFAILED,
+                    "fftw_mpi_plan_many_transpose (from %s) returned NULL plan: plan_backwardB",
+                    transpose_provider);
         }
     }
 
@@ -1257,9 +1260,9 @@ underling_plan_create(
                 problem->forwardB, in, out, rigor_flags | destroy_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardB == NULL)) {
             underling_plan_destroy(p);
-            UNDERLING_ERROR_NULL(
-                    "FFTW MPI returned NULL plan: plan_forwardB",
-                    UNDERLING_EFAILED);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_EFAILED,
+                    "fftw_mpi_plan_many_transpose (from %s) returned NULL plan: plan_forwardB",
+                    transpose_provider);
         }
     }
 
@@ -1274,9 +1277,9 @@ underling_plan_create(
                 problem->forwardA, in, out, rigor_flags | destroy_flags);
         if (UNDERLING_UNLIKELY(p->plan_forwardA == NULL)) {
             underling_plan_destroy(p);
-            UNDERLING_ERROR_NULL(
-                    "FFTW MPI returned NULL plan: plan_forwardA",
-                    UNDERLING_EFAILED);
+            UNDERLING_ERROR_NULL_FMT(UNDERLING_EFAILED,
+                    "fftw_mpi_plan_many_transpose (from %s) returned NULL plan: plan_forwardA",
+                    transpose_provider);
         }
     }
 

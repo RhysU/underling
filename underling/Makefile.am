@@ -29,6 +29,7 @@ libunderling_la_SOURCES += underling.c
 libunderling_la_SOURCES += underling_fftw.c
 libunderling_la_LDFLAGS  = -release $(PACKAGE_VERSION)
 libunderling_la_LDFLAGS += $(FFTW3_MPI_THREADS_LIBS)
+libunderling_la_LDFLAGS += $(DL_LIBS)
 libunderling_la_LDFLAGS += $(LTLIBINTL) # gnulib requirement
 libunderling_la_LIBADD   = ../gnulib/libgnu.la
 
