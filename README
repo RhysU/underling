@@ -37,26 +37,28 @@ The code depends upon the following:
 The following optional dependencies are recommended for full functionality:
 
     1) Boost from http://www.boost.org/ (>= 1.39, required to build the
-       unit tests via Boost.Test)
+       unit tests via Boost.Test and Boost.Program_options)
     2) GRVY from https://github.com/hpcsi/grvy (>= 0.27)
     3) Doxygen from https://www.doxygen.nl/ and Graphviz from
        https://graphviz.org/ to build the API documentation
+    4) mpiP from http://mpip.sourceforge.net/ for lightweight, scalable
+       MPI profiling (enabled with --with-mpiP)
 
-On Ubuntu, the required and optional dependencies are available as system
+On Ubuntu, most required and optional dependencies are available as system
 packages.  Install the build toolchain:
 
-    sudo apt install autoconf automake libtool pkg-config g++
+    sudo apt install autoconf automake g++ libtool make pkg-config
 
 Install MPI and the required libraries:
 
     sudo apt install \
         libopenmpi-dev openmpi-bin \
         libfftw3-dev libfftw3-mpi-dev \
-        libboost-all-dev
+        libboost-program-options-dev libboost-test-dev
 
-Optionally, install documentation tools:
+Optionally, install additional tools:
 
-    sudo apt install doxygen graphviz
+    sudo apt install binutils-dev doxygen graphviz lcov
 
 
 3. Configuration
