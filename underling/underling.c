@@ -1476,7 +1476,8 @@ underling_fprint_grid(
         int resultlen = 0;
         if (   MPI_Comm_get_name(grid->g_comm, buffer, &resultlen)
             || resultlen == 0) {
-            fprintf(output_file, ",{g_comm=%x", grid->g_comm);
+            fprintf(output_file, ",{g_comm=%x",
+                    (unsigned int) MPI_Comm_c2f(grid->g_comm));
         } else {
             fprintf(output_file, ",{g_comm=%s", buffer);
         }
@@ -1484,7 +1485,8 @@ underling_fprint_grid(
         resultlen = 0;
         if (   MPI_Comm_get_name(grid->pA_comm, buffer, &resultlen)
             || resultlen == 0) {
-            fprintf(output_file, ",pA_comm=%x", grid->pA_comm);
+            fprintf(output_file, ",pA_comm=%x",
+                    (unsigned int) MPI_Comm_c2f(grid->pA_comm));
         } else {
             fprintf(output_file, ",pA_comm=%s", buffer);
         }
@@ -1492,7 +1494,8 @@ underling_fprint_grid(
         resultlen = 0;
         if (   MPI_Comm_get_name(grid->pB_comm, buffer, &resultlen)
             || resultlen == 0) {
-            fprintf(output_file, ",pB_comm=%x}", grid->pB_comm);
+            fprintf(output_file, ",pB_comm=%x}",
+                    (unsigned int) MPI_Comm_c2f(grid->pB_comm));
         } else {
             fprintf(output_file, ",pB_comm=%s}", buffer);
         }
@@ -1515,7 +1518,8 @@ underling_fprint_transpose(
         int resultlen = 0;
         if (   MPI_Comm_get_name(transpose->comm, buffer, &resultlen)
             || resultlen == 0) {
-            fprintf(output_file, "comm=%x", transpose->comm);
+            fprintf(output_file, "comm=%x",
+                    (unsigned int) MPI_Comm_c2f(transpose->comm));
         } else {
             fprintf(output_file, "comm=%s", buffer);
         }
