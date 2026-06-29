@@ -116,10 +116,10 @@ libtool: $(LIBTOOL_DEPS)
 	$(SHELL) ./config.status --recheck
 
 # Push license updates into appropriate subdirectories
-.license.stamp:
-	cd underling && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
-	cd tests     && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
-	cd apps      && $(MAKE) $(AM_MAKEFLAGS) .license.stamp
+license-stamp:
+	cd underling && $(MAKE) $(AM_MAKEFLAGS) license-stamp
+	cd tests     && $(MAKE) $(AM_MAKEFLAGS) license-stamp
+	cd apps      && $(MAKE) $(AM_MAKEFLAGS) license-stamp
 
 # Required for AX_PROG_DOXYGEN
 include doxygen/doxygen.am
