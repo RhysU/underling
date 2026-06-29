@@ -1,0 +1,88 @@
+# See https://circleci.com/docs/2.0/reusing-config/
+version: 2.1
+
+executors:
+  ubuntu-docker:
+    parameters:
+      version-ubuntu:
+        description: "Ubuntu base image tag"
+        type: string
+    docker:
+      - image: cimg/base:<<parameters.version-ubuntu>>
+    resource_class: medium
+
+jobs:
+  test:
+    parameters:
+      version-ubuntu:
+        description: "Ubuntu base image tag"
+        type: string
+    executor:
+      name: ubuntu-docker
+      version-ubuntu: <<parameters.version-ubuntu>>
+    steps:
+      - checkout
+      - run:
+          name: Dependencies
+          command: |
+            sudo apt-get -qq update
+            sudo apt-get -qq install -y \
+              autoconf automake g++ libtool make pkg-config \
+              libopenmpi-dev openmpi-bin \
+              libfftw3-dev libfftw3-mpi-dev \
+              libboost-program-options-dev libboost-test-dev
+      - run:
+          name: Bootstrap
+          command: ./bootstrap
+      - run:
+          name: Configure
+          command: ./configure
+      - run:
+          name: Build
+          command: make -j$(nproc)
+      - run:
+          name: Test
+          command: make check
+
+  deploy-docs:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install Doxygen and Graphviz
+          command: |
+            sudo apt-get update -qq
+            sudo apt-get install -y doxygen graphviz
+      - run:
+          name: Build Doxygen documentation
+          command: |
+            PROJECT=underling \
+            VERSION=$(grep AC_INIT configure.ac | cut -d, -f2 | tr -d '[] ') \
+            DOCDIR=docs \
+            SRCDIR=. \
+            GENERATE_HTML=YES \
+            HAVE_DOT=YES \
+            doxygen doxygen/doxygen.cfg
+      - run:
+          name: Deploy to gh-pages
+          command: |
+            if [ "${CIRCLE_BRANCH}" = "master" ]; then
+              echo "Deploying documentation to gh-pages..."
+              ./.circleci/deploy-ghpages.sh docs/html
+            else
+              echo "Not master (current: ${CIRCLE_BRANCH}), skipping deployment"
+            fi
+
+workflows:
+  matrix-tests:
+    jobs:
+      - test:
+          matrix:
+            parameters:
+              version-ubuntu:
+                - "current"
+      - deploy-docs:
+          requires:
+            - test
