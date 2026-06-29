@@ -58,4 +58,11 @@ Provides hint to the compiler to optimize for the expression being false.
 #endif /* MPI_MAX_NAME_STRING */
 #endif /* MPI_MAX_OBJECT_NAME */
 
+/**
+ * Returns the shared library path providing the given function pointer,
+ * or "UNKNOWN LIBRARY" if it cannot be determined.
+ */
+const char *
+underling_library_path(void *fn);
+
 #endif // UNDERLING_COMMON_H

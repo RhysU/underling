@@ -31,6 +31,10 @@
 
 #include <stdlib.h>
 #include <mpi.h>
+#ifdef HAVE_DLADDR
+#include <dlfcn.h>
+#endif
+#include "common.h"
 
 underling_error_handler_t * underling_error_handler = NULL;
 
@@ -156,4 +160,17 @@ underling_strerror(const int underling_errno)
     default:
         return "unknown error code" ;
     }
+}
+
+const char *
+underling_library_path(void *fn)
+{
+#ifdef HAVE_DLADDR
+    Dl_info info;
+    if (dladdr(fn, &info) && info.dli_fname)
+        return info.dli_fname;
+#else
+    (void)fn;
+#endif
+    return "UNKNOWN LIBRARY";
 }
