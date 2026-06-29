@@ -32,6 +32,14 @@ The code depends upon the following:
        (--enable-mpi); threading support (--enable-openmp and/or
        --enable-threads) is also recommended.  The same MPI stack and compiler
        used to build FFTW should be used to build underling.
+
+       WARNING: Intel MKL ships an FFTW3-compatible wrapper that does not
+       faithfully implement the guru and MPI transpose APIs that underling
+       requires.  When MKL is linked before FFTW, MKL silently intercepts
+       these calls and returns NULL plans or missing symbols at runtime.
+       Configuring a statically linked underling (--disable-shared) may
+       allow greater link-time flexibility in applications that also link
+       Intel MKL.
     4) GNU Make from http://www.gnu.org/software/make/
 
 The following optional dependencies are recommended for full functionality:
