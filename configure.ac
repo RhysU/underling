@@ -1,7 +1,7 @@
 dnl ----------------------------------------------------
 dnl Package name, release number, description, and URL
 dnl ----------------------------------------------------
-AC_INIT([underling], [0.3.1], [rhys@ices.utexas.edu])
+AC_INIT([underling], [0.3.1], [rhys.ulerich@gmail.com])
 AC_REVISION([$Id$])
 PACKAGE_DESCRIPTION="an FFTW MPI-based library for 3D pencil decompositions"
 AC_SUBST([PACKAGE_DESCRIPTION])

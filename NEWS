@@ -1,6 +1,11 @@
 What's new in underling master
 ------------------------------
 
+    * TBD
+
+What's new in underling 0.3.1
+-----------------------------
+
 Improved error reporting:
 
      * NULL FFTW plan errors now report the shared library path of the
