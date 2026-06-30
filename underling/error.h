@@ -137,10 +137,10 @@ typedef void underling_error_handler_t(const char * reason,
  * Defines the function prototype necessary for a stream handler.
  * Stream handlers should be reentrant safe if possible.
  *
- * @param reason Reason for the error.
+ * @param label Label for the message.
  * @param file File in which the error was reported.
  * @param line Line at which the error was reported.
- * @param underling_errno Error code to report.
+ * @param reason Reason for the error.
  *
  * @see underling_set_stream_handler
  */
