@@ -63,7 +63,16 @@ jobs:
             DOCDIR=docs \
             SRCDIR=. \
             GENERATE_HTML=YES \
+            GENERATE_LATEX=NO \
+            GENERATE_RTF=NO \
+            GENERATE_MAN=NO \
+            GENERATE_XML=NO \
+            GENERATE_CHI=NO \
             HAVE_DOT=YES \
+            DOT_PATH="" \
+            BUILDDATE="" \
+            BUILDHOST="" \
+            BUILDUSER="" \
             doxygen doxygen/doxygen.cfg
       - run:
           name: Deploy to gh-pages
