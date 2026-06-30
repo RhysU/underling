@@ -52,7 +52,7 @@ Thank you for your interest in underling.
 \section bugs Reporting Bugs
 
 Bugs in the code and errors or omissions in the documentation can be
-reported to rhys@ices.utexas.edu.  Requests and contributions are
+reported to rhys.ulerich@gmail.com.  Requests and contributions are
 welcome at the same e-mail address.  All bug reports should include:
 <ul>
   <li>the version number of the underling library,</li>
@@ -63,7 +63,7 @@ welcome at the same e-mail address.  All bug reports should include:
 </ul>
 
 \section licence License
-Copyright (C) 2010, 2011, 2012, 2013 Rhys Ulerich
+Copyright (C) 2010--2013, 2026 Rhys Ulerich
 Copyright (C) 2012, 2013 The PECOS Development Team
 \copydoc License
 
