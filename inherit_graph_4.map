@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classunderling_1_1noncopyable.html" title="A mixin for making a subclass non&#45;copyable via private inheritance." alt="" coords="5,81,180,108"/>
+<area shape="rect" id="node2" href="$classunderling_1_1fftw_1_1plan.html" title="Provides a thin RAII wrapper for underling_fftw_plan." alt="" coords="228,5,379,32"/>
+<area shape="rect" id="node3" href="$classunderling_1_1grid.html" title="Provides a thin RAII wrapper for underling_grid." alt="" coords="245,56,361,83"/>
+<area shape="rect" id="node4" href="$classunderling_1_1plan.html" title="Provides a thin RAII wrapper for underling_plan." alt="" coords="244,107,363,133"/>
+<area shape="rect" id="node5" href="$classunderling_1_1problem.html" title="Provides a thin RAII wrapper for underling_problem." alt="" coords="231,157,376,184"/>
+</map>
