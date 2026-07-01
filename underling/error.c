@@ -2,7 +2,7 @@
 // Copyright (C) 1996, 1997, 1998, 1999, 2000, 2007 Gerard Jungman, Brian Gough
 //-----------------------------------------------------------------------bl-
 // underling 0.3.1: an FFTW MPI-based library for 3D pencil decompositions
-// http://red.ices.utexas.edu/projects/underling
+// https://github.com/RhysU/underling
 //
 // Copyright (C) 2010--2013, 2026 Rhys Ulerich
 // Copyright (C) 2012, 2013 The PECOS Development Team
